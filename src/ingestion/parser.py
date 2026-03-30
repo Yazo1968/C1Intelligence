@@ -10,8 +10,6 @@ import os
 import re
 from pathlib import Path
 
-from docling.document_converter import DocumentConverter
-
 from src.logging_config import get_logger
 from src.ingestion.models import IngestionError, ParsedDocument
 
@@ -58,6 +56,8 @@ def parse_document(file_path: str, filename: str) -> ParsedDocument:
     )
 
     try:
+        from docling.document_converter import DocumentConverter
+
         converter = DocumentConverter()
         result = converter.convert(Path(file_path))
     except Exception as exc:
