@@ -1,14 +1,23 @@
 """
-C1 — Ingestion Pipeline
-Orchestrates all 8 sub-systems for a single document upload.
-This is the only module that knows the full ingestion flow.
+C1 -- Ingestion Pipeline
+Orchestrates the full ingestion flow for a single document upload.
+This is the only module that knows the complete flow.
+
+Flow: validate -> create record -> parse -> classify -> extract metadata ->
+      validate metadata -> chunk -> embed -> store
+
+All document parsing is handled by Docling (local).
+All embedding is handled by Gemini Embeddings API.
+All storage is handled by Supabase pgvector.
 """
 
 from __future__ import annotations
 
 import uuid
 
-from src.clients import get_anthropic_client, get_gemini_client, get_supabase_client
+from supabase import Client as SupabaseClient
+
+from src.clients import get_anthropic_client, get_supabase_client
 from src.logging_config import get_logger
 from src.ingestion.models import (
     ClassificationResult,
@@ -19,10 +28,12 @@ from src.ingestion.models import (
     ValidationResult,
 )
 from src.ingestion.file_validation import validate_file
-from src.ingestion.store_manager import get_store_name_for_project
+from src.ingestion.parser import parse_document
+from src.ingestion.chunker import chunk_document
+from src.ingestion.embedder import embed_chunks
+from src.ingestion.store import store_chunks
 from src.ingestion.taxonomy_cache import TaxonomyCache
-from src.ingestion.uploader import import_to_store_with_metadata, upload_file_to_gemini
-from src.ingestion.classifier import classify_document, extract_text_preview
+from src.ingestion.classifier import classify_document
 from src.ingestion.metadata_extractor import extract_metadata
 from src.ingestion.tier_validator import validate_metadata_for_tier
 from src.ingestion.status_tracker import (
@@ -34,7 +45,7 @@ from src.ingestion.status_tracker import (
 
 logger = get_logger(__name__)
 
-# Module-level taxonomy cache — loaded once, reused across all ingestion calls
+# Module-level taxonomy cache -- loaded once, reused across all ingestion calls
 _taxonomy_cache = TaxonomyCache()
 
 
@@ -53,22 +64,21 @@ def ingest_document(
     Full ingestion pipeline for a single document.
 
     Flow:
-    1. Validate file (extension, size)
-    2. Create document record (status=QUEUED)
-    3. Transition → EXTRACTING
-    4. Get project's Gemini store name
-    5. Upload file to Gemini Files API + extract text preview
-    6. Transition → CLASSIFYING
-    7. Claude classification against taxonomy
-    8. Import to Gemini store with metadata
-    9. Claude metadata extraction (non-fatal on failure)
-    10. Tier-based validation (flag gaps, don't block)
-    11. Update document record with all metadata
-    12. Transition → STORED
+    1.  Validate file (extension, size)
+    2.  Create document record (status=QUEUED)
+    3.  Transition -> EXTRACTING
+    4.  Parse document with Docling
+    5.  Transition -> CLASSIFYING
+    6.  Claude classification against taxonomy
+    7.  Claude metadata extraction (non-fatal on failure)
+    8.  Tier-based validation (flag gaps, don't block)
+    9.  Update document record with classification and metadata
+    10. Chunk document
+    11. Embed chunks via Gemini Embeddings API
+    12. Store chunks to Supabase pgvector (handles STORED/FAILED status)
 
     Every step has explicit error handling. No document is silently discarded.
     """
-    gemini_client = get_gemini_client()
     anthropic_client = get_anthropic_client()
     supabase_client = get_supabase_client()
 
@@ -107,7 +117,7 @@ def ingest_document(
         )
 
     # ------------------------------------------------------------------
-    # Step 3: Transition → EXTRACTING
+    # Step 3: Transition -> EXTRACTING
     # ------------------------------------------------------------------
     try:
         update_status(supabase_client, document_id, "EXTRACTING")
@@ -115,38 +125,17 @@ def ingest_document(
         return _fail_document(supabase_client, document_id, exc.message)
 
     # ------------------------------------------------------------------
-    # Step 4: Get Gemini store name
+    # Step 4: Parse document with Docling
     # ------------------------------------------------------------------
     try:
-        store_name = get_store_name_for_project(supabase_client, request.project_id)
+        parsed = parse_document(file_path, request.filename)
     except IngestionError as exc:
         return _fail_document(supabase_client, document_id, exc.message)
 
-    # ------------------------------------------------------------------
-    # Step 5: Upload to Gemini Files API + extract text preview
-    # ------------------------------------------------------------------
-    try:
-        gemini_file_name, gemini_file_uri = upload_file_to_gemini(
-            gemini_client, file_path, request.filename
-        )
-    except IngestionError as exc:
-        return _fail_document(supabase_client, document_id, exc.message)
-
-    # Store the Gemini file reference immediately
-    try:
-        update_document_metadata(
-            supabase_client, document_id, gemini_file_name=gemini_file_name
-        )
-    except IngestionError:
-        pass  # Non-fatal — we still have the file name in memory
-
-    try:
-        document_text = extract_text_preview(gemini_client, gemini_file_uri)
-    except IngestionError as exc:
-        return _fail_document(supabase_client, document_id, exc.message)
+    document_text = parsed.text
 
     # ------------------------------------------------------------------
-    # Step 6: Transition → CLASSIFYING
+    # Step 5: Transition -> CLASSIFYING
     # ------------------------------------------------------------------
     try:
         update_status(supabase_client, document_id, "CLASSIFYING")
@@ -154,7 +143,7 @@ def ingest_document(
         return _fail_document(supabase_client, document_id, exc.message)
 
     # ------------------------------------------------------------------
-    # Step 7: Claude classification
+    # Step 6: Claude classification
     # ------------------------------------------------------------------
     user_selected_type_name: str | None = None
     if request.user_selected_type_id is not None:
@@ -196,7 +185,7 @@ def ingest_document(
                 document_id=str(document_id),
                 error=exc.message,
             )
-            # Non-fatal — continue with the low-confidence classification
+            # Non-fatal -- continue with the low-confidence classification
 
     # Check for user-selection mismatch
     if (
@@ -227,25 +216,7 @@ def ingest_document(
             )
 
     # ------------------------------------------------------------------
-    # Step 8: Import to Gemini store with metadata
-    # ------------------------------------------------------------------
-    gemini_metadata = {
-        "project_id": str(request.project_id),
-        "document_type": classification.document_type_name,
-        "tier": classification.tier,
-        "document_date": "",  # Placeholder — updated after extraction
-        "supabase_document_id": str(document_id),
-    }
-
-    try:
-        gemini_document_name = import_to_store_with_metadata(
-            gemini_client, store_name, gemini_file_name, gemini_metadata
-        )
-    except IngestionError as exc:
-        return _fail_document(supabase_client, document_id, exc.message)
-
-    # ------------------------------------------------------------------
-    # Step 9: Claude metadata extraction (non-fatal on failure)
+    # Step 7: Claude metadata extraction (non-fatal on failure)
     # ------------------------------------------------------------------
     try:
         extracted = extract_metadata(
@@ -261,10 +232,10 @@ def ingest_document(
             document_id=str(document_id),
             error=exc.message,
         )
-        # Continue — metadata extraction failure is non-fatal
+        # Continue -- metadata extraction failure is non-fatal
 
     # ------------------------------------------------------------------
-    # Step 10: Tier-based validation (flag gaps, don't block)
+    # Step 8: Tier-based validation (flag gaps, don't block)
     # ------------------------------------------------------------------
     if extracted is not None:
         validation = validate_metadata_for_tier(extracted, classification.tier)
@@ -278,7 +249,7 @@ def ingest_document(
             )
 
     # ------------------------------------------------------------------
-    # Step 11: Update document record with all metadata
+    # Step 9: Update document record with classification and metadata
     # ------------------------------------------------------------------
     try:
         update_document_metadata(
@@ -286,25 +257,59 @@ def ingest_document(
             document_id,
             classification=classification,
             extracted=extracted,
-            gemini_file_name=gemini_file_name,
-            gemini_document_name=gemini_document_name,
         )
     except IngestionError as exc:
         return _fail_document(supabase_client, document_id, exc.message)
 
     # ------------------------------------------------------------------
-    # Step 12: Transition → STORED
+    # Step 10: Chunk document
     # ------------------------------------------------------------------
     try:
-        update_status(supabase_client, document_id, "STORED")
+        chunks = chunk_document(parsed)
+    except Exception as exc:
+        return _fail_document(
+            supabase_client, document_id, f"Chunking failed: {exc}"
+        )
+
+    if not chunks:
+        return _fail_document(
+            supabase_client, document_id,
+            "No extractable text found in document",
+        )
+
+    # ------------------------------------------------------------------
+    # Step 11: Embed chunks via Gemini Embeddings API
+    # ------------------------------------------------------------------
+    try:
+        embedded_chunks = embed_chunks(chunks)
     except IngestionError as exc:
         return _fail_document(supabase_client, document_id, exc.message)
+
+    # ------------------------------------------------------------------
+    # Step 12: Store chunks to Supabase pgvector
+    # store_chunks handles its own rollback and status update
+    # (STORED on success, FAILED on failure)
+    # ------------------------------------------------------------------
+    try:
+        chunk_count = store_chunks(document_id, request.project_id, embedded_chunks)
+    except IngestionError as exc:
+        # store_chunks already set status to FAILED and rolled back
+        return IngestionResult(
+            document_id=document_id,
+            status="FAILED",
+            classification=classification,
+            extracted_metadata=extracted,
+            validation=validation,
+            queued_for_review=queued_for_review,
+            error_message=exc.message,
+        )
 
     logger.info(
         "document_ingested_successfully",
         document_id=str(document_id),
         document_type=classification.document_type_name,
         confidence=classification.confidence,
+        chunk_count=chunk_count,
         queued_for_review=queued_for_review,
     )
 

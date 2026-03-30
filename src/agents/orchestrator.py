@@ -12,8 +12,6 @@ import uuid
 
 from src.clients import get_anthropic_client, get_gemini_client, get_supabase_client
 from src.logging_config import get_logger
-from src.ingestion.store_manager import get_store_name_for_project
-from src.ingestion.models import IngestionError
 from src.agents.models import (
     AgentError,
     ConfidenceLevel,
@@ -40,16 +38,15 @@ def process_query(request: QueryRequest) -> QueryResponse:
 
     1.  Snapshot document IDs (freeze warehouse state)
     2.  Identify relevant domains (Claude)
-    3.  Get Gemini store name
-    4.  Retrieve chunks from Gemini File Search
-    5.  If empty → GREY confidence, skip specialists
-    6.  Run specialists for each relevant domain
-    7.  Detect contradictions (Claude)
-    8.  Write contradiction flags to DB (non-blocking)
-    9.  Determine confidence (deterministic)
-    10. Build response text (deterministic)
-    11. Write audit log (must succeed)
-    12. Return QueryResponse
+    3.  Retrieve chunks via pgvector hybrid search
+    4.  If empty → GREY confidence, skip specialists
+    5.  Run specialists for each relevant domain
+    6.  Detect contradictions (Claude)
+    7.  Write contradiction flags to DB (non-blocking)
+    8.  Determine confidence (deterministic)
+    9.  Build response text (deterministic)
+    10. Write audit log (must succeed)
+    11. Return QueryResponse
     """
     gemini_client = get_gemini_client()
     anthropic_client = get_anthropic_client()
@@ -67,22 +64,14 @@ def process_query(request: QueryRequest) -> QueryResponse:
     domains_engaged = domain_result.domains
 
     # ------------------------------------------------------------------
-    # Step 3: Get Gemini store name
-    # ------------------------------------------------------------------
-    try:
-        store_name = get_store_name_for_project(supabase_client, request.project_id)
-    except IngestionError as exc:
-        raise AgentError(stage="store_lookup", message=exc.message) from exc
-
-    # ------------------------------------------------------------------
-    # Step 4: Retrieve chunks from Gemini File Search
+    # Step 3: Retrieve chunks via pgvector hybrid search
     # ------------------------------------------------------------------
     retrieval = retrieve_chunks(
-        gemini_client, store_name, request.query_text, request.project_id
+        supabase_client, gemini_client, request.query_text, request.project_id
     )
 
     # ------------------------------------------------------------------
-    # Step 5: GREY path — no documents found
+    # Step 4: GREY path — no documents found
     # ------------------------------------------------------------------
     if retrieval.is_empty:
         return _grey_response(
@@ -90,7 +79,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
         )
 
     # ------------------------------------------------------------------
-    # Step 6: Run domain specialists (sequential)
+    # Step 5: Run domain specialists (sequential)
     # ------------------------------------------------------------------
     findings: list[SpecialistFinding] = []
     for domain in domains_engaged:
@@ -114,12 +103,12 @@ def process_query(request: QueryRequest) -> QueryResponse:
             # Skip failed domain, continue with others
 
     # ------------------------------------------------------------------
-    # Step 7: Detect contradictions
+    # Step 6: Detect contradictions
     # ------------------------------------------------------------------
     contradictions = detect_contradictions(anthropic_client, findings)
 
     # ------------------------------------------------------------------
-    # Step 8: Write contradiction flags (non-blocking)
+    # Step 7: Write contradiction flags (non-blocking)
     # ------------------------------------------------------------------
     if contradictions:
         doc_ref_to_id = _build_doc_reference_map(retrieval)
@@ -128,12 +117,12 @@ def process_query(request: QueryRequest) -> QueryResponse:
         )
 
     # ------------------------------------------------------------------
-    # Step 9: Determine confidence (deterministic)
+    # Step 8: Determine confidence (deterministic)
     # ------------------------------------------------------------------
     confidence = determine_confidence(findings, contradictions, retrieval)
 
     # ------------------------------------------------------------------
-    # Step 10: Build response text (deterministic)
+    # Step 9: Build response text (deterministic)
     # ------------------------------------------------------------------
     all_citations = _collect_all_citations(findings)
     response_text = build_response_text(
@@ -141,7 +130,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
     )
 
     # ------------------------------------------------------------------
-    # Step 11: Write audit log (must succeed)
+    # Step 10: Write audit log (must succeed)
     # ------------------------------------------------------------------
     audit_log_id = write_audit_log(
         supabase_client=supabase_client,
@@ -156,7 +145,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
     )
 
     # ------------------------------------------------------------------
-    # Step 12: Return response
+    # Step 11: Return response
     # ------------------------------------------------------------------
     logger.info(
         "query_processed",

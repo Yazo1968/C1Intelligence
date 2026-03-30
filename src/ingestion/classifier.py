@@ -1,18 +1,14 @@
 """
 C1 — Claude-Based Document Classification
 Classifies documents against the 176-type taxonomy using Claude tool_use
-for structured output. Also extracts text previews from Gemini-uploaded files.
+for structured output.
 """
 
 from __future__ import annotations
 
-import json
-
 import anthropic
-from google import genai
-from google.genai import types as genai_types
 
-from src.config import CLAUDE_MODEL, CLASSIFICATION_CONFIDENCE_THRESHOLD, GEMINI_MODEL
+from src.config import CLAUDE_MODEL, CLASSIFICATION_CONFIDENCE_THRESHOLD
 from src.logging_config import get_logger
 from src.ingestion.models import ClassificationResult, IngestionError
 
@@ -87,63 +83,6 @@ CLASSIFICATION_TOOL = {
         ],
     },
 }
-
-
-def extract_text_preview(
-    gemini_client: genai.Client,
-    gemini_file_uri: str,
-) -> str:
-    """
-    Use Gemini generate_content with an uploaded file's full URI to extract
-    a text representation of the document for Claude to classify.
-
-    Args:
-        gemini_file_uri: Full Gemini file URI
-            (e.g., "https://generativelanguage.googleapis.com/v1beta/files/abc123").
-
-    Returns the extracted text string.
-    Raises IngestionError if extraction fails.
-    """
-    try:
-        response = gemini_client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=[
-                genai_types.Content(
-                    parts=[
-                        genai_types.Part(
-                            file_data=genai_types.FileData(file_uri=gemini_file_uri)
-                        ),
-                        genai_types.Part(
-                            text=(
-                                "Extract the full text content of this document. "
-                                "Return only the raw text, preserving the structure "
-                                "(headings, paragraphs, tables). No commentary or summary."
-                            )
-                        ),
-                    ]
-                )
-            ],
-        )
-    except Exception as exc:
-        raise IngestionError(
-            stage="text_extraction",
-            message=f"Failed to extract text from Gemini file {gemini_file_uri}: {exc}",
-        ) from exc
-
-    text = response.text
-    if not text or not text.strip():
-        raise IngestionError(
-            stage="text_extraction",
-            message=f"Gemini returned empty text for file {gemini_file_uri}.",
-        )
-
-    logger.info(
-        "text_extracted",
-        gemini_file_uri=gemini_file_uri,
-        text_length=len(text),
-    )
-
-    return text
 
 
 def classify_document(

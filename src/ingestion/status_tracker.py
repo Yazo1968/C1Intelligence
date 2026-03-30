@@ -140,20 +140,11 @@ def update_document_metadata(
     document_id: uuid.UUID,
     classification: ClassificationResult | None = None,
     extracted: ExtractedMetadata | None = None,
-    gemini_file_name: str | None = None,
-    gemini_document_name: str | None = None,
 ) -> None:
     """
-    Update the document record with classification results, extracted metadata,
-    and Gemini references.
+    Update the document record with classification results and extracted metadata.
     """
     update_data: dict = {}
-
-    if gemini_file_name is not None:
-        update_data["gemini_file_name"] = gemini_file_name
-
-    if gemini_document_name is not None:
-        update_data["gemini_document_name"] = gemini_document_name
 
     if classification is not None:
         update_data["document_type_id"] = classification.document_type_id

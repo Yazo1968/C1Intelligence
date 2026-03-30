@@ -6,8 +6,37 @@ Pydantic models for all data flowing through the ingestion pipeline.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from pydantic import BaseModel, Field
+
+
+@dataclass
+class ParsedDocument:
+    """Output of document parsing via Docling."""
+    text: str
+    sections: list[dict[str, str | None]] = field(default_factory=list)
+    page_count: int | None = None
+    format: str = ""
+
+
+@dataclass
+class Chunk:
+    """A single chunk of document text ready for embedding."""
+    index: int
+    content: str
+    token_count: int
+    section_heading: str | None = None
+
+
+@dataclass
+class EmbeddedChunk:
+    """A chunk with its vector embedding from Gemini Embeddings API."""
+    index: int
+    content: str
+    token_count: int
+    section_heading: str | None = None
+    embedding: list[float] = field(default_factory=list)
 
 
 class IngestionError(Exception):

@@ -24,7 +24,6 @@ class ProjectResponse(BaseModel):
     id: uuid.UUID
     name: str
     description: str | None
-    gemini_store_name: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -42,8 +41,6 @@ class DocumentResponse(BaseModel):
     filename: str
     status: str
     tier: int | None = None
-    gemini_file_name: str | None
-    gemini_document_name: str | None
     document_date: date | None
     document_reference_number: str | None
     issuing_party_id: uuid.UUID | None

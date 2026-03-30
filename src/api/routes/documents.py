@@ -197,8 +197,6 @@ def _to_document_response(row: dict) -> DocumentResponse:
         filename=row["filename"],
         status=row["status"],
         tier=doc_type.get("tier"),
-        gemini_file_name=row.get("gemini_file_name"),
-        gemini_document_name=row.get("gemini_document_name"),
         document_date=row.get("document_date"),
         document_reference_number=row.get("document_reference_number"),
         issuing_party_id=uuid.UUID(row["issuing_party_id"]) if row.get("issuing_party_id") else None,
