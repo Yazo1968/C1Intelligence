@@ -67,3 +67,49 @@ Tracks completion status and deferred issues for each migration step.
 - All 3 LOW issues from Step 2 resolved
 
 **No issues found.**
+
+---
+
+## Step 5 — End-to-End Smoke Test (Quality Guardian) — ✅ Complete
+
+**Date:** 2026-03-30
+
+**Pre-flight baseline:**
+- `document_chunks` for test project: 0 rows
+- `documents` for test project: 3 rows
+
+**Tests executed:**
+
+**Test 1 — Upload and chunk verification:** PASS
+- PDF created programmatically (FIDIC Sub-Clause 8.4 Notice of Delay, 300+ words) using reportlab
+- JWT obtained via Supabase Auth for `smoketest@c1.local`
+- POST `/projects/f1049a59.../documents` → HTTP 201, `status=STORED`, `document_id=3612973c-9c17-4e9f-b0b5-db0da294d020`
+- Classification: "Notice of Delay (FIDIC 8.5 [2017] / 8.4 [1999])", confidence=0.99, taxonomy ID 145
+- `document_chunks` count: 7, all 7 with non-null embeddings, `documents.status=STORED`
+
+**Test 2 — Natural language query:** PASS
+- POST `/projects/f1049a59.../query` → HTTP 200
+- `confidence=AMBER` (not GREY — content retrieved from pgvector), `response_text` non-empty (3 specialist domain findings)
+- `document_ids_at_query_time` contains uploaded document UUID `3612973c-9c17-4e9f-b0b5-db0da294d020`
+- Note: API response uses `document_ids_at_query_time` for source attribution (not `citations` field)
+
+**Test 3 — Audit log entry:** PASS
+- `query_log` row `id=c085a117-53a4-47fb-9fe7-11ee1dc30aaa` present, matches `audit_log_id` from API response
+- `document_ids_at_query_time` contains `3612973c-9c17-4e9f-b0b5-db0da294d020`
+- `confidence=AMBER` matches API response
+
+**Test 4 — Document deletion and chunk cascade:** PASS
+- Pre-deletion chunk count: 7
+- `DELETE FROM documents WHERE id = '3612973c-...'` executed
+- Post-deletion chunk count: 0 — FK CASCADE DELETE confirmed working
+
+**Test 5 — GREY confidence after deletion:** PASS
+- POST `/projects/f1049a59.../query` (fresh JWT) → HTTP 200
+- `confidence=GREY`, response_text: "The document warehouse contains no documents relevant to this query"
+
+**Post-test cleanup:**
+- `test_notice_of_delay.pdf` deleted
+- `grep -r --include="*.py" "store_manager|...|grounding_metadata" src/` → zero matches (exit code 1)
+- `.pyc` binary cache files matched (expected — stale compiled artifacts), source `.py` files clean
+
+**No issues found. Migration fully verified end-to-end.**

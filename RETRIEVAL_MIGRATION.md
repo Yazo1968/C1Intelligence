@@ -3,7 +3,7 @@
 
 **Version:** 1.0
 **Status:** Active — Reference Document
-**Last Updated:** March 2026
+**Last Updated:** 2026-03-30
 
 ---
 
@@ -53,7 +53,7 @@ This plan replaces Gemini File Search with a self-owned pgvector pipeline runnin
 | 2 | Ingestion pipeline rebuild — Docling parsing + chunking + Gemini embedding + Supabase storage | Ingestion Engineer | ✅ Complete |
 | 3 | Retrieval layer rebuild — pgvector similarity search + full-text hybrid search | Agent Orchestrator | ✅ Complete |
 | 4 | Cleanup — remove all Gemini File Search store management code | API Engineer | ✅ Complete |
-| 5 | End-to-end smoke test — upload, chunk, embed, query, verify audit log | Quality Guardian | ⬜ Not Started |
+| 5 | End-to-end smoke test — upload, chunk, embed, query, verify audit log | Quality Guardian | ✅ Complete |
 
 ---
 

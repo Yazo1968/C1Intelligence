@@ -1,10 +1,18 @@
 # C1 — Construction Documentation Intelligence Platform
 
 **Codename:** C1
-**Version:** Pre-PRD v0.1
-**Status:** Confidential — Active Development
+**Version:** 0.1 — Deployed
+**Status:** Confidential — Live
 **Market:** GCC — UAE, Saudi Arabia, Qatar
 **Date:** March 2026
+
+### Live Deployment
+
+| Component | URL |
+|---|---|
+| Frontend | https://c1intelligence.vercel.app |
+| Backend API | https://web-production-6f2c4.up.railway.app |
+| Health Check | https://web-production-6f2c4.up.railway.app/health |
 
 ---
 
@@ -109,19 +117,33 @@ Reference documents may be ingested manually, extracted from integrated document
 
 ### 6.3 Document Ingestion — Phase 1 (Manual Upload)
 
-C1 Phase 1 uses Google Gemini File Search as the document ingestion and retrieval engine. Gemini handles upload, OCR, text extraction, chunking, embedding, and semantic indexing. C1 applies a governance layer on top of Gemini that handles classification, validation, and approval.
+C1 Phase 1 uses a self-owned ingestion pipeline. The platform handles all stages of document processing without dependency on a third-party document search service.
+
+**Ingestion pipeline (in order):**
+
+1. **Parsing** — Docling extracts structured text from PDF (text-based and OCR/scanned), DOCX, and XLSX files. Output is full markdown text plus section headings.
+
+2. **Classification** — Claude AI classifies the document against the 176-type taxonomy. Confidence threshold of 0.7 required for auto-classification; documents below threshold go to `classification_queue`.
+
+3. **Metadata extraction** — Claude AI extracts structured metadata from document content (dates, parties, contract references, FIDIC sub-clauses, financial figures).
+
+4. **Chunking** — tiktoken cl100k_base splits the document into section-aware chunks (512-token target, 50-token overlap). Section headings are preserved per chunk for attribution.
+
+5. **Embedding** — Gemini Embeddings API (gemini-embedding-001) generates 3072-dimension vectors for each chunk, batched at 100.
+
+6. **Storage** — Chunks and embeddings are written atomically to `document_chunks` in Supabase pgvector. On any failure, chunks are rolled back and `documents.status` is set to `FAILED`.
+
+**Processing status is always visible:** `QUEUED` → `EXTRACTING` → `CLASSIFYING` → `STORED` / `FAILED`.
 
 The ingestion governance process for every manually uploaded document:
 
-1. **Document classification** — the user selects the document type from the taxonomy at the point of upload. Claude AI validates the classification by comparing the document content against the selected type.
+1. **Document classification** — Claude AI classifies the document against the taxonomy and validates it. If confidence is below threshold, the document goes to `classification_queue`.
 
-2. **Validation** — if the document does not match the selected type (e.g. a contract uploaded as a notice), the system flags the discrepancy and asks the user to confirm or reclassify.
+2. **Validation** — if the document does not match its expected type, the system flags the discrepancy.
 
-3. **Gap identification** — if the document is correctly classified but missing required metadata fields, the system prompts the user to supply the missing data.
+3. **Gap identification** — if the document is correctly classified but missing required metadata fields, the system records the gap.
 
-4. **User override** — if the user proceeds despite flags or gaps, the document is ingested together with all flags, questions raised, and the user's responses as embedded notes. This transfers accountability to the user and creates an auditable record of the conscious decision.
-
-5. **Approval flow** — each document type is linked to one of three predefined approval workflows, each requiring action from designated roles within the platform's authority matrix before the document is admitted to the warehouse. No document ingestion is a unilateral act.
+4. **Approval flow** — each document type is linked to one of three predefined approval workflows (to be implemented in Phase 2). No document ingestion is a unilateral act.
 
 ### 6.4 Document Ingestion — Phase 2 (Integrated System Ingestion)
 
@@ -160,7 +182,10 @@ Master Orchestrator (Claude API)
     ↓
 Domain Identification — which of 6 domains are relevant?
     ↓
-Gemini File Search — retrieves relevant document chunks with citations
+Hybrid Retrieval (pgvector on Supabase):
+    Semantic search (cosine similarity, gemini-embedding-001)
+    + Full-text search (PostgreSQL tsvector)
+    → top-k chunks with content, section heading, document metadata
     ↓
 Domain Specialists (Claude API):
     Legal & Contractual / Commercial & Financial / Schedule & Programme /
@@ -226,13 +251,16 @@ A compliance officer conducting a periodic review of a portfolio of projects use
 
 | Component | Technology | Purpose |
 |---|---|---|
-| Document ingestion & retrieval | Google Gemini File Search API | Upload, OCR, chunking, embedding, semantic indexing, retrieval, citations |
+| Document parsing | Docling | PDF (text + OCR), DOCX, XLSX text extraction → structured markdown |
+| Chunking | tiktoken cl100k_base | Section-aware splitting (512-token target, 50-token overlap) |
+| Embeddings | Gemini Embeddings API (gemini-embedding-001) | 3072-dimension dense vectors, batched at 100 |
+| Vector store & retrieval | pgvector on Supabase | Cosine similarity search + PostgreSQL tsvector full-text, hybrid RPC |
 | AI agents & reasoning | Anthropic Claude API | Classification, metadata extraction, domain specialists, orchestration, contradiction detection |
-| Structured database | Supabase (PostgreSQL) | Relational metadata, contradiction flags, immutable audit log |
+| Structured database | Supabase (PostgreSQL) | Relational metadata, chunk storage, contradiction flags, immutable audit log |
 | Authentication | Supabase Auth | User accounts, sessions, JWT tokens, row-level security |
 | Backend / API | Python — FastAPI | Business logic layer exposing intelligence to the frontend |
-| Frontend | To be defined | User interface for document upload, querying, and results |
-| Backend hosting | Railway | Hosts the FastAPI backend — deploys directly from GitHub |
+| Frontend | React + TypeScript + Tailwind CSS | Document upload, querying, audit log, confidence display |
+| Backend hosting | Railway (Dockerfile builder) | Hosts the FastAPI backend — deploys from GitHub via Dockerfile |
 | Frontend hosting | Vercel | Hosts and serves the frontend |
 
 ### Deployment Architecture
@@ -243,19 +271,21 @@ User (browser)
 Vercel — serves the frontend
     ↓  authenticated request (JWT token from Supabase Auth)
 FastAPI backend (Railway)
-    ↓                    ↓                         ↓
-Gemini File Search    Claude API               Supabase
-(document content)    (agents & reasoning)     (metadata + auth + audit)
+    ↓                         ↓                         ↓
+Ingestion pipeline         Claude API               Supabase
+(Docling + tiktoken        (agents & reasoning)     (metadata + chunks +
+ + Gemini Embeddings                                 embeddings + auth + audit)
+ → pgvector)
 ```
 
 ### Responsibility Boundaries
 
-**Gemini File Search handles:**
-- Document upload, OCR, text extraction
-- Chunking and embedding
-- Semantic indexing and retrieval
-- Citation generation
-- Document-level metadata as key-value pairs (project ID, document type, tier, date) — used for filtering at retrieval time
+**Ingestion pipeline handles (`src/ingestion/`):**
+- Document parsing — Docling (PDF text + OCR, DOCX, XLSX)
+- Section-aware chunking — tiktoken cl100k_base
+- Embedding — Gemini Embeddings API (gemini-embedding-001, 3072 dims)
+- Chunk storage — pgvector on Supabase (`document_chunks`)
+- Hybrid retrieval — cosine similarity + tsvector full-text (via Supabase RPC)
 
 **Claude API handles:**
 - Document classification against the taxonomy
@@ -267,7 +297,9 @@ Gemini File Search    Claude API               Supabase
 
 **Supabase handles:**
 - Projects, parties, contracts, document types — relational structured data
-- Document registry — each document's Gemini reference, classification, processing status
+- Document registry — each document's classification, processing status (`documents` table)
+- Document chunks and embeddings — `document_chunks` table (immutable, CASCADE DELETE)
+- Retrieval RPC functions — `search_chunks_semantic` and `search_chunks_fulltext`
 - Contradiction flags (project-scoped — never cross-project)
 - Immutable query audit log (UPDATE and DELETE blocked by database trigger)
 - Classification queue for documents that cannot be auto-classified
@@ -293,7 +325,8 @@ Gemini File Search    Claude API               Supabase
 | `contracts` | Each contract within a project |
 | `parties` | Each party with their role from the Party Register |
 | `document_types` | 176 document types seeded from taxonomy v0.4 |
-| `documents` | Every document ingested — metadata, Gemini reference, classification, status |
+| `documents` | Every document ingested — metadata, classification, processing status |
+| `document_chunks` | Chunked text + 3072-dim embeddings (immutable, CASCADE DELETE from documents) |
 | `contradiction_flags` | Detected contradictions between document pairs (project-scoped) |
 | `query_log` | Immutable audit trail — every query and response |
 | `classification_queue` | Documents pending manual classification |
@@ -348,29 +381,157 @@ C1's five most defensible differentiators:
 
 ---
 
-## 16. Repository Structure
+## 16. Getting Started
+
+### Prerequisites
+
+- Python 3.13+
+- Node.js 18+
+- A Supabase project with migrations applied
+- API keys for Gemini and Anthropic Claude
+
+### Local Development
+
+```bash
+# Clone the repository
+git clone https://github.com/Yazo1968/C1Intelligence.git
+cd C1Intelligence
+
+# Copy environment template and fill in real values
+cp .env.example .env
+
+# Install backend dependencies
+pip install -r requirements.txt
+
+# Start the backend
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+# In a separate terminal — install and start the frontend
+cd frontend
+npm install
+npm run dev
+```
+
+### Environment Variables
+
+**Backend (.env):**
+- `SUPABASE_URL` — Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key (server-side only)
+- `ANTHROPIC_API_KEY` — Anthropic Claude API key
+- `GEMINI_API_KEY` — Google Gemini API key
+
+**Frontend (frontend/.env.local):**
+- `VITE_SUPABASE_URL` — Supabase project URL
+- `VITE_SUPABASE_PUBLISHABLE_KEY` — Supabase anon key (public, safe for frontend)
+- `VITE_API_BASE_URL` — Backend URL (e.g., `http://localhost:8000`)
+
+### Database Migrations
+
+Apply migrations in order against your Supabase project:
+1. `supabase/migrations/001_initial_schema.sql` — 8 tables, triggers, 176-row taxonomy seed
+2. `supabase/migrations/002_rls_policies.sql` — Row Level Security policies
+3. `supabase/migrations/003_classification_queue_project_id.sql` — Denormalized project_id
+4. `supabase/migrations/004_pgvector.sql` — pgvector extension, `document_chunks` table, RLS, RPC functions
+5. `supabase/migrations/005_document_chunks_immutable.sql` — Removes UPDATE RLS (chunks are write-once)
+6. `supabase/migrations/006_retrieval_functions.sql` — `search_chunks_semantic` and `search_chunks_fulltext` RPCs
+
+---
+
+## 17. Repository Structure
 
 ```
 /
-├── README.md                    ← This file — single source of truth
-├── CLAUDE.md                    ← Behavioural contract for Claude Code
-├── C1_TAXONOMY_v0.4.xlsx        ← Document taxonomy (176 types, 10 categories)
+├── README.md                           ← This file — single source of truth
+├── CLAUDE.md                           ← Behavioural contract for Claude Code
+├── C1_TAXONOMY_v0.4.xlsx               ← Document taxonomy (176 types, 10 categories)
+├── requirements.txt                    ← Python dependencies
+├── Dockerfile                          ← Railway container build
+├── Procfile                            ← Legacy start command (reference only)
+├── railway.json                        ← Railway config — Dockerfile builder
+├── .env.example                        ← Environment variable template
 ├── supabase/
-│   └── migrations/              ← Database schema migrations
+│   └── migrations/
+│       ├── 001_initial_schema.sql      ← 8 tables, triggers, 176-row seed
+│       ├── 002_rls_policies.sql        ← Row Level Security policies
+│       ├── 003_classification_queue_project_id.sql
+│       ├── 004_pgvector.sql            ← pgvector, document_chunks table, RLS, RPC functions
+│       ├── 005_document_chunks_immutable.sql ← Chunks are write-once (no UPDATE RLS)
+│       └── 006_retrieval_functions.sql ← search_chunks_semantic + search_chunks_fulltext
 ├── src/
-│   ├── agents/                  ← Master orchestrator + 6 domain specialists
-│   ├── ingestion/               ← Gemini File Search integration + governance layer
-│   └── api/                     ← FastAPI backend
-└── tests/                       ← Test suite
+│   ├── config.py                       ← Environment variable loading
+│   ├── clients.py                      ← Supabase + Gemini client singletons
+│   ├── logging_config.py               ← Structured logging (structlog)
+│   ├── ingestion/                      ← Self-owned ingestion pipeline
+│   │   ├── parser.py                   ← Docling document parsing (lazy import)
+│   │   ├── chunker.py                  ← Section-aware chunking with tiktoken
+│   │   ├── embedder.py                 ← Gemini Embeddings API (batched, 3072 dims)
+│   │   ├── store.py                    ← Atomic pgvector chunk storage + rollback
+│   │   ├── classifier.py               ← Claude-based taxonomy classification
+│   │   ├── metadata_extractor.py       ← Claude-based metadata extraction
+│   │   ├── validator.py                ← Tier-based field validation
+│   │   ├── pipeline.py                 ← Full ingestion orchestration
+│   │   └── models.py                   ← Ingestion data models
+│   ├── agents/                         ← Intelligence layer
+│   │   ├── orchestrator.py             ← Master orchestrator
+│   │   ├── specialists.py              ← 6 domain specialist agents
+│   │   ├── contradiction.py            ← Contradiction detection + write-back
+│   │   ├── retrieval.py                ← pgvector hybrid retrieval
+│   │   ├── synthesis.py                ← Response synthesis + confidence
+│   │   └── models.py                   ← Agent data models
+│   └── api/                            ← FastAPI backend
+│       ├── main.py                     ← App entry point
+│       ├── auth.py                     ← JWT validation middleware
+│       ├── errors.py                   ← Structured error handlers
+│       ├── schemas.py                  ← Pydantic request/response models
+│       └── routes/
+│           ├── health.py               ← GET /health (no auth)
+│           ├── projects.py             ← POST/GET /projects
+│           ├── documents.py            ← POST/GET documents
+│           └── queries.py              ← POST query, GET audit log, GET contradictions
+├── frontend/                           ← React + TypeScript + Tailwind CSS
+│   ├── src/
+│   │   ├── config.ts                   ← Environment variable loading
+│   │   ├── lib/supabase.ts             ← Supabase client
+│   │   ├── lib/api.ts                  ← Backend API client
+│   │   ├── contexts/AuthContext.tsx     ← Auth state management
+│   │   ├── pages/
+│   │   │   ├── LoginPage.tsx
+│   │   │   ├── ProjectsPage.tsx
+│   │   │   ├── ProjectPage.tsx
+│   │   │   └── AuditLogPage.tsx
+│   │   └── components/
+│   │       ├── DocumentsPanel.tsx
+│   │       ├── QueryPanel.tsx
+│   │       └── QueryResponse.tsx       ← Most important UI component
+│   └── ...
+└── tests/                              ← Test suite (to be built)
 ```
 
 ---
 
-## 17. Document Control
+## 18. API Endpoints
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `GET` | `/health` | No | Deployment health check |
+| `POST` | `/projects` | Yes | Create project |
+| `GET` | `/projects` | Yes | List user's projects |
+| `POST` | `/projects/{id}/documents` | Yes | Upload + classify document |
+| `GET` | `/projects/{id}/documents` | Yes | List project documents |
+| `GET` | `/projects/{id}/documents/{doc_id}` | Yes | Get document detail |
+| `POST` | `/projects/{id}/query` | Yes | Submit natural language query |
+| `GET` | `/projects/{id}/query-log` | Yes | Retrieve immutable audit log |
+| `GET` | `/projects/{id}/contradictions` | Yes | List contradiction flags |
+
+All authenticated endpoints require `Authorization: Bearer <jwt>` from Supabase Auth.
+
+---
+
+## 19. Document Control
 
 | Field | Value |
 |---|---|
-| Version | 0.1 Draft |
-| Date | March 2026 |
-| Status | Confidential — Internal Working Document |
+| Version | 0.2 — pgvector migration complete |
+| Date | March 2026 (initial: 2026-03-28, pgvector migration: 2026-03-30) |
+| Status | Confidential — Live |
 | Codename | C1 |
