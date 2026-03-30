@@ -101,3 +101,30 @@ class QueryResponse(BaseModel):
     contradictions: list[ContradictionFlag] = Field(default_factory=list)
     document_ids_at_query_time: list[uuid.UUID] = Field(default_factory=list)
     audit_log_id: uuid.UUID | None = None
+
+
+# =============================================================================
+# Phase 1 — Agentic Specialist Models (AGENT_PLAN.md)
+# =============================================================================
+
+
+class SpecialistFindings(BaseModel):
+    """
+    Output of a single agentic specialist run.
+    Used by BaseSpecialist (Phase 1+). Distinct from the legacy SpecialistFinding
+    model above, which remains in use by the v1 orchestrator until Phase 2.
+    """
+
+    domain: str
+    findings: str
+    confidence: str  # GREEN / AMBER / RED / GREY
+    sources_used: list[str] = Field(
+        default_factory=list, description="document_ids that contributed"
+    )
+    tools_called: list[str] = Field(
+        default_factory=list, description="Tool names called during this run"
+    )
+    round_number: int = Field(description="1 or 2")
+    flagged_contradictions: list[str] = Field(
+        default_factory=list, description="contradiction_flag IDs surfaced"
+    )
