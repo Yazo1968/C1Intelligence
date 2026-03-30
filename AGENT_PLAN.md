@@ -92,8 +92,8 @@ Synthesis → Confidence → Audit Log → Response
 
 | Phase | Description | Status |
 |---|---|---|
-| 1 | Agent Template | ⬜ Not Started |
-| 2 | Multi-Round Orchestrator | ⬜ Not Started |
+| 1 | Agent Template | ✅ Complete |
+| 2 | Multi-Round Orchestrator | ✅ Complete |
 | 3 | Claims & Disputes Skills + Validation | ⬜ Not Started |
 | 4 | Remaining Five Specialists | ⬜ Not Started |
 | 5 | Cross-Specialist Contradiction Detection | ⬜ Not Started |
