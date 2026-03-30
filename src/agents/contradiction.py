@@ -17,6 +17,7 @@ from src.agents.models import (
     AgentError,
     ContradictionFlag,
     SpecialistFinding,
+    SpecialistFindings,
 )
 from src.agents.prompts import CONTRADICTION_SYSTEM_PROMPT
 
@@ -77,19 +78,27 @@ CONTRADICTION_TOOL = {
 
 def detect_contradictions(
     anthropic_client: anthropic.Anthropic,
-    findings: list[SpecialistFinding],
+    findings: list[SpecialistFindings] | list[SpecialistFinding],
 ) -> list[ContradictionFlag]:
     """
     Scan all specialist findings for conflicting values across documents.
     Uses Claude to detect contradictions.
 
+    Accepts both SpecialistFindings (Phase 2+) and SpecialistFinding (v1 legacy).
     Returns list of ContradictionFlag (empty if none found).
     """
-    # Need at least 2 findings with citations to have a contradiction
-    all_citations_count = sum(
-        len(c) for f in findings for kf in f.key_findings for c in [kf.citations]
-    )
-    if len(findings) < 1 or all_citations_count < 2:
+    # Need at least 2 findings with sources to have a contradiction
+    if len(findings) < 2:
+        return []
+
+    # Check for sufficient source material
+    if isinstance(findings[0], SpecialistFindings):
+        has_sources = any(f.sources_used for f in findings)
+    else:
+        has_sources = any(
+            kf.citations for f in findings for kf in f.key_findings
+        )
+    if not has_sources:
         return []
 
     findings_text = _format_findings_for_detection(findings)
@@ -201,25 +210,38 @@ def write_contradiction_flags(
     )
 
 
-def _format_findings_for_detection(findings: list[SpecialistFinding]) -> str:
+def _format_findings_for_detection(
+    findings: list[SpecialistFindings] | list[SpecialistFinding],
+) -> str:
     """Format all specialist findings into text for contradiction scanning."""
     sections: list[str] = []
 
     for finding in findings:
-        lines: list[str] = [f"=== {finding.domain.upper()} ==="]
-        for kf in finding.key_findings:
-            lines.append(f"\nFinding: {kf.statement}")
-            for cite in kf.citations:
-                cite_parts: list[str] = []
-                if cite.document_reference:
-                    cite_parts.append(f"Ref: {cite.document_reference}")
-                if cite.document_type:
-                    cite_parts.append(f"Type: {cite.document_type}")
-                if cite.document_date:
-                    cite_parts.append(f"Date: {cite.document_date}")
-                cite_header = " | ".join(cite_parts) if cite_parts else "Unknown"
-                lines.append(f"  Source [{cite_header}]: {cite.excerpt}")
-        sections.append("\n".join(lines))
+        if isinstance(finding, SpecialistFindings):
+            # Phase 2+ format: findings text + sources_used IDs
+            lines: list[str] = [f"=== {finding.domain.upper()} ==="]
+            lines.append(f"\n{finding.findings}")
+            if finding.sources_used:
+                lines.append("\nSources referenced:")
+                for doc_id in finding.sources_used:
+                    lines.append(f"  - Document: {doc_id}")
+            sections.append("\n".join(lines))
+        else:
+            # v1 legacy format: key_findings with citations
+            lines = [f"=== {finding.domain.upper()} ==="]
+            for kf in finding.key_findings:
+                lines.append(f"\nFinding: {kf.statement}")
+                for cite in kf.citations:
+                    cite_parts: list[str] = []
+                    if cite.document_reference:
+                        cite_parts.append(f"Ref: {cite.document_reference}")
+                    if cite.document_type:
+                        cite_parts.append(f"Type: {cite.document_type}")
+                    if cite.document_date:
+                        cite_parts.append(f"Date: {cite.document_date}")
+                    cite_header = " | ".join(cite_parts) if cite_parts else "Unknown"
+                    lines.append(f"  Source [{cite_header}]: {cite.excerpt}")
+            sections.append("\n".join(lines))
 
     return "\n\n".join(sections)
 

@@ -97,7 +97,7 @@ class QueryResponse(BaseModel):
     response_text: str
     confidence: ConfidenceLevel
     domains_engaged: list[str]
-    specialist_findings: list[SpecialistFinding] = Field(default_factory=list)
+    specialist_findings: list["SpecialistFindings"] = Field(default_factory=list)
     contradictions: list[ContradictionFlag] = Field(default_factory=list)
     document_ids_at_query_time: list[uuid.UUID] = Field(default_factory=list)
     audit_log_id: uuid.UUID | None = None

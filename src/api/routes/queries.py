@@ -74,23 +74,12 @@ async def submit_query(
         specialist_findings=[
             {
                 "domain": f.domain,
-                "analysis": f.analysis,
-                "key_findings": [
-                    {
-                        "statement": kf.statement,
-                        "citations": [
-                            {
-                                "document_id": str(c.document_id) if c.document_id else None,
-                                "document_type": c.document_type,
-                                "document_date": c.document_date,
-                                "document_reference": c.document_reference,
-                                "excerpt": c.excerpt,
-                            }
-                            for c in kf.citations
-                        ],
-                    }
-                    for kf in f.key_findings
-                ],
+                "findings": f.findings,
+                "confidence": f.confidence,
+                "sources_used": f.sources_used,
+                "tools_called": f.tools_called,
+                "round_number": f.round_number,
+                "flagged_contradictions": f.flagged_contradictions,
             }
             for f in result.specialist_findings
         ],
