@@ -28,17 +28,23 @@ class QueryRequest(BaseModel):
 
 
 class RetrievedChunk(BaseModel):
-    """A single chunk returned by Gemini File Search with citation info."""
+    """A single chunk from Layer 1 (project documents) or Layer 2 (reference documents).
+
+    Layer 1 chunks are project-scoped and have document_id.
+    Layer 2 chunks are platform-wide reference material (FIDIC, PMBOK, etc.)
+    and are identified by is_reference=True.
+    """
     text: str
     document_id: uuid.UUID | None = None
     document_type: str | None = None
     document_date: str | None = None
     document_reference: str | None = None
     relevance_score: float | None = None
+    is_reference: bool = False
 
 
 class RetrievalResult(BaseModel):
-    """Output of Gemini File Search retrieval."""
+    """Output of pgvector hybrid retrieval (Layer 1 + Layer 2)."""
     chunks: list[RetrievedChunk] = Field(default_factory=list)
     is_empty: bool = True
 

@@ -245,25 +245,42 @@ class BaseSpecialist:
         retrieved_chunks: list[dict],
         round_1_findings: dict | None,
     ) -> str:
-        """Build the user message from query, chunks, and optional Round 1 findings."""
+        """Build the user message from query, Layer 1/Layer 2 chunks, and optional Round 1 findings."""
         parts: list[str] = [f"QUERY: {query}"]
 
-        # Retrieved chunks
-        if retrieved_chunks:
-            parts.append("\n--- RETRIEVED DOCUMENT CHUNKS ---\n")
-            for i, chunk in enumerate(retrieved_chunks):
+        # Separate Layer 1 (project) and Layer 2 (reference) chunks
+        layer1_chunks = [c for c in retrieved_chunks if not c.get("is_reference")]
+        layer2_chunks = [c for c in retrieved_chunks if c.get("is_reference")]
+
+        # Layer 1 — Project Document Chunks
+        if layer1_chunks:
+            parts.append("\n--- PROJECT DOCUMENT CHUNKS (Layer 1) ---\n")
+            for i, chunk in enumerate(layer1_chunks):
                 doc_id = chunk.get("document_id", "unknown")
                 content = chunk.get("content", "")
                 chunk_idx = chunk.get("chunk_index", i)
                 parts.append(
                     f"[Chunk {chunk_idx} | Document: {doc_id}]\n{content}\n"
                 )
-            parts.append("--- END RETRIEVED CHUNKS ---")
-        else:
+            parts.append("--- END PROJECT DOCUMENT CHUNKS ---")
+        elif not layer2_chunks:
+            # Only show "no chunks" message if BOTH layers are empty
             parts.append(
                 "\n[No document chunks were retrieved for this query. "
                 "Use the search_chunks tool to find relevant documents.]\n"
             )
+
+        # Layer 2 — Reference Document Chunks (omit section entirely if empty)
+        if layer2_chunks:
+            parts.append("\n--- REFERENCE DOCUMENT CHUNKS (Layer 2 — Standards and Regulations) ---\n")
+            for chunk in layer2_chunks:
+                doc_ref = chunk.get("document_reference", "unknown")
+                doc_type = chunk.get("document_type", "unknown")
+                content = chunk.get("content", "")
+                parts.append(
+                    f"[Reference: {doc_ref} | Standard: {doc_type}]\n{content}\n"
+                )
+            parts.append("--- END REFERENCE DOCUMENT CHUNKS ---")
 
         # Round 1 findings (for Round 2 specialists only)
         if round_1_findings:

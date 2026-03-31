@@ -147,6 +147,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
             "document_type": chunk.document_type,
             "document_date": chunk.document_date,
             "document_reference": chunk.document_reference,
+            "is_reference": chunk.is_reference,
         }
         for idx, chunk in enumerate(retrieval.chunks)
     ]

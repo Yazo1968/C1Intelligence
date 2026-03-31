@@ -1,10 +1,11 @@
 """
-C1 -- pgvector Retrieval
-Queries document_chunks via Supabase RPC functions for hybrid search:
-  - Semantic (vector cosine similarity via pgvector)
-  - Full-text (PostgreSQL tsvector/tsquery)
-Merges, deduplicates, enriches with document metadata, and returns
-RetrievalResult compatible with the orchestrator.
+C1 -- pgvector Retrieval (Two-Layer Warehouse)
+Queries document_chunks (Layer 1, project-scoped) and reference_chunks
+(Layer 2, platform-wide) via Supabase RPC functions for hybrid search:
+  - Layer 1: semantic + full-text on project documents
+  - Layer 2: semantic + full-text on reference documents (FIDIC, PMBOK, etc.)
+Merges, deduplicates within each layer, enriches with document metadata,
+and returns RetrievalResult compatible with the orchestrator.
 """
 
 from __future__ import annotations
@@ -29,53 +30,74 @@ def retrieve_chunks(
     query_text: str,
     project_id: uuid.UUID,
     top_k: int = 20,
+    reference_top_k: int = 5,
 ) -> RetrievalResult:
     """
-    Hybrid retrieval: semantic vector search + full-text search,
-    merged, deduplicated, enriched with document metadata.
+    Two-layer hybrid retrieval: Layer 1 (project documents) + Layer 2
+    (reference documents). Each layer uses semantic + full-text search,
+    merged and deduplicated within its own layer.
 
     Args:
         supabase_client: Supabase client for RPC calls and metadata lookups.
         gemini_client: Gemini client for query embedding.
         query_text: Natural language query from the user.
-        project_id: UUID of the project to scope the search.
-        top_k: Maximum number of chunks to return after merge.
+        project_id: UUID of the project to scope Layer 1 search.
+        top_k: Maximum number of Layer 1 chunks to return after merge.
+        reference_top_k: Maximum number of Layer 2 chunks to return after merge.
 
     Returns:
-        RetrievalResult with ranked chunks and is_empty flag.
+        RetrievalResult with ranked chunks (Layer 1 + Layer 2) and is_empty flag.
 
     Raises:
-        AgentError: If query embedding or semantic search fails.
+        AgentError: If query embedding or Layer 1 semantic search fails.
     """
     # ------------------------------------------------------------------
-    # Step 1: Embed the query
+    # Step 1: Embed the query (shared across all four searches)
     # ------------------------------------------------------------------
     query_embedding = _embed_query(gemini_client, query_text)
 
     # ------------------------------------------------------------------
-    # Step 2: Semantic search
+    # Step 2: Layer 1 — semantic search (project-scoped, fatal on failure)
     # ------------------------------------------------------------------
     semantic_results = _search_semantic(supabase_client, project_id, query_embedding, top_k)
 
     # ------------------------------------------------------------------
-    # Step 3: Full-text search (supplementary — failure does not block)
+    # Step 3: Layer 1 — full-text search (project-scoped, non-fatal)
     # ------------------------------------------------------------------
     fulltext_results = _search_fulltext(supabase_client, project_id, query_text, top_k)
 
     # ------------------------------------------------------------------
-    # Step 4: Merge and deduplicate
+    # Step 4: Layer 2 — reference semantic search (platform-wide, non-fatal)
     # ------------------------------------------------------------------
-    merged = _merge_and_deduplicate(semantic_results, fulltext_results, top_k)
+    ref_semantic_results = _search_reference_semantic(
+        supabase_client, query_embedding, reference_top_k
+    )
 
     # ------------------------------------------------------------------
-    # Step 5: Enrich with document metadata
+    # Step 5: Layer 2 — reference full-text search (platform-wide, non-fatal)
     # ------------------------------------------------------------------
-    doc_metadata = _fetch_document_metadata(supabase_client, merged)
+    ref_fulltext_results = _search_reference_fulltext(
+        supabase_client, query_text, reference_top_k
+    )
 
     # ------------------------------------------------------------------
-    # Step 6: Build RetrievedChunk list
+    # Step 6: Merge and deduplicate within each layer
     # ------------------------------------------------------------------
-    retrieved_chunks = _build_retrieved_chunks(merged, doc_metadata)
+    layer1_merged = _merge_and_deduplicate(semantic_results, fulltext_results, top_k)
+    layer2_merged = _merge_and_deduplicate(ref_semantic_results, ref_fulltext_results, reference_top_k)
+
+    # ------------------------------------------------------------------
+    # Step 7: Enrich with document metadata (each layer separately)
+    # ------------------------------------------------------------------
+    layer1_metadata = _fetch_document_metadata(supabase_client, layer1_merged)
+    layer2_metadata = _fetch_reference_document_metadata(supabase_client, layer2_merged)
+
+    # ------------------------------------------------------------------
+    # Step 8: Build RetrievedChunk list (Layer 1 first, then Layer 2)
+    # ------------------------------------------------------------------
+    layer1_chunks = _build_retrieved_chunks(layer1_merged, layer1_metadata, is_reference=False)
+    layer2_chunks = _build_retrieved_chunks(layer2_merged, layer2_metadata, is_reference=True)
+    retrieved_chunks = layer1_chunks + layer2_chunks
 
     is_empty = len(retrieved_chunks) == 0
 
@@ -83,9 +105,13 @@ def retrieve_chunks(
         "retrieval_completed",
         project_id=str(project_id),
         query_text_length=len(query_text),
-        semantic_hits=len(semantic_results),
-        fulltext_hits=len(fulltext_results),
-        merged_total=len(merged),
+        layer1_semantic_hits=len(semantic_results),
+        layer1_fulltext_hits=len(fulltext_results),
+        layer1_merged=len(layer1_merged),
+        layer2_semantic_hits=len(ref_semantic_results),
+        layer2_fulltext_hits=len(ref_fulltext_results),
+        layer2_merged=len(layer2_merged),
+        total_chunks=len(retrieved_chunks),
         is_empty=is_empty,
     )
 
@@ -188,6 +214,64 @@ def _search_fulltext(
         logger.warning(
             "fulltext_search_failed",
             project_id=str(project_id),
+            error=str(exc),
+        )
+        return []
+
+    return response.data or []
+
+
+def _search_reference_semantic(
+    supabase_client: SupabaseClient,
+    query_embedding: list[float],
+    top_k: int,
+) -> list[dict]:
+    """
+    Call the search_chunks_reference_semantic RPC function (Layer 2).
+
+    Platform-wide — no project_id filter.
+    On failure: logs warning and returns empty list (non-fatal).
+    """
+    try:
+        response = supabase_client.rpc(
+            "search_chunks_reference_semantic",
+            {
+                "p_query_embedding": query_embedding,
+                "p_top_k": top_k,
+            },
+        ).execute()
+    except Exception as exc:
+        logger.warning(
+            "reference_semantic_search_failed",
+            error=str(exc),
+        )
+        return []
+
+    return response.data or []
+
+
+def _search_reference_fulltext(
+    supabase_client: SupabaseClient,
+    query_text: str,
+    top_k: int,
+) -> list[dict]:
+    """
+    Call the search_chunks_reference_fulltext RPC function (Layer 2).
+
+    Platform-wide — no project_id filter.
+    On failure: logs warning and returns empty list (non-fatal).
+    """
+    try:
+        response = supabase_client.rpc(
+            "search_chunks_reference_fulltext",
+            {
+                "p_query_text": query_text,
+                "p_top_k": top_k,
+            },
+        ).execute()
+    except Exception as exc:
+        logger.warning(
+            "reference_fulltext_search_failed",
             error=str(exc),
         )
         return []
@@ -308,28 +392,94 @@ def _fetch_document_metadata(
     return metadata
 
 
+def _fetch_reference_document_metadata(
+    supabase_client: SupabaseClient,
+    merged_chunks: list[dict],
+) -> dict[str, dict]:
+    """
+    Fetch reference document metadata for all unique reference_document_ids
+    in the merged Layer 2 results.
+
+    Returns a dict keyed by reference_document_id string with values containing:
+        name, document_type.
+
+    On failure: logs warning, returns empty dict.
+    Enrichment failure must not block retrieval.
+    """
+    if not merged_chunks:
+        return {}
+
+    unique_ref_ids = list({
+        row["reference_document_id"]
+        for row in merged_chunks
+        if row.get("reference_document_id")
+    })
+    if not unique_ref_ids:
+        return {}
+
+    try:
+        response = (
+            supabase_client.table("reference_documents")
+            .select("id, name, document_type")
+            .in_("id", unique_ref_ids)
+            .execute()
+        )
+    except Exception as exc:
+        logger.warning(
+            "reference_document_metadata_fetch_failed",
+            error=str(exc),
+        )
+        return {}
+
+    ref_docs = response.data or []
+    if not ref_docs:
+        return {}
+
+    metadata: dict[str, dict] = {}
+    for doc in ref_docs:
+        metadata[doc["id"]] = {
+            "name": doc.get("name"),
+            "document_type": doc.get("document_type"),
+        }
+
+    return metadata
+
+
 def _build_retrieved_chunks(
     merged: list[dict],
     doc_metadata: dict[str, dict],
+    is_reference: bool = False,
 ) -> list[RetrievedChunk]:
     """
     Convert merged search results into RetrievedChunk objects,
     enriched with document metadata where available.
+
+    For Layer 1 (is_reference=False): uses document_id key and project document metadata.
+    For Layer 2 (is_reference=True): uses reference_document_id key and reference document metadata.
     """
     chunks: list[RetrievedChunk] = []
 
+    # Layer 2 rows use reference_document_id; Layer 1 rows use document_id
+    id_key = "reference_document_id" if is_reference else "document_id"
+
     for row in merged:
-        doc_id_str = row.get("document_id", "")
+        doc_id_str = row.get(id_key, "")
         meta = doc_metadata.get(doc_id_str, {})
 
-        # Use document_reference_number if available, fall back to filename
-        doc_reference = meta.get("document_reference_number") or meta.get("filename")
+        if is_reference:
+            # Layer 2: use reference document name and document_type
+            doc_reference = meta.get("name")
+            doc_type = meta.get("document_type")
+            date_str = None  # Reference documents don't have a document_date field
+        else:
+            # Layer 1: use document_reference_number, fall back to filename
+            doc_reference = meta.get("document_reference_number") or meta.get("filename")
+            doc_type = meta.get("document_type_name")
+            doc_date = meta.get("document_date")
+            date_str = str(doc_date) if doc_date else None
 
         # Use similarity for semantic results, rank for full-text-only
         score = row.get("similarity") if row.get("_source") == "semantic" else row.get("rank")
-
-        doc_date = meta.get("document_date")
-        date_str = str(doc_date) if doc_date else None
 
         try:
             doc_uuid = uuid.UUID(doc_id_str) if doc_id_str else None
@@ -340,10 +490,11 @@ def _build_retrieved_chunks(
             RetrievedChunk(
                 text=row.get("content", ""),
                 document_id=doc_uuid,
-                document_type=meta.get("document_type_name"),
+                document_type=doc_type,
                 document_date=date_str,
                 document_reference=doc_reference,
                 relevance_score=float(score) if score is not None else None,
+                is_reference=is_reference,
             )
         )
 

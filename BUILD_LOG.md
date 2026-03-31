@@ -231,6 +231,46 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 
 ---
 
+## C1_CLEANUP_PLAN Phase C2 — Layer 2 Retrieval Integration (Agent Orchestrator) — ✅ Complete
+
+**Date:** 2026-03-31
+**Active agent:** Agent Orchestrator
+**Quality Guardian:** PASS on all 4 tasks individually + combined review
+
+**Task 1 — Add `is_reference` field to RetrievedChunk:**
+- `src/agents/models.py` — added `is_reference: bool = False` to `RetrievedChunk`
+- Updated `RetrievedChunk` docstring: removed stale Gemini File Search reference, now describes Layer 1 vs Layer 2 chunks
+- Updated `RetrievalResult` docstring: "Output of Gemini File Search retrieval" → "Output of pgvector hybrid retrieval (Layer 1 + Layer 2)"
+
+**Task 2 — Extend `retrieve_chunks` to two-layer hybrid search:**
+- `src/agents/retrieval.py` — `retrieve_chunks` expanded from 6-step to 8-step flow
+- Added `reference_top_k: int = 5` parameter (improvement over spec: exposed rather than hardcoded)
+- New function `_search_reference_semantic` — calls `search_chunks_reference_semantic` RPC, platform-wide, non-fatal
+- New function `_search_reference_fulltext` — calls `search_chunks_reference_fulltext` RPC, platform-wide, non-fatal
+- Layer 1 and Layer 2 merge/dedup run separately (no cross-layer dedup)
+- Layer 2 chunks marked with `is_reference=True`
+- Logging updated with layer-specific hit counts
+- Module docstring updated to describe two-layer architecture
+
+**Task 3 — Reference document metadata enrichment:**
+- `src/agents/retrieval.py` — new function `_fetch_reference_document_metadata`
+- Queries `reference_documents` table for `name` and `document_type` given unique `reference_document_id` values
+- Non-fatal: logs warning and returns empty dict on failure
+- `_build_retrieved_chunks` updated to accept `is_reference` parameter: Layer 2 chunks use `reference_document_id` key, `name` for reference, `document_type` for type
+- File now has 10 functions (was 8)
+
+**Task 4 — Specialist message construction with Layer 1/Layer 2 separation:**
+- `src/agents/base_specialist.py` — `_build_user_message` now separates chunks into two labelled sections:
+  - `--- PROJECT DOCUMENT CHUNKS (Layer 1) ---` with `[Chunk {idx} | Document: {doc_id}]` format
+  - `--- REFERENCE DOCUMENT CHUNKS (Layer 2 — Standards and Regulations) ---` with `[Reference: {doc_ref} | Standard: {doc_type}]` format
+- Layer 2 section omitted entirely when no reference chunks present (no empty header)
+- "No chunks" message only shown when both layers are empty
+- `src/agents/orchestrator.py` — chunk dict conversion updated to include `"is_reference": chunk.is_reference`
+
+**Files changed:** `src/agents/models.py`, `src/agents/retrieval.py`, `src/agents/base_specialist.py`, `src/agents/orchestrator.py`
+
+---
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |
