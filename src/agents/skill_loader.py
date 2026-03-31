@@ -83,7 +83,7 @@ class SkillLoader:
                             error=str(exc),
                         )
 
-        # --- Layer 2: Project playbook ---
+        # --- Layer 2: Project playbook (flat file override or DB auto-generation) ---
         playbook_path = PLAYBOOKS_DIR / f"{project_id}.md"
 
         if playbook_path.is_file():
@@ -103,10 +103,96 @@ class SkillLoader:
                     error=str(exc),
                 )
         else:
-            logger.warning(
-                "skill_loader_playbook_missing",
-                project_id=project_id,
-                expected_path=str(playbook_path),
-            )
+            # No flat file — auto-generate project context from Supabase
+            sections.append(self._generate_project_context(project_id))
 
         return "\n\n".join(sections)
+
+    def _generate_project_context(self, project_id: str) -> str:
+        """
+        Auto-generate project context from Supabase when no flat playbook exists.
+
+        Queries contracts and parties tables for the project. Returns a markdown
+        block with contracts, parties, and FIDIC edition. Gracefully degrades
+        on any database error — returns partial content built so far.
+        """
+        from src.clients import get_supabase_client
+
+        header = "--- PROJECT CONTEXT (auto-generated from database) ---"
+
+        try:
+            supabase = get_supabase_client()
+
+            contracts_resp = (
+                supabase.table("contracts")
+                .select("id, name, contract_type, fidic_edition")
+                .eq("project_id", project_id)
+                .execute()
+            )
+            contracts = contracts_resp.data or []
+
+            parties_resp = (
+                supabase.table("parties")
+                .select("id, name, role")
+                .eq("project_id", project_id)
+                .execute()
+            )
+            parties = parties_resp.data or []
+
+        except Exception as exc:
+            logger.warning(
+                "skill_loader_playbook_db_error",
+                project_id=project_id,
+                error=str(exc),
+            )
+            return header + "\n\nFailed to load project context from database."
+
+        # Both empty — no project data registered yet
+        if not contracts and not parties:
+            logger.info(
+                "skill_loader_playbook_db_empty",
+                project_id=project_id,
+            )
+            return (
+                header
+                + "\n\nNo contracts or parties have been registered for this project yet."
+            )
+
+        parts: list[str] = [header]
+
+        # Contracts section
+        if contracts:
+            parts.append("\n## Contracts on Record")
+            for c in contracts:
+                edition = c.get("fidic_edition")
+                edition_str = f"FIDIC {edition}" if edition else "FIDIC edition not specified"
+                contract_type = c.get("contract_type", "type not specified")
+                parts.append(f"- {c.get('name', 'Unnamed')} — {contract_type} — {edition_str}")
+
+        # Parties section
+        if parties:
+            parts.append("\n## Parties on Record")
+            for p in parties:
+                parts.append(f"- {p.get('name', 'Unnamed')} — {p.get('role', 'role not specified')}")
+
+        # FIDIC edition summary
+        fidic_editions = [
+            c["fidic_edition"] for c in contracts if c.get("fidic_edition")
+        ]
+        parts.append("\n## FIDIC Edition")
+        if fidic_editions:
+            unique_editions = sorted(set(fidic_editions))
+            parts.append(f"Governing edition: {', '.join(unique_editions)}")
+        else:
+            parts.append(
+                "FIDIC edition not confirmed — determine from contract documents in the warehouse"
+            )
+
+        logger.info(
+            "skill_loader_playbook_db_generated",
+            project_id=project_id,
+            contract_count=len(contracts),
+            party_count=len(parties),
+        )
+
+        return "\n".join(parts)
