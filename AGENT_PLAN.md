@@ -1,7 +1,7 @@
 # C1 — Agent Enhancement Plan
 ## From Stateless Specialists to True Domain Agents
 
-**Version:** 1.1
+**Version:** 1.3
 **Status:** Active — Reference Document
 **Last Updated:** March 2026
 
@@ -15,6 +15,7 @@ C1's six domain specialists were built in v1 as stateless Claude API calls — e
 - The flow (agentic loop, tool set, round structure) is the same for all six specialists
 - The domain knowledge (skill files) is what differs between specialists
 - Skill files are markdown — they can be deepened at any time without touching code
+- Skill file authorship follows `SKILLS_STANDARDS.md` — the governing reference for all skill writing across all domains
 
 ---
 
@@ -43,15 +44,19 @@ Adding a new specialist beyond the current six requires only:
 
 No new Python class. No new tool. No new loop logic. If adding a specialist requires touching `base_specialist.py` or `tools.py`, that is a design failure.
 
-### Principle 3 — Skills and playbooks are separate layers
+### Principle 3 — Skills reason over the warehouse; the warehouse is the source of truth
 
-**Skills** (`skills/{domain}/`) encode generic construction domain knowledge. They are reusable across every project on the platform. A FIDIC notices skill file applies equally to a UAE project and a Qatar project. Skills are maintained by the platform owner and improve over time through Phase 6 iterative deepening.
+Skill files encode generic construction domain knowledge — how to analyse, what to look for, what to flag, what frameworks to apply. They are reusable across every project on the platform.
 
-**Playbooks** (`playbooks/{project_id}.md`) encode project-specific configuration. One file per project. A playbook contains: FIDIC edition governing this contract (1999 or 2017), jurisdiction, identified Engineer / PMC / Supervision Consultant, contract sum, project-specific escalation triggers, and any deviations from standard FIDIC that the contracts team has flagged.
+Project-specific facts — which FIDIC edition governs, who the Engineer is, what the contract sum is, what the key dates are — are not in the skill files. They are in the project documents already in the warehouse. The agent retrieves these facts by calling tools against the warehouse, the same way it retrieves any other evidence.
 
-At query time, the `SkillLoader` loads both — the generic skill files for the relevant domain AND the project playbook. The specialist reasons across both layers.
+The warehouse has two document layers, as defined in `README.md`:
 
-Changing a skill file improves every project immediately on next deploy. Changing a playbook file affects only that project. Neither change touches code.
+**Layer 1 — Project-specific documents:** The 176 document types generated on a specific project (contracts, drawings, notices, correspondence, claims, reports, schedules, approvals). Retrieved via pgvector at query time.
+
+**Layer 2 — Reference documents:** Global, static, non-project-specific documents providing the regulatory and standards framework (FIDIC conditions of contract, PMBOK, IFRS, applicable laws, government authority policies, DOA matrices). Retrieved via pgvector at query time.
+
+The specialist reasons across all of this — its skill files tell it how, the warehouse gives it the evidence.
 
 ---
 
@@ -59,21 +64,22 @@ Changing a skill file improves every project immediately on next deploy. Changin
 
 ```
 Orchestrator
-    ↓
+    |
 Round 1: Legal + Commercial
-    ↓ findings passed forward
+    | findings passed forward
 Round 2: Claims + Schedule + Technical + Governance
-    ↓ (receive Round 1 findings as context)
+    | (receive Round 1 findings as context)
 Cross-Specialist Contradiction Pass
-    ↓
-Synthesis → Confidence → Audit Log → Response
+    |
+Synthesis -> Confidence -> Audit Log -> Response
 ```
 
 **Each specialist runs as a true agent:**
-- Receives retrieved chunks + query + (Round 2 only) Round 1 findings
+- Receives retrieved chunks from Layer 1 (project documents) and Layer 2 (reference documents)
+- Receives query + (Round 2 only) Round 1 findings
 - Assesses whether retrieved context is sufficient
 - Calls tools if more information is needed
-- Reasons and returns structured findings
+- Reasons over all evidence and returns structured findings
 - Runs up to a configured maximum number of rounds
 
 **Tools available to every specialist:**
@@ -92,12 +98,14 @@ Synthesis → Confidence → Audit Log → Response
 
 | Phase | Description | Status |
 |---|---|---|
-| 1 | Agent Template | ✅ Complete |
-| 2 | Multi-Round Orchestrator | ✅ Complete |
-| 3 | Claims & Disputes Skills + Validation | ⬜ Not Started |
-| 4 | Remaining Five Specialists | ⬜ Not Started |
-| 5 | Cross-Specialist Contradiction Detection | ⬜ Not Started |
-| 6 | Iterative Skill Deepening | ⬜ Ongoing — No Completion Date |
+| 1 | Agent Template | Complete |
+| 2 | Multi-Round Orchestrator | Complete |
+| 3 | Legal & Contractual Skills + Validation | Not Started |
+| 4 | Commercial & Financial Skills + Validation | Not Started |
+| 5 | Claims & Disputes Skills + Validation Gate | Not Started |
+| 6 | Remaining Three Specialists | Not Started |
+| 7 | Cross-Specialist Contradiction Detection | Not Started |
+| 8 | Iterative Skill Deepening | Ongoing — No Completion Date |
 
 ---
 
@@ -106,9 +114,9 @@ Synthesis → Confidence → Audit Log → Response
 **Objective:** Build the reusable architecture all six specialists will share. Get this right before anything else moves.
 
 **What gets built:**
-- `BaseSpecialist` class — agentic loop: assess → tool call if needed → reason → return
+- `BaseSpecialist` class — agentic loop: assess -> tool call if needed -> reason -> return
 - Four shared tools: `search_chunks`, `get_document`, `get_contradictions`, `get_related_documents`
-- `SkillLoader` — dynamically loads all markdown files from `skills/{domain}/` and `playbooks/{project_id}.md` into the system prompt at runtime. No hardcoded filenames.
+- `SkillLoader` — dynamically loads all markdown files from `skills/{domain}/` into the system prompt at runtime. No hardcoded filenames.
 - `SpecialistConfig` — per-specialist configuration: domain name, round assignment, max rounds
 - One stub specialist: Claims & Disputes — wired to template, minimal skill content, validates architecture only
 
@@ -117,7 +125,6 @@ Synthesis → Confidence → Audit Log → Response
 **Completion criteria:**
 - Stub Claims specialist calls tools correctly and returns structured findings
 - SkillLoader dynamically loads all files in the folder — confirmed by adding and removing a test file without any code change
-- Project playbook is loaded alongside domain skills — confirmed by checking system prompt composition
 - Quality Guardian sign-off
 
 ---
@@ -142,51 +149,99 @@ Synthesis → Confidence → Audit Log → Response
 
 ---
 
-## Phase 3 — Claims & Disputes Skills + Validation Gate
+## Phase 3 — Legal & Contractual Skills + Validation
 
-**Objective:** Build the first complete skill set. Validate before proceeding. This is the most critical phase.
+**Objective:** Build the first complete skill set. Legal & Contractual is the correct starting domain — it has no upstream dependencies, runs in Round 1, and its findings are passed forward to Claims, Schedule, and Governance before they begin.
 
-**Skill files to build in `skills/claims/`:**
+**Governing standard:** `SKILLS_STANDARDS.md`
 
-| File | Content |
-|---|---|
-| `FIDIC_notices.md` | Valid notice structure, 28-day time bar, awareness date calculation, notice sufficiency, 1999 vs 2017 differences |
-| `delay_analysis.md` | Methodology identification, critical path assessment, concurrent delay signals, contemporaneous record requirements |
-| `entitlement_matrix.md` | FIDIC clause to entitlement mapping, required evidence per clause, common entitlement failures |
-| `contradiction_patterns.md` | High-risk field pairs in claims documents, what to flag, why it matters forensically |
-| `forensic_signals.md` | What tells an experienced claims consultant something is wrong: missing notices, date gaps, inconsistent durations |
+**Skill files to build in `skills/legal/`:** Defined during Phase 3 authorship session per `SKILLS_STANDARDS.md` Section 4. Domain research summary must be produced and approved before authorship begins.
+
+**Key skill areas:**
+- Contract document completeness and hierarchy analysis
+- Engineer role identification and authority mapping
+- Notice and instruction compliance assessment
+- Contractual entitlement basis identification
+- Key contractual dates and securities assessment
 
 **Validation gate — before Phase 4 starts:**
-- Test against minimum five real claims scenarios
+- Test against minimum five scenarios per `SKILLS_STANDARDS.md` Section 7
+- Quality Guardian sign-off
+
+---
+
+## Phase 4 — Commercial & Financial Skills + Validation
+
+**Objective:** Build Commercial & Financial skill set. Commercial runs in Round 1 in parallel with Legal. Its findings (contract sum, certified amounts, variation register, LD exposure) are passed to Claims in Round 2.
+
+**Governing standard:** `SKILLS_STANDARDS.md`
+
+**Skill files to build in `skills/commercial/`:** Defined during Phase 4 authorship session per `SKILLS_STANDARDS.md` Section 4. Domain research summary must be produced and approved before authorship begins.
+
+**Key skill areas:**
+- BOQ measurement and rate application
+- Variation valuation methodology under FIDIC Clause 13
+- Payment application and IPC assessment under FIDIC Clause 14
+- Prolongation cost methodology and recoverable heads of claim
+- Liquidated damages calculation and cap
+- Final account structure and assessment
+
+**Validation gate — before Phase 5 starts:**
+- Test against minimum five scenarios per `SKILLS_STANDARDS.md` Section 7
+- Quality Guardian sign-off
+
+---
+
+## Phase 5 — Claims & Disputes Skills + Validation Gate
+
+**Objective:** Build Claims & Disputes skill set. Most forensically critical domain. Has upstream dependencies on both Legal and Commercial. Phases 3 and 4 must be complete before Phase 5 begins.
+
+**Dependency note:** Claims specialist receives Legal (Round 1) and Commercial (Round 1) findings before it runs. A Claims skill file that duplicates Legal or Commercial analysis is a design failure.
+
+**Governing standard:** `SKILLS_STANDARDS.md` — Section 6 contains Claims-specific additional standards.
+
+**Skill files to build in `skills/claims/`:** Defined during Phase 5 authorship session per `SKILLS_STANDARDS.md` Sections 4 and 6. Domain research summary must be produced and approved before authorship begins.
+
+**Key skill areas:**
+- Notice compliance assessment — time bar, sufficiency, awareness date calculation
+- Entitlement mapping — FIDIC clause to relief type
+- Delay analysis methodology identification and assessment — SCL/AACE compliance
+- Quantum assessment — heads of claim, methodology, recoverable costs
+- Contradiction detection across claims document set
+- Forensic credibility signals
+
+**Validation gate — before Phase 6 starts:**
+- Test against minimum five real claims scenarios per `SKILLS_STANDARDS.md` Section 7
 - Specialist must correctly identify time bar compliance / non-compliance
 - Specialist must detect at least one contradiction in a document set containing a known one
-- If either fails, refine skill files and retest — do not proceed to Phase 4
+- If either fails, refine skill files and retest — do not proceed to Phase 6
 
 ---
 
-## Phase 4 — Remaining Five Specialists
+## Phase 6 — Remaining Three Specialists
 
-**Objective:** Replicate the validated skill structure across remaining specialists, one at a time.
+**Objective:** Build skill sets for Schedule & Programme, Governance & Compliance, and Technical & Design, one at a time.
 
-**Sequence and focus areas:**
+**Governing standard:** `SKILLS_STANDARDS.md`
 
-| Specialist | Key Skill Areas |
-|---|---|
-| Legal & Contractual | Contract hierarchy, notice obligations, governing law, Engineer role identification, entitlement basis |
-| Commercial & Financial | BOQ rate application, variation valuation methodology, payment certificate analysis, LD calculation, final account |
-| Schedule & Programme | Programme validity assessment, delay causation, float analysis, baseline vs as-built, SCL/AACE methodology signals |
-| Governance & Compliance | DOA compliance, approval chain verification, authority matrix adherence, regulatory requirements |
-| Technical & Design | Specification compliance, RFI validity and response adequacy, design change assessment, submittal review |
+**Sequencing and dependencies:**
 
-**Rule:** Each specialist follows the same pattern — build shallow skills, test against real documents, refine if needed, mark complete, move to next. Each new specialist is a new folder in `skills/` and a new `SpecialistConfig` entry — no new agent code.
+| Specialist | Round | Upstream dependency | Key skill areas |
+|---|---|---|---|
+| Schedule & Programme | Round 2 | Legal (FIDIC Cl. 8, EOT clause, milestones) | Programme validity, delay causation, float, SCL/AACE methodology, as-built vs baseline |
+| Governance & Compliance | Round 2 | Legal (Engineer authority, delegation limits) | DOA compliance, approval chain, authority matrix, regulatory requirements |
+| Technical & Design | Round 2 | Light — can proceed in parallel with Schedule/Governance | Specification compliance, RFI validity, design change assessment, submittal review |
+
+**Rule:** Each specialist is a new folder in `skills/` and a new `SpecialistConfig` entry — no new agent code.
 
 ---
 
-## Phase 5 — Cross-Specialist Contradiction Detection
+## Phase 7 — Cross-Specialist Contradiction Detection
 
 **Objective:** Upgrade contradiction detection to operate across specialist findings, not just across documents.
 
 **What gets built:**
+- `cross_specialist_contradiction_pass()` in `src/agents/contradiction_cross.py` — currently a stub returning an empty list — replaced with real logic
 - Post-Round 2 contradiction pass compares findings across all specialists
 - Legal date finding checked against Schedule date finding for the same event
 - Commercial VO value checked against Claims claimed amount for the same variation
@@ -199,7 +254,7 @@ Synthesis → Confidence → Audit Log → Response
 
 ---
 
-## Phase 6 — Iterative Skill Deepening
+## Phase 8 — Iterative Skill Deepening
 
 **Objective:** Continuous improvement driven by real query failures. No sprint. No completion date.
 
@@ -211,9 +266,7 @@ Synthesis → Confidence → Audit Log → Response
 5. Redeploy
 6. Retest
 
-**This is where domain expertise becomes the product's competitive moat.**
-
-No Claude Code involvement for skill deepening. No engineering. Domain knowledge encoded in markdown files, continuously refined based on evidence from real queries.
+No Claude Code involvement for skill deepening. Domain knowledge encoded in markdown files, refined based on evidence from real queries. All updates logged in `BUILD_LOG.md` per `SKILLS_STANDARDS.md` Section 9.
 
 ---
 
@@ -221,12 +274,15 @@ No Claude Code involvement for skill deepening. No engineering. Domain knowledge
 
 1. One phase at a time. No phase starts until the previous is approved.
 2. Phase 1 is the highest-risk phase — if the template is wrong, everything built on it is wrong.
-3. Phase 3 has a hard validation gate — do not proceed to Phase 4 without passing it.
-4. Quality Guardian reviews every phase before it is marked complete.
-5. Skill files are markdown — they can be edited at any time without touching code.
-6. The flow layer (agentic loop, tools, round structure) does not change per specialist. Only the skill files change.
-7. SkillLoader must never contain a hardcoded list of skill files — it loads all files in the folder dynamically.
-8. Adding a new specialist must never require changes to `base_specialist.py` or `tools.py`.
+3. Phases 3, 4, and 5 each have a validation gate — do not proceed without passing it.
+4. Phase 5 (Claims) must not begin until Phases 3 (Legal) and 4 (Commercial) are complete.
+5. Quality Guardian reviews every phase before it is marked complete.
+6. Skill files are markdown — they can be edited at any time without touching code.
+7. The flow layer (agentic loop, tools, round structure) does not change per specialist. Only the skill files change.
+8. SkillLoader must never contain a hardcoded list of skill files — it loads all files in the folder dynamically.
+9. Adding a new specialist must never require changes to `base_specialist.py` or `tools.py`.
+10. Every skill file set must be preceded by a domain research summary approved before authorship begins — per `SKILLS_STANDARDS.md` Section 4.3.
+11. Project-specific facts (FIDIC edition, Engineer identity, contract sum, key dates) are never hardcoded into skill files — they are retrieved from the warehouse at query time.
 
 ---
 
@@ -235,36 +291,31 @@ No Claude Code involvement for skill deepening. No engineering. Domain knowledge
 ```
 src/
 └── agents/
-    ├── base_specialist.py      ← Phase 1: shared agent template
-    ├── tools.py                ← Phase 1: four shared tools
-    ├── skill_loader.py         ← Phase 1: dynamic markdown loader
-    ├── specialist_config.py    ← Phase 1: per-domain configuration
-    ├── orchestrator.py         ← Phase 2: multi-round rebuild
+    ├── base_specialist.py          <- Phase 1: shared agent template (complete)
+    ├── tools.py                    <- Phase 1: four shared tools (complete)
+    ├── skill_loader.py             <- Phase 1: dynamic markdown loader (complete)
+    ├── specialist_config.py        <- Phase 1: per-domain configuration (complete)
+    ├── contradiction_cross.py      <- Phase 2: stub — Phase 7 fills logic (complete)
+    ├── orchestrator.py             <- Phase 2: multi-round rebuild (complete)
     └── specialists/
-        ├── claims.py           ← Phase 1 stub → Phase 3 complete
-        ├── legal.py            ← Phase 4
-        ├── commercial.py       ← Phase 4
-        ├── schedule.py         ← Phase 4
-        ├── governance.py       ← Phase 4
-        └── technical.py        ← Phase 4
+        ├── claims.py               <- Phase 1 stub -> Phase 5 complete
+        ├── legal.py                <- Phase 3
+        ├── commercial.py           <- Phase 4
+        ├── schedule.py             <- Phase 6
+        ├── governance.py           <- Phase 6
+        └── technical.py            <- Phase 6
 
-skills/                                       ← generic domain knowledge — reusable across all projects
+skills/                             <- generic domain knowledge — reusable across all projects
+├── legal/                          <- Phase 3
+├── commercial/                     <- Phase 4
 ├── claims/
-│   ├── FIDIC_notices.md                      ← Phase 3
-│   ├── delay_analysis.md                     ← Phase 3
-│   ├── entitlement_matrix.md                 ← Phase 3
-│   ├── contradiction_patterns.md             ← Phase 3
-│   ├── forensic_signals.md                   ← Phase 3
-│   └── [any future file]                     ← drop file here, no code change
-├── legal/                                    ← Phase 4
-├── commercial/                               ← Phase 4
-├── schedule/                                 ← Phase 4
-├── governance/                               ← Phase 4
-└── technical/                                ← Phase 4
-
-playbooks/                                    ← project-specific configuration — one file per project
-└── {project_id}.md                           ← FIDIC edition, jurisdiction, Engineer, contract-specific positions
+│   └── README.md                   <- Phase 1 placeholder -> Phase 5 skill files
+├── schedule/                       <- Phase 6
+├── governance/                     <- Phase 6
+└── technical/                      <- Phase 6
 ```
+
+The warehouse (Supabase pgvector) holds all project-specific evidence (Layer 1) and reference documents (Layer 2). Skills reason over the warehouse. Skills do not store project-specific facts.
 
 ---
 
@@ -273,5 +324,7 @@ playbooks/                                    ← project-specific configuration
 | Field | Value |
 |---|---|
 | Owner | C1 Project |
+| Version | 1.3 — Playbook concept removed; two-layer warehouse architecture per README.md restored; Governing Rule 11 added |
 | Updated when | Phase completed or plan revised |
 | Location | Repo root — `AGENT_PLAN.md` |
+| Related documents | `SKILLS_STANDARDS.md`, `CLAUDE.md`, `README.md` |
