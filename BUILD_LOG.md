@@ -271,6 +271,42 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 
 ---
 
+## C1_CLEANUP_PLAN Phase D — Playbook Auto-Generation + File Storage (Agent Orchestrator + DB Architect + Ingestion Engineer) — ✅ Complete
+
+**Date:** 2026-03-31
+**Active agents:** Agent Orchestrator (Task 1), DB Architect (Task 2), Ingestion Engineer (Task 3)
+**Quality Guardian:** PASS on all 3 tasks individually + combined review
+**Commit protocol:** Tasks committed and pushed individually after QG PASS for independent verification
+
+**Task 1 — Playbook auto-generation from Supabase (Agent Orchestrator):**
+- `src/agents/skill_loader.py` — replaced `skill_loader_playbook_missing` warning with DB-driven auto-generation
+- New method `_generate_project_context`: queries `contracts` and `parties` tables, builds markdown block with Contracts on Record, Parties on Record, FIDIC Edition sections
+- `get_supabase_client` lazy imported inside method body (avoids circular import)
+- Graceful degradation: DB error → returns header + error message; both queries empty → returns informative empty-state message
+- Flat file override preserved: `playbooks/{project_id}.md` still takes precedence if it exists
+- Commit: `390b243`
+
+**Task 2 — Migration 008 (DB Architect):**
+- `supabase/migrations/008_document_storage.sql` — `ALTER TABLE documents ADD COLUMN storage_path text;`
+- Migration applied directly to live Supabase project by session coordinator (confirmed: column present, text type, nullable)
+- SQL file created locally to keep repo in sync with live database
+- Commit: `390b243` (bundled with Task 1)
+
+**Task 3 — File storage upload + pipeline modification (Ingestion Engineer):**
+- `src/ingestion/pipeline.py` — added optional `document_id: uuid.UUID | None = None` parameter to `ingest_document()`; when provided, Step 2 (create_document_record) is skipped
+- `src/api/routes/documents.py` — new flow in `upload_document`:
+  1. `create_document_record()` called before pipeline to obtain `document_id`
+  2. Original file uploaded to Supabase Storage bucket `document-originals` at `{project_id}/{document_id}/{filename}`
+  3. `documents.storage_path` updated on successful upload
+  4. Storage failure is non-fatal — logged as warning, ingestion continues
+  5. `ingest_document()` called with `document_id` so pipeline skips record creation
+- New imports: `ALLOWED_MIME_TYPES` from config, `create_document_record` from status_tracker
+- Commit: `0fa8164`
+
+**Independently verified by session coordinator:** Supabase column confirmed, all four files verified on GitHub main branch against spec.
+
+---
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |
