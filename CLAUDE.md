@@ -140,26 +140,73 @@ Some phases require multiple agents in the same session. The order is always exp
 1. **Sequential within session:** The first agent completes its full scope and reports clearly before the second agent begins. Agents do not work simultaneously on interdependent files.
 2. **Declared handoff:** When the first agent finishes, it states: "Handoff to [Agent Name]. The following outputs are ready: [list]. The following assumptions the next agent depends on: [list]."
 3. **No boundary crossing:** If Agent A's task requires a change in Agent B's files, Agent A flags it and waits. It does not make the change unilaterally.
-4. **Quality Guardian reviews the combined output** at the end of the session — after all agents have completed their tasks — not each agent individually in isolation.
+4. **Quality Guardian reviews after each agent's tasks complete**, and also performs a combined review of all outputs once the final agent finishes. See Quality Guardian Rules below for the full process.
 
 ### Quality Guardian Rules
 
-- Reviews every agent's output before the session is marked complete
-- Has authority to send work back for revision
-- CRITICAL and HIGH findings must be resolved before the session closes
-- MEDIUM and LOW findings are logged in `BUILD_LOG.md` and addressed in the next appropriate session
-- Does not pass a session that has unresolved CRITICAL or HIGH findings regardless of time pressure
+#### When Quality Guardian is invoked
 
-Quality Guardian checks for:
-- Dead code (functions defined but not called)
+Quality Guardian is invoked **after every individual task completes** — not only at the end of a session. Every time an agent reports a task done, Quality Guardian reviews that output before the next task begins. For multi-agent sessions, Quality Guardian also performs a combined review of all outputs after the final agent completes.
+
+Quality Guardian is never skipped. It is not optional when time is short. It is not skipped because a task seems simple.
+
+#### What Quality Guardian does when invoked
+
+1. **Reviews the output** against the task specification and the checklist below
+2. **Classifies every finding** with a severity: CRITICAL / HIGH / MEDIUM / LOW
+3. **If no findings:** States "Quality Guardian: PASS — [task name] approved. No issues found." The next task may proceed.
+4. **If findings exist:** States each finding clearly in this format:
+
+   ```
+   Quality Guardian: [SEVERITY] — [Agent Name] — [File/function] — [Issue description] — [Required corrective action]
+   ```
+
+   Then instructs the responsible agent directly:
+
+   ```
+   [Agent Name]: address the above before this task is marked complete. Report back when corrected.
+   ```
+
+5. **After the agent reports corrections:** Quality Guardian re-reviews the specific items that were flagged. If resolved: PASS. If not resolved or new issues introduced: issues another corrective instruction. This cycle repeats until all CRITICAL and HIGH findings are resolved.
+6. **MEDIUM and LOW findings** that are acceptable to carry forward are logged in `BUILD_LOG.md` with the task reference. They do not block the current task but must be addressed in the next appropriate session.
+
+#### What Quality Guardian never does
+
+- Never passes a task with unresolved CRITICAL or HIGH findings
+- Never merges MEDIUM/LOW findings into vague summary language — every finding is stated precisely with a required action
+- Never instructs an agent outside that agent's ownership boundary to fix something
+- Never accepts "it works" as a substitute for "it is correct"
+
+#### Quality Guardian checklist
+
+Applied to every task output:
+
+**Code correctness:**
+- Dead code — functions defined but not called anywhere
 - Unused imports
-- Duplicated logic
-- Inconsistent naming
-- Silent failures (exceptions swallowed without logging)
-- Missing error handling on external calls (Supabase, Gemini, Anthropic)
-- Missing type hints on new functions
-- Print statements in production code (structlog only)
 - Functions doing more than one thing
+- Inconsistent naming with the rest of the codebase
+
+**Failure handling:**
+- Silent failures — exceptions swallowed without logging
+- Missing try/except on every external call (Supabase, Gemini API, Anthropic API)
+- Missing declared failure state (every failure must produce a visible output — status update, log entry, or error response)
+
+**Code standards:**
+- Missing type hints on new functions
+- Print statements in production code (structlog only — `get_logger(__name__)`)
+- Hard-coded values that should be config or constants
+
+**Architecture compliance:**
+- Boundary violations — agent touching files outside its ownership
+- Docling imported at module level (must be lazy — inside function body only)
+- New vector index attempted at 3072 dims (will fail — pgvector 0.8.0 cap)
+- Sensitive data in log messages
+
+**Spec compliance:**
+- Task output matches what was specified in `C1_CLEANUP_PLAN.md` or `AGENT_PLAN.md`
+- Governing documents updated if the task required it
+- Completion criteria from the governing document are met
 
 ---
 
