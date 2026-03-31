@@ -34,7 +34,7 @@ def count_tokens(text: str) -> int:
 
 def chunk_document(
     parsed: ParsedDocument,
-    target_tokens: int = 450,
+    target_tokens: int = 450,  # 450 validated in smoke test (2026-03-30) — supersedes original 512-token design spec
     overlap_tokens: int = 50,
 ) -> list[Chunk]:
     """

@@ -164,6 +164,43 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 
 ---
 
+## C1_CLEANUP_PLAN Phase B — Spec Alignment + Frontend Cleanup + README Alignment (API Engineer) — ✅ Complete
+
+**Date:** 2026-03-31
+**Active agent:** API Engineer
+**Quality Guardian:** PASS on all 8 tasks — self-checked after each task, independently confirmed by session coordinator
+
+**Task 1 — Classification threshold provenance comment:**
+- `src/config.py:38` — added inline comment documenting 0.75 validated post-deployment, stricter than original 0.70 spec
+
+**Task 2 — Chunk target provenance comment:**
+- `src/ingestion/chunker.py:37` — added inline comment documenting 450 validated in smoke test (2026-03-30), supersedes original 512-token spec
+
+**Task 3 — Remove stale Gemini fields from frontend types:**
+- `frontend/src/api/types.ts` — removed `gemini_store_name` from `ProjectResponse`
+- `frontend/src/api/types.ts` — removed `gemini_file_name` and `gemini_document_name` from `DocumentResponse`
+
+**Task 4 — Remove Gemini store badge from ProjectCard:**
+- `frontend/src/components/projects/ProjectCard.tsx:24` — removed `{project.gemini_store_name && <span>Store active</span>}` conditional
+
+**Task 5 — README spec values (verification only):**
+- No changes needed. README already contained correct values: 450-token target (lines 139, 271, 506) and 0.75 threshold (lines 135, 509). No stale 512 or 0.70 values found. Updated in a prior session not fully captured in BUILD_LOG.
+
+**Task 6 — README Current Build Status (verification only):**
+- No changes needed. Subsection already present at lines 17–27 with correct content (AGENT_PLAN Phases 1+2 complete, pgvector migration, active workstream, next milestone).
+
+**Task 7 — README repository structure (verification only):**
+- No changes needed. Section 18 already reflects current state: correct `src/agents/` listing (no stale `specialist.py`), `scripts/ingest_reference.py`, `docs/research/`, all governing docs at root, migrations 007–008.
+
+**Task 8 — BUILD_LOG.md entry + final verification:**
+- This entry. Frontend build and grep verification results below.
+
+**Observation:** Tasks 5, 6, and 7 were verification-only — the README was already updated during prior sessions. This confirms the README is current but also indicates those prior updates were not recorded in BUILD_LOG.md at the time.
+
+**Final verification:** `npm run build` in `frontend/` — `tsc -b && vite build` succeeded, 97 modules transformed, zero TypeScript errors. `grep -r "gemini_store_name|gemini_file_name|gemini_document_name" frontend/src/` — zero matches.
+
+---
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |

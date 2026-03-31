@@ -21,7 +21,6 @@ export function ProjectCard({ project, onClick }: ProjectCardProps) {
       )}
       <div className="mt-4 flex items-center gap-3 text-xs text-gray-400">
         <span>Created {created}</span>
-        {project.gemini_store_name && <span className="text-emerald-600">Store active</span>}
       </div>
     </button>
   );

@@ -35,7 +35,7 @@ GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
 # Ingestion Constants
 # ---------------------------------------------------------------------------
 MAX_FILE_SIZE_BYTES: int = 100 * 1024 * 1024  # 100 MB — Maximum supported file size
-CLASSIFICATION_CONFIDENCE_THRESHOLD: float = 0.75
+CLASSIFICATION_CONFIDENCE_THRESHOLD: float = 0.75  # 0.75 validated post-deployment — stricter than original 0.70 spec; appropriate for forensic use
 
 ALLOWED_EXTENSIONS: set[str] = {".pdf", ".docx", ".xlsx"}
 

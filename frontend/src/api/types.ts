@@ -4,7 +4,6 @@ export interface ProjectResponse {
   id: string;
   name: string;
   description: string | null;
-  gemini_store_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -19,8 +18,6 @@ export interface DocumentResponse {
   filename: string;
   status: 'QUEUED' | 'EXTRACTING' | 'CLASSIFYING' | 'STORED' | 'FAILED';
   tier: number | null;
-  gemini_file_name: string | null;
-  gemini_document_name: string | null;
   document_date: string | null;
   document_reference_number: string | null;
   issuing_party_id: string | null;
