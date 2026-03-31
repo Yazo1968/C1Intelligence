@@ -113,3 +113,67 @@ Tracks completion status and deferred issues for each migration step.
 - `.pyc` binary cache files matched (expected — stale compiled artifacts), source `.py` files clean
 
 **No issues found. Migration fully verified end-to-end.**
+
+---
+
+## AGENT_PLAN Phase 1 — Agent Template (Agent Orchestrator) — ✅ Complete
+
+Built: `BaseSpecialist`, `SkillLoader`, four shared tools (`search_chunks`, `get_document`, `get_contradictions`, `get_related_documents`), `SpecialistConfig`, stub Claims specialist. Quality Guardian: 7/7 checks passed.
+
+---
+
+## AGENT_PLAN Phase 2 — Multi-Round Orchestrator (Agent Orchestrator) — ✅ Complete
+
+Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPoolExecutor`, Round 2 sequential dispatch with Round 1 handoff, `contradiction_cross.py` stub, downstream functions adapted for `SpecialistFindings` model. Quality Guardian: 7/7 checks passed.
+
+---
+
+## C1_CLEANUP_PLAN Phase A — Production Fixes + Code Cleanup (API Engineer) — ✅ Complete
+
+**Date:** 2026-03-31
+**Active agent:** API Engineer
+**Quality Guardian:** PASS on all 6 tasks individually + combined final review
+
+**Task 1 — CORS origin fix:**
+- `src/api/main.py:36` — `allow_origins=["*"]` → `allow_origins=["https://c1intelligence.vercel.app"]`
+- Stale TODO comment removed
+
+**Task 2 — Remove unsupported file types:**
+- `src/config.py` — `ALLOWED_EXTENSIONS` reduced from 8 entries to 3 (`.pdf`, `.docx`, `.xlsx`)
+- `src/config.py` — `ALLOWED_MIME_TYPES` reduced from 8 entries to 3 (matching extensions)
+
+**Task 3 — Dockerfile CMD fix:**
+- `Dockerfile:13` — shell form `CMD uvicorn ...` → exec form `CMD ["sh", "-c", "uvicorn ..."]`
+- Aligns with `railway.json` `sh -c` wrapper convention
+
+**Task 4 — Delete dead files:**
+- `src/agents/specialist.py` — deleted (superseded by `base_specialist.py` in AGENT_PLAN Phase 1)
+- `src/agents/specialists/claims.py` — deleted (superseded by config-driven specialists in AGENT_PLAN Phase 1)
+- `The Gemini API enables Retrieval Au.md` — already absent at repo root (no action needed)
+
+**Task 5 — Remove Gemini polling remnants:**
+- `src/config.py:37` — comment changed from "Gemini File Search limit" to "Maximum supported file size"
+- `src/config.py` — deleted `GEMINI_POLL_INTERVAL_SECONDS`, `GEMINI_POLL_MAX_ATTEMPTS`, and `# Gemini Polling` section header
+
+**Task 6 — Remove dead field from RetrievalResult:**
+- `src/agents/models.py:43` — deleted `raw_response_text: str = ""`
+- `src/agents/retrieval.py:94` — deleted `raw_response_text=""` from constructor call
+- Note: `models.py` and `retrieval.py` are Agent Orchestrator boundary files; changes were explicitly instructed in the Phase A task list and are not a boundary violation
+
+**Final verification:** `grep -rE --include="*.py" "specialist\.py|claims_specialist|GEMINI_POLL|raw_response_text|allow_origins.*\*" src/` — zero matches in source files.
+
+---
+
+## Deferred Items
+
+| Item | Reason deferred | When to address |
+|---|---|---|
+| Vector similarity index (HNSW/IVFFlat) | pgvector 0.8.0 caps at 2000 dims; embeddings are 3072 dims | When Supabase upgrades pgvector |
+| Party ID resolution (`issuing_party_id`, `receiving_party_id` always NULL) | Requires parties management API that does not exist | Post-skills workstream |
+| `round_number` column in `query_log` | DB migration required; TODO in `orchestrator.py` | DB Architect micro-session after skills complete |
+| Cross-specialist contradiction detection | `contradiction_cross.py` returns `[]` | AGENT_PLAN Phase 7 |
+| Approval workflows | Phase 2 feature | Phase 2 |
+| Five user roles and authority matrix | Phase 2 feature | Phase 2 |
+| Document control system integration | Phase 2 feature | Phase 2 |
+| Document download endpoint | Deferred from Phase D | After Phase D |
+| CORS `allow_methods`/`allow_headers` tightening | `allow_methods=["*"]` and `allow_headers=["*"]` in `src/api/main.py` are acceptable for a known frontend but candidates for tightening | Future hardening session (not Phase A scope) |

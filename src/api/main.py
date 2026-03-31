@@ -33,7 +33,7 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Tighten to Vercel domain in production
+    allow_origins=["https://c1intelligence.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

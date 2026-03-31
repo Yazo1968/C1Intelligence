@@ -91,7 +91,6 @@ def retrieve_chunks(
 
     return RetrievalResult(
         chunks=retrieved_chunks,
-        raw_response_text="",
         is_empty=is_empty,
     )
 

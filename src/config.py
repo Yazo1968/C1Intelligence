@@ -34,27 +34,13 @@ GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
 # ---------------------------------------------------------------------------
 # Ingestion Constants
 # ---------------------------------------------------------------------------
-MAX_FILE_SIZE_BYTES: int = 100 * 1024 * 1024  # 100 MB — Gemini File Search limit
+MAX_FILE_SIZE_BYTES: int = 100 * 1024 * 1024  # 100 MB — Maximum supported file size
 CLASSIFICATION_CONFIDENCE_THRESHOLD: float = 0.75
 
-ALLOWED_EXTENSIONS: set[str] = {
-    ".pdf", ".docx", ".xlsx", ".pptx", ".csv",
-    ".jpg", ".jpeg", ".png",
-}
+ALLOWED_EXTENSIONS: set[str] = {".pdf", ".docx", ".xlsx"}
 
 ALLOWED_MIME_TYPES: dict[str, str] = {
     ".pdf": "application/pdf",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    ".csv": "text/csv",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".png": "image/png",
 }
-
-# ---------------------------------------------------------------------------
-# Gemini Polling
-# ---------------------------------------------------------------------------
-GEMINI_POLL_INTERVAL_SECONDS: int = 3
-GEMINI_POLL_MAX_ATTEMPTS: int = 60  # 3 minutes max wait

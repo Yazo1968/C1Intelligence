@@ -40,7 +40,6 @@ class RetrievedChunk(BaseModel):
 class RetrievalResult(BaseModel):
     """Output of Gemini File Search retrieval."""
     chunks: list[RetrievedChunk] = Field(default_factory=list)
-    raw_response_text: str = ""
     is_empty: bool = True
 
 
