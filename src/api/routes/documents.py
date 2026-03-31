@@ -12,12 +12,14 @@ import uuid
 from fastapi import APIRouter, File, Form, UploadFile, status
 
 from src.clients import get_supabase_client
+from src.config import ALLOWED_MIME_TYPES
 from src.logging_config import get_logger
 from src.api.auth import AuthenticatedUser
 from src.api.errors import error_response
 from src.api.schemas import DocumentResponse, DocumentUploadResponse
 from src.ingestion.models import IngestionError, UploadRequest
 from src.ingestion.pipeline import ingest_document
+from src.ingestion.status_tracker import create_document_record
 
 logger = get_logger(__name__)
 
@@ -78,10 +80,42 @@ async def upload_document(
             user_selected_type_id=user_selected_type_id,
         )
 
+        # Create document record first so we have an ID for storage
+        document_id = create_document_record(supabase_client, request)
+
+        # Upload original file to Supabase Storage (non-fatal on failure)
+        storage_path = f"{project_id}/{document_id}/{filename}"
+        ext = os.path.splitext(filename)[1].lower()
+        mime_type = ALLOWED_MIME_TYPES.get(ext, "application/octet-stream")
+
+        try:
+            supabase_client.storage.from_("document-originals").upload(
+                path=storage_path,
+                file=content,
+                file_options={"content-type": mime_type, "upsert": "false"},
+            )
+            supabase_client.table("documents").update(
+                {"storage_path": storage_path}
+            ).eq("id", str(document_id)).execute()
+            logger.info(
+                "document_file_stored",
+                document_id=str(document_id),
+                storage_path=storage_path,
+            )
+        except Exception as exc:
+            logger.warning(
+                "document_file_storage_failed",
+                document_id=str(document_id),
+                storage_path=storage_path,
+                error=str(exc),
+            )
+            # Storage failure must never block ingestion — continue
+
         result = ingest_document(
             file_path=temp_path,
             file_size_bytes=file_size,
             request=request,
+            document_id=document_id,
         )
 
         classification_dict = None

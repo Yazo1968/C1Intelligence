@@ -59,13 +59,14 @@ def ingest_document(
     file_path: str,
     file_size_bytes: int,
     request: UploadRequest,
+    document_id: uuid.UUID | None = None,
 ) -> IngestionResult:
     """
     Full ingestion pipeline for a single document.
 
     Flow:
     1.  Validate file (extension, size)
-    2.  Create document record (status=QUEUED)
+    2.  Create document record (status=QUEUED) — skipped if document_id provided
     3.  Transition -> EXTRACTING
     4.  Parse document with Docling
     5.  Transition -> CLASSIFYING
@@ -77,6 +78,13 @@ def ingest_document(
     11. Embed chunks via Gemini Embeddings API
     12. Store chunks to Supabase pgvector (handles STORED/FAILED status)
 
+    Args:
+        file_path: Path to the temporary file on disk.
+        file_size_bytes: Size of the file in bytes.
+        request: Upload request with project_id, filename, uploaded_by, etc.
+        document_id: If provided, skip document record creation (caller already
+            created the record, e.g., for file storage before ingestion).
+
     Every step has explicit error handling. No document is silently discarded.
     """
     anthropic_client = get_anthropic_client()
@@ -84,7 +92,6 @@ def ingest_document(
 
     ensure_taxonomy_loaded()
 
-    document_id: uuid.UUID | None = None
     classification: ClassificationResult | None = None
     extracted: ExtractedMetadata | None = None
     validation: ValidationResult | None = None
@@ -104,17 +111,18 @@ def ingest_document(
         )
 
     # ------------------------------------------------------------------
-    # Step 2: Create document record (status=QUEUED)
+    # Step 2: Create document record (status=QUEUED) — skip if caller provided ID
     # ------------------------------------------------------------------
-    try:
-        document_id = create_document_record(supabase_client, request)
-    except IngestionError as exc:
-        logger.error("document_creation_failed", error=exc.message)
-        return IngestionResult(
-            document_id=uuid.UUID(int=0),
-            status="FAILED",
-            error_message=exc.message,
-        )
+    if document_id is None:
+        try:
+            document_id = create_document_record(supabase_client, request)
+        except IngestionError as exc:
+            logger.error("document_creation_failed", error=exc.message)
+            return IngestionResult(
+                document_id=uuid.UUID(int=0),
+                status="FAILED",
+                error_message=exc.message,
+            )
 
     # ------------------------------------------------------------------
     # Step 3: Transition -> EXTRACTING
