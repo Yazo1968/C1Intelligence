@@ -326,5 +326,5 @@ The warehouse (Supabase pgvector) holds all project-specific evidence (Layer 1) 
 | Owner | C1 Project |
 | Version | 1.3 — Playbook concept removed; two-layer warehouse architecture per README.md restored; Governing Rule 11 added |
 | Updated when | Phase completed or plan revised |
-| Location | Repo root — `AGENT_PLAN.md` |
-| Related documents | `SKILLS_STANDARDS.md`, `CLAUDE.md`, `README.md` |
+| Location | `docs/AGENT_PLAN.md` |
+| Related documents | `docs/SKILLS_STANDARDS.md`, `CLAUDE.md`, `README.md` |

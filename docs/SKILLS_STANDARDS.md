@@ -3,7 +3,7 @@
 
 **Version:** 1.1
 **Status:** Active — Governing Document
-**Location:** Repo root — `SKILLS_STANDARDS.md`
+**Location:** `docs/SKILLS_STANDARDS.md`
 **Applies to:** All six domain specialists — Legal & Contractual, Commercial & Financial, Schedule & Programme, Technical & Design, Claims & Disputes, Governance & Compliance
 
 ---
@@ -399,6 +399,6 @@ All updates must be logged in `BUILD_LOG.md` with: the query or event that trigg
 |---|---|
 | Version | 1.1 — Playbook concept removed; warehouse two-layer architecture clarified |
 | Date | March 2026 |
-| Location | Repo root — `SKILLS_STANDARDS.md` |
+| Location | `docs/SKILLS_STANDARDS.md` |
 | Updated when | Standard revised, new domain added, or validation practice updated |
-| Related documents | `AGENT_PLAN.md`, `CLAUDE.md`, `README.md` |
+| Related documents | `docs/AGENT_PLAN.md`, `CLAUDE.md`, `README.md` |
