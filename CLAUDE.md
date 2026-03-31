@@ -18,7 +18,7 @@ You will be instructed step by step. Do not anticipate the next step. Do not bui
 C1 is a construction documentation intelligence platform for the GCC market. It ingests project documents, reasons across them using AI agents, detects contradictions between documents, and produces forensic-grade responses with full source attribution and confidence classification.
 
 Read `README.md` fully before writing any code. It is the single source of truth for what C1 is, what it does, and how it works.
-Read `C1_TAXONOMY_v0.4.xlsx` before touching anything database-related.
+Read `docs/taxonomy/C1_TAXONOMY_v0.4.xlsx` before touching anything database-related.
 
 ---
 
@@ -283,7 +283,11 @@ Build accordingly.
 /
 ├── README.md                           ← Single source of truth
 ├── CLAUDE.md                           ← This file — behavioural contract
-├── C1_TAXONOMY_v0.4.xlsx               ← 176 document types, 10 categories
+├── docs/
+│   ├── migrations/
+│   │   └── RETRIEVAL_MIGRATION.md      ← pgvector migration record (complete)
+│   └── taxonomy/
+│       └── C1_TAXONOMY_v0.4.xlsx       ← 176 document types, 10 categories
 ├── requirements.txt                    ← Python dependencies
 ├── Dockerfile                          ← Railway container build (Dockerfile builder)
 ├── Procfile                            ← Legacy start command (reference only)
