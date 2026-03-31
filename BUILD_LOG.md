@@ -201,6 +201,36 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 
 ---
 
+## C1_CLEANUP_PLAN Phase C1 — Layer 2 Reference Document Architecture (DB Architect + Ingestion Engineer) — ✅ Complete
+
+**Date:** 2026-03-31
+**Active agents:** DB Architect (Task 1), then Ingestion Engineer (Task 2)
+**Quality Guardian:** PASS on both tasks individually + combined cross-task review
+
+**Task 1 — Migration 007 (DB Architect):**
+- `supabase/migrations/007_layer2_reference.sql` — 131 lines, applied to live Supabase project `bkkujtvhdbroieffhfok`
+- `reference_documents` table created: 10 columns (id, name, document_type, standard_body, edition_year, jurisdiction, description, status CHECK, created_at, updated_at)
+- `reference_chunks` table created: 7 columns (id, reference_document_id FK CASCADE, chunk_index, content, embedding vector(3072), token_count, created_at) — no updated_at, immutable
+- RLS enabled on both tables: 7 policies total (SELECT for authenticated on both; INSERT/UPDATE/DELETE service_role on reference_documents; INSERT/DELETE service_role on reference_chunks — no UPDATE policy, immutable)
+- GIN full-text index: `idx_reference_chunks_fulltext` on `to_tsvector('english', content)`
+- `updated_at` trigger: `trg_reference_documents_updated_at` reuses existing `set_updated_at()` from migration 001
+- RPC function `search_chunks_reference_semantic(p_query_embedding vector(3072), p_top_k int DEFAULT 5)` — platform-wide, no project_id filter
+- RPC function `search_chunks_reference_fulltext(p_query_text text, p_top_k int DEFAULT 5)` — platform-wide, no project_id filter
+- Database now has 11 tables (was 9), migration version `20260331121214`
+
+**Task 2 — CLI Ingestion Script (Ingestion Engineer):**
+- `scripts/ingest_reference.py` — 202 lines, standalone CLI script
+- 7 CLI arguments: `--file` (required), `--name` (required), `--document-type` (required), `--standard-body` (required), `--edition-year` (optional), `--jurisdiction` (optional), `--description` (optional)
+- Reuses existing pipeline: `parse_document` (Docling, lazy import preserved), `chunk_document` (450 tokens, 50 overlap), `embed_chunks` (Gemini, 3072 dims)
+- Inserts to `reference_documents` then bulk inserts to `reference_chunks` in batches of 50
+- Error handling: all failure paths exit non-zero with stderr messages; rollback on partial insert (CASCADE deletes any partial chunks)
+- Uses `get_supabase_client()` (service role key) — bypasses RLS for INSERT
+- Success output: `"Ingested: {name} | ID: {id} | Chunks: {count}"`
+
+**Cross-task verification:** Script INSERT column names match table schema from Task 1. FK relationship confirmed. Service role client bypasses RLS correctly for INSERT operations.
+
+---
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |
@@ -214,3 +244,5 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 | Document control system integration | Phase 2 feature | Phase 2 |
 | Document download endpoint | Deferred from Phase D | After Phase D |
 | CORS `allow_methods`/`allow_headers` tightening | `allow_methods=["*"]` and `allow_headers=["*"]` in `src/api/main.py` are acceptable for a known frontend but candidates for tightening | Future hardening session (not Phase A scope) |
+| **Live end-to-end test of `scripts/ingest_reference.py`** (HIGH) | Docling and Gemini API unavailable in Claude Code environment — script created and code-reviewed but not executed against a real PDF | **Must be completed before AGENT_PLAN Phase 3 goes into production** |
+| `function_search_path_mutable` on all RPC functions | Pre-existing Supabase security advisory affecting all 7 RPC functions across migrations 001, 006, and 007 — not introduced by Phase C1 | Future hardening session |
