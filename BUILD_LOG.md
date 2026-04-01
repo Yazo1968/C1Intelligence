@@ -307,6 +307,30 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 
 ---
 
+## AGENT_PLAN Phase 3 — Legal & Contractual Skill Files (Agent Orchestrator) — ✅ Skill files complete
+
+**Date:** 2026-04-01
+**Active agent:** Agent Orchestrator
+**Quality Guardian:** PASS on all five skill files individually
+**Commit protocol:** Each file committed and pushed individually after QG PASS and independent verification by session coordinator
+
+**Five skill files created in skills/legal/:**
+- `contract_assembly.md` — contract document completeness, hierarchy identification, Particular Conditions amendment mapping. Commit: `965c350` (398 lines)
+- `engineer_identification.md` — Engineer role identification, authority mapping, GCC split-role pattern, delegation validity, Silver Book Employer's Representative. Commit: `4d57e2c` (372 lines)
+- `notice_and_instruction_compliance.md` — notice validity, instruction validity, Clause 1.3 compliance, 28-day time bar assessment, routing compliance, Qatar Article 418 caveat. Commit: `bd0e01b` (395 lines)
+- `entitlement_basis.md` — FIDIC clause identification for claimed events, Particular Conditions modification check, Red/Yellow/Silver Book entitlement framework, GCC-specific entitlement patterns. Commit: `adf8cc7` (400 lines)
+- `key_dates_and_securities.md` — contractual dates, EOT history, LD exposure, bond and security validity, DNP and Performance Certificate status. Commit: `b413126` (427 lines)
+
+**All three FIDIC books (Red, Yellow, Silver) and both editions (1999, 2017) addressed in every skill file.**
+
+**Governing documents used:** AGENT_PLAN.md v1.4, SKILLS_STANDARDS.md v1.2, legal_domain_research_summary.md v1.2
+
+**Remaining before Phase 3 validation gate:**
+- FIDIC reference document ingestion via scripts/ingest_reference.py (HIGH — deferred from Phase C1, must complete before production use)
+- Five validation scenarios to be executed against the live platform
+
+---
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |

@@ -100,7 +100,7 @@ Synthesis -> Confidence -> Audit Log -> Response
 |---|---|---|
 | 1 | Agent Template | Complete |
 | 2 | Multi-Round Orchestrator | Complete |
-| 3 | Legal & Contractual Skills + Validation | Active — Prerequisites pending |
+| 3 | Legal & Contractual Skills + Validation | Skill files complete — validation gate pending |
 | 4 | Commercial & Financial Skills + Validation | Not Started |
 | 5 | Claims & Disputes Skills + Validation Gate | Not Started |
 | 6 | Remaining Three Specialists | Not Started |
