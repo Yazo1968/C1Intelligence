@@ -1,7 +1,7 @@
 # C1 — Agent Enhancement Plan
 ## From Stateless Specialists to True Domain Agents
 
-**Version:** 1.3
+**Version:** 1.4
 **Status:** Active — Reference Document
 **Last Updated:** March 2026
 
@@ -100,7 +100,7 @@ Synthesis -> Confidence -> Audit Log -> Response
 |---|---|---|
 | 1 | Agent Template | Complete |
 | 2 | Multi-Round Orchestrator | Complete |
-| 3 | Legal & Contractual Skills + Validation | Not Started |
+| 3 | Legal & Contractual Skills + Validation | Active — Prerequisites pending |
 | 4 | Commercial & Financial Skills + Validation | Not Started |
 | 5 | Claims & Disputes Skills + Validation Gate | Not Started |
 | 6 | Remaining Three Specialists | Not Started |
@@ -155,14 +155,17 @@ Synthesis -> Confidence -> Audit Log -> Response
 
 **Governing standard:** `SKILLS_STANDARDS.md`
 
-**Skill files to build in `skills/legal/`:** Defined during Phase 3 authorship session per `SKILLS_STANDARDS.md` Section 4. Domain research summary must be produced and approved before authorship begins.
+**Skill files to build in `skills/legal/`:**
+- `contract_assembly.md` — contract document completeness and hierarchy analysis
+- `engineer_identification.md` — Engineer role identification and authority mapping
+- `notice_and_instruction_compliance.md` — notice and instruction compliance assessment
+- `entitlement_basis.md` — contractual entitlement basis identification
+- `key_dates_and_securities.md` — key contractual dates and securities assessment
 
-**Key skill areas:**
-- Contract document completeness and hierarchy analysis
-- Engineer role identification and authority mapping
-- Notice and instruction compliance assessment
-- Contractual entitlement basis identification
-- Key contractual dates and securities assessment
+**Prerequisites before authorship begins:**
+1. Review and approve `docs/research/legal_domain_research_summary.md` — exists, awaiting Yasser domain review
+2. Ingest FIDIC Red Book 1999 and 2017 General Conditions via `scripts/ingest_reference.py` — HIGH deferred item from Phase C1, must complete before production use
+3. Define five validation scenarios per `SKILLS_STANDARDS.md` Section 7 — one per skill file
 
 **Validation gate — before Phase 4 starts:**
 - Test against minimum five scenarios per `SKILLS_STANDARDS.md` Section 7
@@ -298,12 +301,7 @@ src/
     ├── contradiction_cross.py      <- Phase 2: stub — Phase 7 fills logic (complete)
     ├── orchestrator.py             <- Phase 2: multi-round rebuild (complete)
     └── specialists/
-        ├── claims.py               <- Phase 1 stub -> Phase 5 complete
-        ├── legal.py                <- Phase 3
-        ├── commercial.py           <- Phase 4
-        ├── schedule.py             <- Phase 6
-        ├── governance.py           <- Phase 6
-        └── technical.py            <- Phase 6
+        └── __init__.py             <- placeholder; specialist files added per phase
 
 skills/                             <- generic domain knowledge — reusable across all projects
 ├── legal/                          <- Phase 3
@@ -324,7 +322,7 @@ The warehouse (Supabase pgvector) holds all project-specific evidence (Layer 1) 
 | Field | Value |
 |---|---|
 | Owner | C1 Project |
-| Version | 1.3 — Playbook concept removed; two-layer warehouse architecture per README.md restored; Governing Rule 11 added |
+| Version | 1.4 — Phase 3 activated; skill files named; prerequisites stated; stale claims.py removed from file structure |
 | Updated when | Phase completed or plan revised |
 | Location | `docs/AGENT_PLAN.md` |
 | Related documents | `docs/SKILLS_STANDARDS.md`, `CLAUDE.md`, `README.md` |
