@@ -49,7 +49,7 @@ Phase 3 is knowledge authorship, not code work. Skill files are written in markd
 
 Before Phase 3 skills are used in production, the following must be completed:
 1. Review and approve `docs/research/legal_domain_research_summary.md`
-2. Ingest FIDIC Red Book 1999 and 2017 General Conditions via `scripts/ingest_reference.py`
+2. Ingest FIDIC General Conditions for all three books in use in the GCC via `scripts/ingest_reference.py`: Red Book (Construction) 1999 and 2017, Yellow Book (Plant & Design-Build) 1999 and 2017, Silver Book (EPC/Turnkey) 1999 and 2017
 3. Define five validation scenarios per `SKILLS_STANDARDS.md` Section 7
 
 Five skill files to author in `skills/legal/`:
@@ -514,12 +514,38 @@ GREY at the orchestrator level means `retrieval.is_empty=True`. GREY from an ind
 
 ## FIDIC Awareness
 
-- FIDIC Red Book 1999 and 2017 editions are both in use in the GCC
-- Sub-clause numbering differs between editions (e.g., EOT is 8.4 [1999] and 8.5 [2017]; Notice of Claim is 20.1 [1999] and 20.2.1 [2017])
-- Notice of Claim has a 28-day time bar — one of the most critical forensic flags
-- The Engineer role may be split between PMC and Supervision Consultant in GCC projects — this creates genuine ambiguity that must be flagged, not resolved
+C1 operates across all three FIDIC books in common use in the GCC market. Skills must handle all three — a project may use any one of them.
+
+**Red Book (Conditions of Contract for Construction):**
+- Employer designs, Contractor builds
+- Engineer has supervisory and certifying role with defined authority under the contract
+- Standard clause structure: Clause 20 (1999) / Clauses 20–21 (2017) govern claims
+- Most common on building, civil works, and infrastructure projects
+
+**Yellow Book (Conditions of Contract for Plant & Design-Build):**
+- Contractor designs and builds — design responsibility shifts entirely to Contractor
+- Engineer role retained with similar supervisory/certifying function
+- Affects defects liability, specification compliance, and variation entitlement
+- Common on MEP, process plant, and infrastructure projects in the GCC
+
+**Silver Book (Conditions of Contract for EPC/Turnkey):**
+- Contractor takes full design, construction, and risk responsibility
+- No Engineer in the traditional sense — Employer's Representative replaces the Engineer with materially different authority
+- Significantly fewer Employer Risk Events — Contractor bears most project risk
+- No Engineer's determination mechanism — disputes escalate directly to DAB/DAAB
+- Used on large EPC projects, oil and gas related works, and PPP projects particularly in Saudi Arabia and Qatar
+
+**Key forensic distinctions across all three books:**
+- The 28-day Notice of Claim time bar applies across all three books — it is the most critical forensic flag regardless of which book governs
+- Engineer authority differs materially: Red/Yellow retain the Engineer's determination role; Silver does not
+- Design responsibility affects entitlement basis: on Yellow/Silver, Contractor-design deficiencies are not Employer Risk Events
+- Sub-clause numbering is broadly similar across Red and Yellow; Silver differs in important ways
+- Both 1999 and 2017 editions of each book are in active use in the GCC — the governing edition must always be determined from the contract documents in the warehouse, never assumed
+
+**GCC-specific patterns:**
+- The Engineer role may be split between PMC and Supervision Consultant on GCC projects — this creates genuine ambiguity that must be flagged, not resolved
 - Contradiction between the same field in different documents is never resolved — both versions are always surfaced
-- Layer 2 reference documents (FIDIC General Conditions 1999 and 2017) must be ingested via `scripts/ingest_reference.py` before Phase 3 skills are used in production
+- Layer 2 reference documents (Red, Yellow, and Silver Book General Conditions, 1999 and 2017) must be ingested via `scripts/ingest_reference.py` before Phase 3 skills are used in production
 
 ---
 

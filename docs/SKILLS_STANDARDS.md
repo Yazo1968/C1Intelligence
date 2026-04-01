@@ -1,7 +1,7 @@
 # C1 — Skills Standards and Requirements
 ## Governing Reference for All Agent Skill File Authorship
 
-**Version:** 1.1
+**Version:** 1.2
 **Status:** Active — Governing Document
 **Location:** `docs/SKILLS_STANDARDS.md`
 **Applies to:** All six domain specialists — Legal & Contractual, Commercial & Financial, Schedule & Programme, Technical & Design, Claims & Disputes, Governance & Compliance
@@ -138,7 +138,7 @@ The substantive knowledge that underpins the workflow. This section is where FID
 
 Rules for this section:
 - Every claim must cite a source (FIDIC sub-clause, SCL Protocol core principle, AACE RP 29R-03 MIP number, etc.)
-- Both FIDIC 1999 and 2017 must be addressed where they differ
+- All applicable FIDIC books (Red, Yellow, Silver) and both 1999 and 2017 editions must be addressed where they differ in ways that affect the analysis
 - GCC-specific practice must be explicitly identified as such, not conflated with general FIDIC guidance
 - Content must be actionable — "know this and apply it", not "here is a summary of the standard"
 
@@ -154,12 +154,12 @@ The following standards must be understood before authoring skill files for the 
 
 | Domain | Primary Standards | Methodology Frameworks | Key Document Types |
 |---|---|---|---|
-| Claims & Disputes | FIDIC Red Book 1999 & 2017 Cl. 20/21 | SCL Protocol 2nd Ed. 2017; AACE RP 29R-03 | Notice of Claim, EOT Claim, Delay Analysis Report, Expert Report, DAB/DAAB Decision |
-| Schedule & Programme | FIDIC Cl. 8; SCL Protocol 2017 | TIA, As-Planned vs As-Built, Windows Analysis, Collapsed As-Built, Impacted As-Planned | Baseline Programme, Revised Programme, As-Built Programme, Progress Reports |
-| Legal & Contractual | FIDIC Red Book 1999 & 2017 | Contract hierarchy analysis; notice sufficiency doctrine | Contract Agreement, Particular Conditions, Engineer's Instructions, Notices, Determinations |
-| Commercial & Financial | FIDIC Cl. 12, 13, 14; IFRS 15 | BOQ measurement; variation valuation; prolongation cost methodology | BOQ, IPC, Variation Order, Payment Application, Final Account |
-| Technical & Design | FIDIC Cl. 5, 7; relevant engineering standards | Specification compliance assessment; design change impact | Specifications, Drawings, RFIs, Shop Drawing Submittals, NCRs |
-| Governance & Compliance | FIDIC Cl. 3; applicable authority matrices | DOA compliance; approval chain verification | Project Charter, DOA Matrix, Committee Minutes, Audit Reports |
+| Claims & Disputes | FIDIC Red, Yellow & Silver Books 1999 & 2017 Cl. 20/21 | SCL Protocol 2nd Ed. 2017; AACE RP 29R-03 | Notice of Claim, EOT Claim, Delay Analysis Report, Expert Report, DAB/DAAB Decision |
+| Schedule & Programme | FIDIC Red, Yellow & Silver Books Cl. 8; SCL Protocol 2017 | TIA, As-Planned vs As-Built, Windows Analysis, Collapsed As-Built, Impacted As-Planned | Baseline Programme, Revised Programme, As-Built Programme, Progress Reports |
+| Legal & Contractual | FIDIC Red, Yellow & Silver Books 1999 & 2017 | Contract hierarchy analysis; notice sufficiency doctrine; book-specific Engineer/Employer's Representative authority | Contract Agreement, Particular Conditions, Engineer's Instructions, Notices, Determinations |
+| Commercial & Financial | FIDIC Red, Yellow & Silver Books Cl. 12, 13, 14; IFRS 15 | BOQ measurement; variation valuation; prolongation cost methodology | BOQ, IPC, Variation Order, Payment Application, Final Account |
+| Technical & Design | FIDIC Red, Yellow & Silver Books Cl. 5, 7; relevant engineering standards | Specification compliance assessment; design change impact; Contractor design liability (Yellow/Silver) | Specifications, Drawings, RFIs, Shop Drawing Submittals, NCRs |
+| Governance & Compliance | FIDIC Red, Yellow & Silver Books Cl. 3; applicable authority matrices | DOA compliance; approval chain verification; Employer's Representative authority (Silver) | Project Charter, DOA Matrix, Committee Minutes, Audit Reports |
 
 ### 4.2 Research Depth Required
 
@@ -202,7 +202,17 @@ Generic FIDIC commentary is available everywhere. The skill must encode what is 
 
 ### 5.3 Edition-Specific Where It Matters
 
-Where FIDIC 1999 and 2017 differ in a way that affects the analysis — clause numbering, time periods, procedural requirements, symmetric vs. asymmetric obligations — both editions must be addressed. The agent determines which edition governs by reading the project's contract documents from the warehouse.
+Where FIDIC 1999 and 2017 differ in a way that affects the analysis — clause numbering, time periods, procedural requirements, symmetric vs. asymmetric obligations — both editions must be addressed. Where the three FIDIC books (Red, Yellow, Silver) differ in ways that affect the analysis — Engineer authority, design responsibility, risk allocation, Employer Risk Events — all applicable books must be addressed. The agent determines which book and which edition governs by reading the project's contract documents from the warehouse.
+
+**Key book-level differences that must always be addressed:**
+
+| Issue | Red Book | Yellow Book | Silver Book |
+|---|---|---|---|
+| Design responsibility | Employer | Contractor | Contractor |
+| Supervisory role | Engineer | Engineer | Employer's Representative |
+| Engineer's determination | Yes (Cl. 3.5 / 3.7) | Yes (Cl. 3.5 / 3.7) | No — disputes escalate directly to DAB/DAAB |
+| Employer Risk Events | Broad — includes unforeseen conditions | Similar to Red but design risks excluded | Narrow — Contractor bears most risk |
+| Contractor design defects | Not Employer Risk Event (Employer designs) | Contractor liability | Contractor liability |
 
 Key differences that must always be addressed in any skill file that references FIDIC claims procedure:
 
@@ -243,7 +253,7 @@ Claims & Disputes skill files must be consistent with the working methodology of
 
 **AACE International Recommended Practice 29R-03 — Forensic Schedule Analysis:** The forensic methodology standard. Defines nine schedule analysis methodologies across a five-layer taxonomy. Complements rather than conflicts with the SCL Protocol — FIDIC defines what must be proved and when; SCL/AACE define how to prove it.
 
-**FIDIC Red Book 1999 and 2017:** The contractual framework. Defines entitlement, notice obligations, time bars, and the claims resolution procedure. Does not prescribe delay analysis methodology — that is left to SCL/AACE.
+**FIDIC Red, Yellow and Silver Books 1999 and 2017:** The contractual framework across all three books in GCC use. Defines entitlement, notice obligations, time bars, and the claims resolution procedure. The 28-day Notice of Claim time bar applies across all three books. The Engineer's determination mechanism exists in Red and Yellow but not Silver — on Silver Book projects disputes escalate directly to DAB/DAAB. Entitlement basis differs materially across books due to different risk allocation and design responsibility. Does not prescribe delay analysis methodology — that is left to SCL/AACE.
 
 ### 6.2 Professional Claim Assessment Workflow
 
@@ -397,7 +407,7 @@ All updates must be logged in `BUILD_LOG.md` with: the query or event that trigg
 
 | Field | Value |
 |---|---|
-| Version | 1.1 — Playbook concept removed; warehouse two-layer architecture clarified |
+| Version | 1.2 — FIDIC scope expanded to Red, Yellow, and Silver Books across all domains; book-level differences table added to Section 5.3; Claims section 6.1 updated |
 | Date | March 2026 |
 | Location | `docs/SKILLS_STANDARDS.md` |
 | Updated when | Standard revised, new domain added, or validation practice updated |

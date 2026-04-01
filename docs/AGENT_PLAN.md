@@ -164,7 +164,7 @@ Synthesis -> Confidence -> Audit Log -> Response
 
 **Prerequisites before authorship begins:**
 1. Review and approve `docs/research/legal_domain_research_summary.md` — exists, awaiting Yasser domain review
-2. Ingest FIDIC Red Book 1999 and 2017 General Conditions via `scripts/ingest_reference.py` — HIGH deferred item from Phase C1, must complete before production use
+2. Ingest FIDIC General Conditions for all three books in use in the GCC via `scripts/ingest_reference.py`: Red Book (Construction) 1999 and 2017, Yellow Book (Plant & Design-Build) 1999 and 2017, Silver Book (EPC/Turnkey) 1999 and 2017 — HIGH deferred item from Phase C1, must complete before production use
 3. Define five validation scenarios per `SKILLS_STANDARDS.md` Section 7 — one per skill file
 
 **Validation gate — before Phase 4 starts:**
@@ -322,7 +322,7 @@ The warehouse (Supabase pgvector) holds all project-specific evidence (Layer 1) 
 | Field | Value |
 |---|---|
 | Owner | C1 Project |
-| Version | 1.4 — Phase 3 activated; skill files named; prerequisites stated; stale claims.py removed from file structure |
+| Version | 1.4 — Phase 3 activated; skill files named; prerequisites stated; stale claims.py removed from file structure; FIDIC scope expanded to Red, Yellow, and Silver Books |
 | Updated when | Phase completed or plan revised |
 | Location | `docs/AGENT_PLAN.md` |
 | Related documents | `docs/SKILLS_STANDARDS.md`, `CLAUDE.md`, `README.md` |
