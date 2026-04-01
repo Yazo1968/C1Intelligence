@@ -30,10 +30,10 @@ Every session, before writing any code, confirm which governing document applies
 |---|---|---|
 | `README.md` | Platform architecture, warehouse design, API endpoints | Every session |
 | `CLAUDE.md` | This file — behavioural contract | Every session |
-| `C1_CLEANUP_PLAN.md` | Active workstream — Phases A through E | Every session until Phase E is complete |
-| `docs/AGENT_PLAN.md` | Agent architecture phases 1–8 | When working on agent/intelligence layer |
-| `docs/SKILLS_STANDARDS.md` | Skill file authorship standards | When working on skill files |
+| `docs/AGENT_PLAN.md` | Agent architecture phases 1–8 — **current active workstream** | Every session |
+| `docs/SKILLS_STANDARDS.md` | Skill file authorship standards — governs all skill file content | When working on skill files |
 | `BUILD_LOG.md` | Completion record and deferred items | Read at session start; update at session end |
+| `C1_CLEANUP_PLAN.md` | **Archived** — Phases A–E complete. Reference only if a historical decision needs tracing. | Do not treat as active workstream |
 
 **These documents must be kept current.** When a phase or task completes, the relevant governing document is updated before the session is closed. The Quality Guardian confirms the document accurately reflects what was built. A phase is not complete until the document is updated and committed.
 
@@ -41,18 +41,23 @@ Every session, before writing any code, confirm which governing document applies
 
 ## Current Active Workstream
 
-**C1_CLEANUP_PLAN.md — Phases A through E**
+**`docs/AGENT_PLAN.md` — Phase 3: Legal & Contractual Skills**
 
-This is the active workstream. Read `C1_CLEANUP_PLAN.md` fully before starting any session in this workstream. It contains:
-- The full issues register (what is wrong and why)
-- The architecture decisions (what has been locked and why)
-- The complete specification for each phase
-- The exact session prompt templates for each phase
-- The completion criteria that Quality Guardian checks against
+This is the active workstream. Read `docs/AGENT_PLAN.md` and `docs/SKILLS_STANDARDS.md` fully before starting any session in this workstream.
 
-Phase sequence: A → B → C1 → C2 → D → E (CLAUDE.md rewrite)
+Phase 3 is knowledge authorship, not code work. Skill files are written in markdown, reviewed by Yasser as domain expert, and deployed by dropping files into `skills/legal/`. Claude Code is not used for skill file content. See `docs/SKILLS_STANDARDS.md` v1.1 for the full authorship standard.
 
-**After Phase E is complete**, the next workstream is **`docs/AGENT_PLAN.md` Phase 3 — Legal & Contractual Skills**.
+Before Phase 3 skills are used in production, the following must be completed:
+1. Review and approve `docs/research/legal_domain_research_summary.md`
+2. Ingest FIDIC Red Book 1999 and 2017 General Conditions via `scripts/ingest_reference.py`
+3. Define five validation scenarios per `SKILLS_STANDARDS.md` Section 7
+
+Five skill files to author in `skills/legal/`:
+- `contract_assembly.md`
+- `engineer_identification.md`
+- `notice_and_instruction_compliance.md`
+- `entitlement_basis.md`
+- `key_dates_and_securities.md`
 
 ---
 
@@ -85,7 +90,7 @@ Do not introduce any orchestration framework. Build directly against the Gemini 
 - Claude-based taxonomy classification (0.75 confidence threshold)
 - Claude-based metadata extraction
 - Tier-based field validation
-- Supabase Storage — original file preservation (`document-originals` bucket)
+- Original file preserved to Supabase Storage (`document-originals` bucket) before ingestion begins
 
 **Reference document ingestion handles (`scripts/ingest_reference.py`):**
 - CLI script for Layer 2 reference documents (FIDIC, PMBOK, IFRS, laws)
@@ -103,7 +108,7 @@ Do not introduce any orchestration framework. Build directly against the Gemini 
 
 **Supabase handles:**
 - All relational data — projects, contracts, parties, document types
-- Layer 1 document registry (`documents` table) and chunks (`document_chunks`)
+- Layer 1 document registry (`documents` table, includes `storage_path`) and chunks (`document_chunks`)
 - Layer 2 reference documents (`reference_documents`) and chunks (`reference_chunks`)
 - Contradiction flags (project-scoped)
 - Immutable audit log (`query_log` — UPDATE and DELETE blocked by trigger)
@@ -204,7 +209,7 @@ Applied to every task output:
 - Sensitive data in log messages
 
 **Spec compliance:**
-- Task output matches what was specified in `C1_CLEANUP_PLAN.md` or `AGENT_PLAN.md`
+- Task output matches what was specified in `docs/AGENT_PLAN.md` or `docs/SKILLS_STANDARDS.md`
 - Governing documents updated if the task required it
 - Completion criteria from the governing document are met
 
@@ -232,6 +237,13 @@ Before writing any code, answer these questions explicitly:
 
 If any check reveals a gap or inconsistency with a previous session's reported output, stop and report the discrepancy to Yasser before writing any code.
 
+### Commit Protocol — Mandatory
+
+**Each task must be committed and pushed to GitHub immediately after Quality Guardian PASS.** Do not accumulate multiple tasks into a single commit. One task — one commit — one push. This allows the session coordinator to independently verify each change before the next task begins.
+
+Commit message format: `[agent]: [phase] [task description]`
+Example: `feat: Phase 3 Task 1 — contract_assembly skill file`
+
 ### At Session Close
 
 1. State exactly what was built — file by file, function by function where relevant
@@ -239,7 +251,7 @@ If any check reveals a gap or inconsistency with a previous session's reported o
 3. State any new deferred items discovered during this session
 4. Update `BUILD_LOG.md` with the session's completion entry
 5. Update the relevant governing document if the session completed a phase or changed an architectural decision
-6. Confirm all files are committed to the repository
+6. Confirm all files are committed and pushed to the repository
 7. State what the next session should pick up and any dependencies it needs to be aware of
 
 ---
@@ -250,13 +262,7 @@ The following documents must be updated when relevant work is completed. Never m
 
 | Event | Document to update |
 |---|---|
-| Phase A complete | `BUILD_LOG.md` |
-| Phase B complete | `BUILD_LOG.md`, `README.md` (spec values) |
-| Phase C1 complete | `BUILD_LOG.md`, `README.md` (Layer 2 architecture section) |
-| Phase C2 complete | `BUILD_LOG.md` |
-| Phase D complete | `BUILD_LOG.md` |
-| Phase E complete | `CLAUDE.md` (this file — full rewrite), archive `C1_CLEANUP_PLAN.md` |
-| AGENT_PLAN phase complete | `BUILD_LOG.md`, `AGENT_PLAN.md` (phase status table) |
+| AGENT_PLAN phase complete | `BUILD_LOG.md`, `docs/AGENT_PLAN.md` (phase status table) |
 | New deferred item identified | `BUILD_LOG.md` (Deferred Items section) |
 | Architectural decision made or changed | `CLAUDE.md` and `README.md` |
 
@@ -274,8 +280,11 @@ The following items are known, acknowledged, and explicitly not being addressed 
 | Approval workflows | Phase 2 feature — correctly deferred from initial build | Phase 2 |
 | Five user roles and authority matrix | Phase 2 feature | Phase 2 |
 | Document control system integration (Aconex, Docutrack) | Phase 2 feature | Phase 2 |
-| Document download endpoint | Deferred from Phase D | After Phase D, add as small task |
+| Document download endpoint (`GET /documents/{id}/download`) | Deferred from Phase D | Small task after Phase D — add before Phase 2 |
 | Cross-specialist contradiction detection | `contradiction_cross.py` is a stub returning `[]` | AGENT_PLAN Phase 7 |
+| CORS `allow_methods` / `allow_headers` tightening | Currently `["*"]` — acceptable for known frontend but not hardened | Future hardening session |
+| Live end-to-end test of `scripts/ingest_reference.py` | Docling + Gemini API unavailable in Claude Code environment | Must run before AGENT_PLAN Phase 3 goes into production |
+| `function_search_path_mutable` on all RPC functions | Pre-existing pattern across all project RPC functions | Future hardening session |
 
 ---
 
@@ -284,7 +293,7 @@ The following items are known, acknowledged, and explicitly not being addressed 
 ### Original Build (2026-03-28)
 
 All seven original steps complete and deployed:
-1. ~~Supabase schema~~ — migrations 001–003 applied (8 tables, triggers, 176-row taxonomy seed, RLS)
+1. ~~Supabase schema~~ — migrations 001–003 applied (9 tables, triggers, 176-row taxonomy seed, RLS)
 2. ~~Ingestion pipeline~~ — `src/ingestion/` complete (parse, classify, extract, chunk, embed, store)
 3. ~~Master orchestrator~~ — `src/agents/orchestrator.py`
 4. ~~Domain specialists~~ — six specialist stubs, system prompts in `src/agents/prompts.py`
@@ -304,9 +313,16 @@ Built: `BaseSpecialist`, `SkillLoader`, four shared tools (`search_chunks`, `get
 
 Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPoolExecutor`, Round 2 sequential dispatch with Round 1 handoff, `contradiction_cross.py` stub, downstream functions adapted for `SpecialistFindings` model. Quality Guardian: 7/7 checks passed.
 
-### C1_CLEANUP_PLAN.md — Active
+### C1_CLEANUP_PLAN.md — Phases A–E (Complete, 2026-03-31)
 
-Phases A through E in progress. See `C1_CLEANUP_PLAN.md` for full specification.
+All five phases complete. See `BUILD_LOG.md` for full details.
+
+- **Phase A** — CORS wildcard fixed, unsupported file types removed, Dockerfile CMD corrected, dead files deleted (`specialist.py`, `specialists/claims.py`), dead constants and dead model field removed.
+- **Phase B** — Spec values aligned (450 tokens, 0.75 threshold documented), stale Gemini-era frontend types removed, README brought current.
+- **Phase C1** — Layer 2 database tables created (`reference_documents`, `reference_chunks`), RLS policies, RPC functions (`search_chunks_reference_semantic`, `search_chunks_reference_fulltext`), CLI ingestion script (`scripts/ingest_reference.py`).
+- **Phase C2** — Layer 2 retrieval integrated into hybrid search pipeline. `RetrievedChunk` extended with `is_reference` field. `_build_user_message` updated with labelled Layer 1 / Layer 2 sections.
+- **Phase D** — Playbook auto-generation from Supabase DB (replaces inert flat-file mechanism). File storage added: original documents preserved to `document-originals` bucket. Migration 008 applied (`storage_path` on `documents`).
+- **Phase E** — This CLAUDE.md rewrite.
 
 ---
 
@@ -334,23 +350,45 @@ DOMAIN_TO_CONFIG_KEY = {
 
 **Key files in `src/agents/`:**
 - `orchestrator.py` — master orchestrator, multi-round dispatch
-- `base_specialist.py` — shared agentic loop (assess → tool call → reason → return)
+- `base_specialist.py` — shared agentic loop (assess → tool call → reason → return); `_build_user_message` produces labelled Layer 1 and Layer 2 sections
 - `tools.py` — four shared tools available to all specialists
-- `skill_loader.py` — dynamic markdown loading from `skills/{domain}/` + DB-driven playbook (after Phase D)
+- `skill_loader.py` — dynamic markdown loading from `skills/{domain}/`; DB-driven playbook auto-generation via `_generate_project_context()` (flat file override if `playbooks/{project_id}.md` exists)
 - `specialist_config.py` — `SPECIALIST_CONFIGS` dict
 - `domain_router.py` — Claude-based domain identification
-- `retrieval.py` — pgvector hybrid search (Layer 1 + Layer 2 after Phase C)
+- `retrieval.py` — four-search hybrid pipeline: Layer 1 semantic + Layer 1 full-text + Layer 2 reference semantic + Layer 2 reference full-text; Layer 2 chunks flagged with `is_reference=True`
 - `contradiction.py` — intra-document contradiction detection + write-back
-- `contradiction_cross.py` — **stub, returns empty list** — Phase 7 of AGENT_PLAN fills this
+- `contradiction_cross.py` — **stub, returns empty list** — AGENT_PLAN Phase 7 fills this
 - `prompts.py` — system prompts for domain routing, six specialists, contradiction detection
-- `models.py` — all agent data models including `SpecialistFindings` (the active model post-Phase 2)
+- `models.py` — all agent data models including `SpecialistFindings` (active model) and `RetrievedChunk` (with `is_reference` field)
 - `audit.py` — `query_log` write and document snapshot
 
 **`SpecialistFindings` is the active model** (not v1 `SpecialistFinding`). All downstream functions use `SpecialistFindings`.
 
 **`contradiction_cross.py` status:** Returns `[]`. This is intentional. AGENT_PLAN Phase 7 will fill the logic. Do not treat the empty return as a bug.
 
-**`prompts.py` status:** Contains hardcoded FIDIC knowledge in `SPECIALIST_SYSTEM_PROMPTS`. After Phase C, Layer 2 retrieval supplements this with actual FIDIC document chunks from the warehouse. The hardcoded strings are a baseline, not a replacement for Layer 2.
+**`prompts.py` status:** Contains hardcoded FIDIC knowledge in `SPECIALIST_SYSTEM_PROMPTS`. Layer 2 retrieval now supplements this with actual FIDIC document chunks from the warehouse when reference documents have been ingested. The hardcoded strings are a baseline fallback, not a replacement for Layer 2.
+
+**`orchestrator.py` known TODO:** `round_number` is not written to `query_log` — a TODO comment marks the location. This requires a DB migration to add the column. Deferred — see Deferred Items Register.
+
+### Retrieval Pipeline — Four-Search Flow
+
+`retrieve_chunks` in `retrieval.py` performs eight steps:
+
+1. Embed query (Gemini, shared across all four searches)
+2. Layer 1 semantic search — `search_chunks_semantic` RPC (project-scoped, raises `AgentError` on failure)
+3. Layer 1 full-text search — `search_chunks_fulltext` RPC (project-scoped, non-fatal)
+4. Layer 2 reference semantic search — `search_chunks_reference_semantic` RPC (platform-wide, non-fatal, `p_top_k=5`)
+5. Layer 2 reference full-text search — `search_chunks_reference_fulltext` RPC (platform-wide, non-fatal)
+6. Merge and deduplicate within each layer (Layer 1 deduplicates against Layer 1; Layer 2 against Layer 2)
+7. Enrich with metadata (Layer 1 from `documents` + `document_types`; Layer 2 from `reference_documents`)
+8. Build `RetrievedChunk` list (Layer 1 first with `is_reference=False`; Layer 2 with `is_reference=True`)
+
+### Playbook Mechanism — DB-Driven
+
+`SkillLoader.load()` in `skill_loader.py`:
+
+1. **Layer 1 (skills):** Scans `skills/{domain}/*.md` alphabetically — no hardcoded file list.
+2. **Layer 2 (playbook):** Checks for `playbooks/{project_id}.md`. If present: reads it (manual override). If absent: calls `_generate_project_context(project_id)` which queries `contracts` and `parties` tables to produce a structured markdown block with contract names, FIDIC edition, and party roles. Graceful degradation: DB failure returns empty string; skills still load.
 
 ### Two-Layer Warehouse Architecture
 
@@ -358,6 +396,7 @@ DOMAIN_TO_CONFIG_KEY = {
 - Project-scoped (RLS enforces per-project access)
 - 176 document types from taxonomy
 - Ingested via `POST /projects/{id}/documents`
+- Original file stored to `document-originals` Supabase Storage bucket; path in `documents.storage_path`
 - Immutable chunks (no UPDATE RLS)
 
 **Layer 2 — Reference documents** (`reference_documents` + `reference_chunks`):
@@ -365,7 +404,6 @@ DOMAIN_TO_CONFIG_KEY = {
 - FIDIC, PMBOK, IFRS, applicable laws, government authority documents
 - Ingested via `scripts/ingest_reference.py` (CLI, service role only)
 - Immutable chunks (no UPDATE RLS)
-- Note: Added in C1_CLEANUP_PLAN.md Phase C — may not exist yet if Phase C is not complete
 
 ---
 
@@ -399,6 +437,8 @@ When an approach changes, delete the old code. Do not comment it out.
 
 **Never start the next task without completing the session protocol for the current one.**
 
+**Never commit multiple tasks in a single commit.** One task — one commit — one push.
+
 ---
 
 ## Code Quality Standards
@@ -413,7 +453,7 @@ When an approach changes, delete the old code. Do not comment it out.
 
 **Type hints on all functions.**
 
-**No print statements in production code.** Use structlog via `get_logger(__name__)`.
+**No print statements in production code.** Use structlog via `get_logger(__name__)`. CLI scripts (`scripts/`) may use `print()` — they are not production server code.
 
 ---
 
@@ -441,19 +481,21 @@ When an approach changes, delete the old code. Do not comment it out.
 
 **opencv-python-headless must be pinned.** Dockerfile explicitly uninstalls opencv-python and reinstalls opencv-python-headless==4.13.0.92 after all pip installs.
 
+**Accepted file types are .pdf, .docx, .xlsx only.** `ALLOWED_EXTENSIONS` and `ALLOWED_MIME_TYPES` in `src/config.py` contain exactly these three types. Do not add others without also extending the parser.
+
 **Chunks are immutable.** Write-once. CASCADE DELETE from parent document deletes all chunks.
 
 **CASCADE DELETE is enforced at the DB level.** `document_chunks.document_id` FK has `ON DELETE CASCADE`.
 
-**Retrieval uses two Layer 1 RPC functions.** `search_chunks_semantic` and `search_chunks_fulltext`. After Phase C, also `search_chunks_reference_semantic` and `search_chunks_reference_fulltext` for Layer 2.
+**Retrieval uses four RPC functions.** Layer 1: `search_chunks_semantic` and `search_chunks_fulltext` (project-scoped). Layer 2: `search_chunks_reference_semantic` and `search_chunks_reference_fulltext` (platform-wide).
 
-**Classification confidence threshold is 0.75.** Documents below threshold go to `classification_queue`. This is stricter than the original 0.70 spec — 0.75 is correct for a forensic platform.
+**Classification confidence threshold is 0.75.** Documents below threshold go to `classification_queue`. Stricter than original 0.70 spec — 0.75 is correct for a forensic platform.
 
 **Chunk target is 450 tokens.** With 50-token overlap. Validated in smoke test 2026-03-30. Supersedes original 512 spec.
 
 **Processing status is always visible.** `QUEUED` → `EXTRACTING` → `CLASSIFYING` → `STORED` / `FAILED`. Nothing disappears silently.
 
-**Original file is preserved.** After Phase D, uploaded files are stored in Supabase Storage (`document-originals` bucket) at `{project_id}/{document_id}/{filename}` before ingestion begins. `documents.storage_path` is populated on success.
+**Original file is preserved.** Uploaded files are stored in Supabase Storage (`document-originals` bucket) at `{project_id}/{document_id}/{filename}` before ingestion begins. `documents.storage_path` is populated on success. Storage failure is non-fatal — ingestion continues.
 
 ---
 
@@ -477,7 +519,7 @@ GREY at the orchestrator level means `retrieval.is_empty=True`. GREY from an ind
 - Notice of Claim has a 28-day time bar — one of the most critical forensic flags
 - The Engineer role may be split between PMC and Supervision Consultant in GCC projects — this creates genuine ambiguity that must be flagged, not resolved
 - Contradiction between the same field in different documents is never resolved — both versions are always surfaced
-- Layer 2 reference documents (FIDIC General Conditions 1999 and 2017) should be ingested via `scripts/ingest_reference.py` before Phase 3 skills are used in production
+- Layer 2 reference documents (FIDIC General Conditions 1999 and 2017) must be ingested via `scripts/ingest_reference.py` before Phase 3 skills are used in production
 
 ---
 
@@ -500,7 +542,7 @@ GREY at the orchestrator level means `retrieval.is_empty=True`. GREY from an ind
 
 - **Railway uses Dockerfile builder** — `railway.json` sets `"builder": "DOCKERFILE"`. Do NOT switch to NIXPACKS.
 - **Start command uses `sh -c` wrapper** — `railway.json` startCommand: `sh -c 'uvicorn src.api.main:app --host 0.0.0.0 --port $PORT'`. The Dockerfile CMD also uses this wrapper.
-- Railway Pro plan required for docling build time.
+- Railway Pro plan required for Docling build time.
 - Vercel project root directory: `frontend/`, framework preset: Vite.
 - GitHub pushes to `main` auto-trigger Railway and Vercel redeployments.
 
@@ -513,7 +555,7 @@ GREY at the orchestrator level means `retrieval.is_empty=True`. GREY from an ind
 ├── README.md                            ← Single source of truth for platform
 ├── CLAUDE.md                            ← This file — behavioural contract
 ├── BUILD_LOG.md                         ← Completion log and deferred items
-├── C1_CLEANUP_PLAN.md                   ← Active workstream plan (Phases A–E)
+├── C1_CLEANUP_PLAN.md                   ← Archived — Phases A–E complete
 ├── requirements.txt
 ├── Dockerfile
 ├── Procfile                             ← Legacy reference only
@@ -523,7 +565,7 @@ GREY at the orchestrator level means `retrieval.is_empty=True`. GREY from an ind
 ├── scripts/
 │   └── ingest_reference.py             ← CLI script for Layer 2 reference ingestion
 ├── docs/
-│   ├── AGENT_PLAN.md                   ← Agent enhancement plan (v1.3)
+│   ├── AGENT_PLAN.md                   ← Agent enhancement plan (v1.3) — active workstream
 │   ├── SKILLS_STANDARDS.md             ← Skill file authorship standards (v1.1)
 │   ├── migrations/
 │   │   └── RETRIEVAL_MIGRATION.md
@@ -539,14 +581,14 @@ GREY at the orchestrator level means `retrieval.is_empty=True`. GREY from an ind
 │       ├── 004_pgvector.sql
 │       ├── 005_document_chunks_immutable.sql
 │       ├── 006_retrieval_functions.sql
-│       ├── 007_layer2_reference.sql     ← Added in Phase C
-│       └── 008_document_storage.sql    ← Added in Phase D
+│       ├── 007_layer2_reference.sql
+│       └── 008_document_storage.sql
 ├── src/
 │   ├── config.py
 │   ├── clients.py
 │   ├── logging_config.py
 │   ├── ingestion/
-│   │   ├── pipeline.py
+│   │   ├── pipeline.py                 ← Accepts optional document_id param
 │   │   ├── parser.py                   ← Docling (lazy import)
 │   │   ├── chunker.py                  ← tiktoken, 450-token target
 │   │   ├── embedder.py                 ← Gemini Embeddings API
@@ -560,32 +602,32 @@ GREY at the orchestrator level means `retrieval.is_empty=True`. GREY from an ind
 │   │   └── models.py
 │   ├── agents/
 │   │   ├── orchestrator.py             ← Multi-round dispatch, DOMAIN_TO_CONFIG_KEY
-│   │   ├── base_specialist.py          ← Shared agentic loop
+│   │   ├── base_specialist.py          ← Shared agentic loop, Layer 1/2 message sections
 │   │   ├── tools.py                    ← Four shared tools
-│   │   ├── skill_loader.py             ← Dynamic skill loading + DB playbook
+│   │   ├── skill_loader.py             ← Dynamic skill loading + DB-driven playbook
 │   │   ├── specialist_config.py        ← SPECIALIST_CONFIGS dict
 │   │   ├── domain_router.py
-│   │   ├── retrieval.py                ← Layer 1 + Layer 2 hybrid search
+│   │   ├── retrieval.py                ← Four-search hybrid pipeline (Layer 1 + Layer 2)
 │   │   ├── contradiction.py            ← Intra-document detection
-│   │   ├── contradiction_cross.py      ← STUB — returns [] — Phase 7 fills this
+│   │   ├── contradiction_cross.py      ← STUB — returns [] — AGENT_PLAN Phase 7 fills this
 │   │   ├── synthesis.py
 │   │   ├── prompts.py
 │   │   ├── audit.py
-│   │   ├── models.py
+│   │   ├── models.py                   ← RetrievedChunk (is_reference), SpecialistFindings
 │   │   └── specialists/
 │   │       └── __init__.py
 │   └── api/
-│       ├── main.py
+│       ├── main.py                     ← CORS locked to https://c1intelligence.vercel.app
 │       ├── auth.py
 │       ├── errors.py
 │       ├── schemas.py
 │       └── routes/
 │           ├── health.py
 │           ├── projects.py
-│           ├── documents.py
+│           ├── documents.py            ← Storage upload before ingestion
 │           └── queries.py
 ├── skills/
-│   ├── legal/                          ← Phase 3 of AGENT_PLAN (not started)
+│   ├── legal/                          ← AGENT_PLAN Phase 3 — active
 │   ├── commercial/                     ← Phase 4
 │   ├── claims/
 │   │   └── README.md                   ← Placeholder
@@ -593,7 +635,7 @@ GREY at the orchestrator level means `retrieval.is_empty=True`. GREY from an ind
 │   ├── governance/                     ← Phase 6
 │   └── technical/                      ← Phase 6
 ├── playbooks/
-│   └── README.md                       ← Flat file override; DB-driven after Phase D
+│   └── README.md                       ← Flat file manual override; DB-driven auto-generation is default
 ├── frontend/
 │   ├── src/
 │   │   ├── api/
@@ -624,8 +666,6 @@ GREY at the orchestrator level means `retrieval.is_empty=True`. GREY from an ind
 │   └── ...
 └── tests/                              ← Test suite (to be built)
 ```
-
-Note: `scripts/ingest_reference.py` and migrations 007–008 are added during C1_CLEANUP_PLAN.md Phases C and D. They appear in the structure above as the target state.
 
 ---
 
