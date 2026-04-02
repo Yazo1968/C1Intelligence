@@ -64,8 +64,25 @@ Your findings are read by internal auditors, compliance officers, legal counsel,
 and board-level executives. Write accordingly.
 
 - Use the exact output format defined in your skill files. Do not deviate.
-- Every factual claim must cite its source document by document_id in the format:
-  [Source: document_id, {{document reference or filename}}]
+- Every factual claim must cite its source. Each search result includes a "source"
+  field — use it exactly as provided, then append the clause, section, or article
+  if identifiable from the content.
+
+  Format: [source field value, clause/section if identifiable]
+
+  Examples across different document types:
+    [Contract Agreement, Ref. YD_PROC_PRD-000097.01, 2023-07-06, Chunk 10, Sub-Clause 1.1.7]
+    [Non-Conformance Report, Ref. NCR-0042, 2024-03-14, Chunk 3]
+    [Site Daily Report, 2024-02-03, Chunk 1]
+    [Schedule of Rates, Chunk 5]
+    [FIDIC Conditions of Contract, Ref. 2017, Chunk 44, Clause 20.2.1]
+
+  Rules:
+    - Always use the source field. Never substitute a document UUID.
+    - Append a clause, article, or section only if you can identify it from the
+      chunk content itself — do not guess.
+    - The format adapts to the document type — use what is available.
+
 - Classify each finding: FLAG (requires attention) or INFORMATIONAL (noted, no action).
 - Where a finding is a FLAG, state the implication in one sentence: what risk or
   obligation does this create?
@@ -272,11 +289,10 @@ class BaseSpecialist:
         if layer1_chunks:
             parts.append("\n--- PROJECT DOCUMENT CHUNKS (Layer 1) ---\n")
             for i, chunk in enumerate(layer1_chunks):
-                doc_id = chunk.get("document_id", "unknown")
                 content = chunk.get("content", "")
-                chunk_idx = chunk.get("chunk_index", i)
+                source_label = self._build_chunk_source_label(chunk, i)
                 parts.append(
-                    f"[Chunk {chunk_idx} | Document: {doc_id}]\n{content}\n"
+                    f"[source: {source_label}]\n{content}\n"
                 )
             parts.append("--- END PROJECT DOCUMENT CHUNKS ---")
         elif not layer2_chunks:
@@ -290,11 +306,10 @@ class BaseSpecialist:
         if layer2_chunks:
             parts.append("\n--- REFERENCE DOCUMENT CHUNKS (Layer 2 — Standards and Regulations) ---\n")
             for chunk in layer2_chunks:
-                doc_ref = chunk.get("document_reference", "unknown")
-                doc_type = chunk.get("document_type", "unknown")
                 content = chunk.get("content", "")
+                source_label = self._build_chunk_source_label(chunk, 0)
                 parts.append(
-                    f"[Reference: {doc_ref} | Standard: {doc_type}]\n{content}\n"
+                    f"[source: {source_label}]\n{content}\n"
                 )
             parts.append("--- END REFERENCE DOCUMENT CHUNKS ---")
 
@@ -304,6 +319,36 @@ class BaseSpecialist:
             parts.append(_ROUND_1_CONTEXT_HEADER.format(findings=findings_text))
 
         return "\n".join(parts)
+
+    @staticmethod
+    def _build_chunk_source_label(chunk: dict, fallback_index: int) -> str:
+        """Build a human-readable source label from chunk metadata fields.
+
+        Uses whatever fields are available, skips those that are None.
+        Produces labels like:
+          "Contract Agreement, Ref. YD_PROC_PRD-000097.01, 2023-07-06, Chunk 10"
+          "FIDIC Conditions of Contract, Ref. 2017, Chunk 44"
+        """
+        parts: list[str] = []
+        # Use document type name if available, else fall back to filename or reference
+        if chunk.get("document_type"):
+            parts.append(chunk["document_type"])
+        elif chunk.get("document_reference"):
+            parts.append(chunk["document_reference"])
+        elif chunk.get("document_id"):
+            parts.append(str(chunk["document_id"]))
+        # Append reference number if available
+        doc_ref_num = chunk.get("document_reference_number")
+        if doc_ref_num:
+            parts.append(f"Ref. {doc_ref_num}")
+        # Append date if available
+        doc_date = chunk.get("document_date")
+        if doc_date:
+            parts.append(str(doc_date))
+        # Always append chunk index as locator
+        chunk_idx = chunk.get("chunk_index", fallback_index)
+        parts.append(f"Chunk {chunk_idx}")
+        return ", ".join(parts) if parts else "Unknown source"
 
     def _parse_findings(
         self, text: str, tools_called: list[str]

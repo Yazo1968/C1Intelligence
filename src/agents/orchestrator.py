@@ -145,11 +145,14 @@ def process_query(request: QueryRequest) -> QueryResponse:
         {
             "document_id": str(chunk.document_id) if chunk.document_id else "",
             "content": chunk.text,
-            "chunk_index": idx,
+            "chunk_index": chunk.chunk_index if chunk.chunk_index is not None else idx,
             "document_type": chunk.document_type,
             "document_date": chunk.document_date,
             "document_reference": chunk.document_reference,
             "is_reference": chunk.is_reference,
+            "filename": chunk.filename,
+            "document_reference_number": chunk.document_reference_number,
+            "document_type_name": chunk.document_type_name,
         }
         for idx, chunk in enumerate(retrieval.chunks)
     ]

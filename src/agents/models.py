@@ -36,11 +36,15 @@ class RetrievedChunk(BaseModel):
     """
     text: str
     document_id: uuid.UUID | None = None
+    chunk_index: int | None = None
     document_type: str | None = None
     document_date: str | None = None
     document_reference: str | None = None
     relevance_score: float | None = None
     is_reference: bool = False
+    filename: str | None = None
+    document_reference_number: str | None = None
+    document_type_name: str | None = None
 
 
 class RetrievalResult(BaseModel):

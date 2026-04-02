@@ -155,12 +155,42 @@ def _generate_query_embedding(query: str) -> list[float]:
     return vector
 
 
+def _build_source_label(chunk: dict) -> str:
+    """
+    Build a human-readable source label from chunk metadata fields.
+    Uses whatever fields are available, skips those that are None.
+
+    Examples:
+      "Contract Agreement, Ref. YD_PROC_PRD-000097.01, 2023-07-06, Chunk 10"
+      "Non-Conformance Report, Ref. NCR-0042, 2024-03-14, Chunk 3"
+      "FIDIC Conditions of Contract, Ref. 2017, Chunk 44"
+    """
+    parts: list[str] = []
+    # Use document type name if available, else fall back to filename
+    if chunk.get("document_type_name"):
+        parts.append(chunk["document_type_name"])
+    elif chunk.get("filename"):
+        parts.append(chunk["filename"])
+    # Append reference number if available
+    if chunk.get("document_reference_number"):
+        parts.append(f"Ref. {chunk['document_reference_number']}")
+    # Append date if available
+    if chunk.get("document_date"):
+        parts.append(str(chunk["document_date"]))
+    # Always append chunk index as fallback locator
+    chunk_index = chunk.get("chunk_index")
+    if chunk_index is not None:
+        parts.append(f"Chunk {chunk_index}")
+    return ", ".join(parts) if parts else "Unknown source"
+
+
 def _execute_search_chunks(tool_input: dict, project_id: str) -> dict:
     """
     Execute search_chunks: semantic + full-text search against document_chunks.
 
     Semantic search requires a query embedding generated via Gemini.
     Full-text search failure is non-fatal — semantic-only results are returned.
+    Each result includes a human-readable "source" label built from metadata.
     """
     query_text: str = tool_input["query"]
     top_k: int = tool_input.get("top_k", 10)
@@ -185,6 +215,7 @@ def _execute_search_chunks(tool_input: dict, project_id: str) -> dict:
             chunk_id = str(chunk.get("id", ""))
             if chunk_id not in seen_ids:
                 seen_ids.add(chunk_id)
+                source_label = _build_source_label(chunk)
                 results.append({
                     "id": chunk_id,
                     "document_id": str(chunk.get("document_id", "")),
@@ -192,7 +223,8 @@ def _execute_search_chunks(tool_input: dict, project_id: str) -> dict:
                     "content": chunk.get("content", ""),
                     "token_count": chunk.get("token_count"),
                     "score": chunk.get("similarity"),
-                    "source": "semantic",
+                    "search_type": "semantic",
+                    "source": source_label,
                 })
     except Exception as exc:
         logger.error(
@@ -217,6 +249,7 @@ def _execute_search_chunks(tool_input: dict, project_id: str) -> dict:
             chunk_id = str(chunk.get("id", ""))
             if chunk_id not in seen_ids:
                 seen_ids.add(chunk_id)
+                source_label = _build_source_label(chunk)
                 results.append({
                     "id": chunk_id,
                     "document_id": str(chunk.get("document_id", "")),
@@ -224,7 +257,8 @@ def _execute_search_chunks(tool_input: dict, project_id: str) -> dict:
                     "content": chunk.get("content", ""),
                     "token_count": chunk.get("token_count"),
                     "score": chunk.get("rank"),
-                    "source": "fulltext",
+                    "search_type": "fulltext",
+                    "source": source_label,
                 })
     except Exception as exc:
         logger.warning(

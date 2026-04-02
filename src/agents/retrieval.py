@@ -456,6 +456,10 @@ def _build_retrieved_chunks(
 
     For Layer 1 (is_reference=False): uses document_id key and project document metadata.
     For Layer 2 (is_reference=True): uses reference_document_id key and reference document metadata.
+
+    Metadata fields are populated from two sources (RPC row data takes priority,
+    enriched metadata dict is fallback):
+    - filename, document_reference_number, document_date, document_type_name
     """
     chunks: list[RetrievedChunk] = []
 
@@ -471,12 +475,22 @@ def _build_retrieved_chunks(
             doc_reference = meta.get("name")
             doc_type = meta.get("document_type")
             date_str = None  # Reference documents don't have a document_date field
+            # RPC row fields (from migration 010 JOIN), fallback to enriched metadata
+            filename = row.get("filename") or meta.get("name")
+            doc_ref_number = row.get("document_reference_number") or meta.get("edition_year")
+            doc_type_name = row.get("document_type_name") or meta.get("document_type")
         else:
             # Layer 1: use document_reference_number, fall back to filename
             doc_reference = meta.get("document_reference_number") or meta.get("filename")
             doc_type = meta.get("document_type_name")
             doc_date = meta.get("document_date")
             date_str = str(doc_date) if doc_date else None
+            # RPC row fields (from migration 010 JOIN), fallback to enriched metadata
+            filename = row.get("filename") or meta.get("filename")
+            doc_ref_number = row.get("document_reference_number") or meta.get("document_reference_number")
+            row_date = row.get("document_date")
+            date_str = str(row_date) if row_date else date_str
+            doc_type_name = row.get("document_type_name") or meta.get("document_type_name")
 
         # Use similarity for semantic results, rank for full-text-only
         score = row.get("similarity") if row.get("_source") == "semantic" else row.get("rank")
@@ -490,11 +504,15 @@ def _build_retrieved_chunks(
             RetrievedChunk(
                 text=row.get("content", ""),
                 document_id=doc_uuid,
+                chunk_index=row.get("chunk_index"),
                 document_type=doc_type,
                 document_date=date_str,
                 document_reference=doc_reference,
                 relevance_score=float(score) if score is not None else None,
                 is_reference=is_reference,
+                filename=filename,
+                document_reference_number=doc_ref_number,
+                document_type_name=doc_type_name,
             )
         )
 
