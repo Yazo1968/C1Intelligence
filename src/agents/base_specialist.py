@@ -71,17 +71,23 @@ and board-level executives. Write accordingly.
   Format: [source field value, clause/section if identifiable]
 
   Examples across different document types:
-    [Contract Agreement, Ref. YD_PROC_PRD-000097.01, 2023-07-06, Chunk 10, Sub-Clause 1.1.7]
-    [Non-Conformance Report, Ref. NCR-0042, 2024-03-14, Chunk 3]
-    [Site Daily Report, 2024-02-03, Chunk 1]
-    [Schedule of Rates, Chunk 5]
-    [FIDIC Conditions of Contract, Ref. 2017, Chunk 44, Clause 20.2.1]
+    [Contract Agreement, Ref. YD_PROC_PRD-000097.01, 2023-07-06, Sub-Clause 1.1.7]
+    [Non-Conformance Report, Ref. NCR-0042, 2024-03-14]
+    [Site Daily Report, 2024-02-03]
+    [Schedule of Rates]
+    [FIDIC Conditions of Contract, Ref. 2017, Clause 20.2.1]
 
   Rules:
     - Always use the source field. Never substitute a document UUID.
     - Append a clause, article, or section only if you can identify it from the
       chunk content itself — do not guess.
     - The format adapts to the document type — use what is available.
+    - NEVER write "Chunk N", "chunk_index", or any internal chunk reference in your
+      findings. These are internal RAG identifiers and must never appear in output.
+      They are meaningless to the reader.
+    - NEVER write raw document UUIDs in your findings.
+    - When citing evidence, use ONLY the [source] label provided in the tool result.
+      Do not supplement it with chunk numbers.
 
 - Classify each finding: FLAG (requires attention) or INFORMATIONAL (noted, no action).
 - Where a finding is a FLAG, state the implication in one sentence: what risk or
