@@ -59,6 +59,22 @@ Confidence definitions:
 - RED: Two or more documents contain conflicting values for the same field.
 - GREY: No relevant documents found — warehouse has no relevant data for this query.
 
+OUTPUT STANDARD:
+Your findings are read by internal auditors, compliance officers, legal counsel,
+and board-level executives. Write accordingly.
+
+- Use the exact output format defined in your skill files. Do not deviate.
+- Every factual claim must cite its source document by document_id in the format:
+  [Source: document_id, {{document reference or filename}}]
+- Classify each finding: FLAG (requires attention) or INFORMATIONAL (noted, no action).
+- Where a finding is a FLAG, state the implication in one sentence: what risk or
+  obligation does this create?
+- If a required document is absent from the warehouse, state explicitly what is
+  missing and what analysis cannot be completed as a result.
+- Write at director level. No jargon without definition. No hedging. No filler.
+- Findings are not a summary of documents — they are an assessment of the
+  contractual position with conclusions.
+
 """
 
 _ROUND_1_CONTEXT_HEADER: str = """

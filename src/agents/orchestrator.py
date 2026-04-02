@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 
 from src.clients import get_anthropic_client, get_gemini_client, get_supabase_client
+from src.config import CLAUDE_MODEL
 from src.logging_config import get_logger
 from src.agents.models import (
     AgentError,
@@ -261,14 +263,8 @@ def process_query(request: QueryRequest) -> QueryResponse:
     confidence = determine_confidence(all_findings, contradictions, retrieval)
 
     # ------------------------------------------------------------------
-    # Step 10: Build response text (deterministic)
-    # ------------------------------------------------------------------
-    response_text = build_response_text(
-        all_findings, contradictions, confidence, request.query_text
-    )
-
-    # ------------------------------------------------------------------
-    # Step 11: Write audit log (must succeed)
+    # Step 10: Write audit log (must succeed — before response text so
+    # audit_log_id can be embedded in the report footer)
     # ------------------------------------------------------------------
     all_citations = _collect_all_citations(all_findings)
 
@@ -280,11 +276,23 @@ def process_query(request: QueryRequest) -> QueryResponse:
         project_id=request.project_id,
         user_id=request.user_id,
         query_text=request.query_text,
-        response_text=response_text,
+        response_text="",  # Placeholder — full text built after audit ID is known
         confidence=confidence,
         domains_engaged=domains_engaged,
         document_ids=document_ids,
         citations=all_citations,
+    )
+
+    # ------------------------------------------------------------------
+    # Step 11: Build response text (includes executive summary via Claude)
+    # ------------------------------------------------------------------
+    response_text = build_response_text(
+        all_findings,
+        contradictions,
+        confidence,
+        request.query_text,
+        document_count=len(document_ids),
+        audit_log_id=audit_log_id,
     )
 
     # ------------------------------------------------------------------
@@ -354,67 +362,163 @@ def determine_confidence(
     return ConfidenceLevel.GREEN
 
 
+NOT_ENGAGED_REASONS: dict[str, str] = {
+    "legal_contractual": "No contract documents found in the warehouse for this query.",
+    "commercial_financial": "No BOQ, IPC, payment, or variation documents found in the warehouse.",
+    "claims_disputes": "No notice documents, EOT claims, or dispute correspondence found in the warehouse.",
+    "schedule_programme": "No programme documents, delay records, or progress reports found in the warehouse.",
+    "technical_design": "No specifications, drawings, RFIs, or NCRs found in the warehouse.",
+    "governance_compliance": "No DOA matrix, committee minutes, or approval chain documents found in the warehouse.",
+}
+
+# All six domains in display order (Round 1 first, then Round 2)
+ALL_DOMAINS_ORDERED: list[str] = [
+    "legal_contractual",
+    "commercial_financial",
+    "claims_disputes",
+    "schedule_programme",
+    "technical_design",
+    "governance_compliance",
+]
+
+
+def _generate_executive_summary(
+    findings: list[SpecialistFindings],
+    confidence: ConfidenceLevel,
+) -> str:
+    """
+    Generate a 3-sentence executive summary via a single Claude API call.
+    Falls back to a static message on any failure.
+    """
+    fallback = "Analysis complete. See domain assessments below for full findings."
+
+    if not findings:
+        return fallback
+
+    # Build context from all domain findings
+    findings_context_parts: list[str] = []
+    for f in findings:
+        display_name = _config_key_to_display_name(f.domain)
+        findings_context_parts.append(f"### {display_name}\n{f.findings}")
+
+    findings_context = "\n\n".join(findings_context_parts)
+
+    try:
+        anthropic_client = get_anthropic_client()
+        response = anthropic_client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=200,
+            system="You are a senior construction contract analyst. Write a 3-sentence executive summary for a director-level reader. Be direct. State what was assessed, the confidence level, and the single most important finding.",
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Overall confidence: {confidence.value}\n\n{findings_context}",
+                }
+            ],
+        )
+        summary = response.content[0].text.strip()
+        if summary:
+            return summary
+        return fallback
+    except Exception as exc:
+        logger.warning("executive_summary_generation_failed", error=str(exc))
+        return fallback
+
+
+def _config_key_to_display_name(config_key: str) -> str:
+    """Map a specialist config key (e.g., 'legal') to display name (e.g., 'Legal & Contractual')."""
+    for domain_name, key in DOMAIN_TO_CONFIG_KEY.items():
+        if key == config_key:
+            return DOMAIN_DISPLAY_NAMES.get(domain_name, config_key)
+    return config_key
+
+
 def build_response_text(
     findings: list[SpecialistFindings],
     contradictions: list[ContradictionFlag],
     confidence: ConfidenceLevel,
     query_text: str,
+    document_count: int = 0,
+    audit_log_id: uuid.UUID | None = None,
 ) -> str:
     """
-    Deterministic response assembly from SpecialistFindings.
-    No LLM call — structured text composition.
+    Professional report assembly from SpecialistFindings.
 
-    Uses findings (str) per domain and sources_used document IDs.
+    Produces an executive report with:
+    - Executive summary (single Claude API call)
+    - All six domains declared (engaged or NOT ENGAGED)
+    - Contradictions section
+    - Audit reference footer
     """
     sections: list[str] = []
 
-    # Header
-    confidence_labels = {
-        ConfidenceLevel.GREEN: "CONSISTENT — all documents agree",
-        ConfidenceLevel.AMBER: "PARTIAL — incomplete or limited support",
-        ConfidenceLevel.RED: "CONTRADICTION DETECTED — documents disagree",
-        ConfidenceLevel.GREY: "INSUFFICIENT DATA — no relevant documents found",
-    }
-    sections.append(
-        f"Confidence: {confidence.value} — {confidence_labels[confidence]}"
-    )
+    # --- Executive Summary ---
+    executive_summary = _generate_executive_summary(findings, confidence)
+    sections.append("## Executive Summary")
+    sections.append("")
+    sections.append(executive_summary)
+    sections.append("")
+    sections.append(f"**Overall Confidence:** {confidence.value}")
+    sections.append(f"**Documents assessed:** {document_count}")
+    sections.append("")
+    sections.append("---")
     sections.append("")
 
-    # Domain findings
-    for finding in findings:
-        # Map config key back to display name via DOMAIN_TO_CONFIG_KEY reverse lookup
-        display_name = finding.domain
-        for domain_name, config_key in DOMAIN_TO_CONFIG_KEY.items():
-            if config_key == finding.domain:
-                display_name = DOMAIN_DISPLAY_NAMES.get(domain_name, finding.domain)
-                break
+    # --- Domain Assessments ---
+    sections.append("## Domain Assessments")
+    sections.append("")
 
-        round_label = f"Round {finding.round_number}"
-        sections.append(f"## {display_name} [{round_label}]")
-        sections.append("")
-        sections.append(finding.findings)
-        sections.append("")
+    # Build lookup: config_key -> SpecialistFindings
+    findings_by_key: dict[str, SpecialistFindings] = {
+        f.domain: f for f in findings
+    }
 
-        if finding.sources_used:
-            sections.append("Sources referenced:")
-            for doc_id in finding.sources_used:
-                sections.append(f"  - Document: {doc_id}")
+    for domain_name in ALL_DOMAINS_ORDERED:
+        display_name = DOMAIN_DISPLAY_NAMES.get(domain_name, domain_name)
+        config_key = DOMAIN_TO_CONFIG_KEY.get(domain_name, domain_name)
+        finding = findings_by_key.get(config_key)
+
+        if finding:
+            badge = finding.confidence
+            sections.append(f"### {display_name} — {badge}")
+            sections.append("")
+            sections.append(finding.findings)
+            sections.append("")
+        else:
+            reason = NOT_ENGAGED_REASONS.get(domain_name, "Not applicable to this query.")
+            sections.append(f"### {display_name} — NOT ENGAGED")
+            sections.append("")
+            sections.append(f"*Not applicable to this query. {reason}*")
             sections.append("")
 
-    # Contradictions section
-    if contradictions:
-        sections.append("## Contradictions Detected")
+        sections.append("---")
         sections.append("")
+
+    # --- Contradictions ---
+    sections.append("## Contradictions Detected")
+    sections.append("")
+    if contradictions:
         for c in contradictions:
             sections.append(f"- **{c.field_name}**:")
             sections.append(
-                f"  Document A ({c.document_a_reference}): {c.value_a}"
+                f"  - Document A ({c.document_a_reference}): {c.value_a}"
             )
             sections.append(
-                f"  Document B ({c.document_b_reference}): {c.value_b}"
+                f"  - Document B ({c.document_b_reference}): {c.value_b}"
             )
-            sections.append(f"  {c.description}")
+            sections.append(f"  - {c.description}")
             sections.append("")
+    else:
+        sections.append("No contradictions detected across the documents assessed.")
+        sections.append("")
+
+    sections.append("---")
+    sections.append("")
+
+    # --- Audit footer ---
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    audit_ref = str(audit_log_id) if audit_log_id else "pending"
+    sections.append(f"*Audit Reference: {audit_ref} · Query submitted: {timestamp}*")
 
     return "\n".join(sections)
 
@@ -427,26 +531,58 @@ def _grey_response(
 ) -> QueryResponse:
     """
     Handle the GREY path: retrieval returned no relevant documents.
-    Still writes an audit log entry.
+    Still writes an audit log entry and produces a professional-format report.
     """
-    response_text = (
-        "Confidence: GREY — INSUFFICIENT DATA\n\n"
-        "The document warehouse contains no documents relevant to this query. "
-        "This may mean the required documents have not yet been uploaded, "
-        "or the query does not match any content in the current project."
-    )
-
     audit_log_id = write_audit_log(
         supabase_client=supabase_client,
         project_id=request.project_id,
         user_id=request.user_id,
         query_text=request.query_text,
-        response_text=response_text,
+        response_text="",  # Placeholder — full text built after audit ID is known
         confidence=ConfidenceLevel.GREY,
         domains_engaged=domains_engaged,
         document_ids=document_ids,
         citations=[],
     )
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    audit_ref = str(audit_log_id) if audit_log_id else "pending"
+
+    # Build all six domains as NOT ENGAGED
+    domain_sections: list[str] = []
+    for domain_name in ALL_DOMAINS_ORDERED:
+        display_name = DOMAIN_DISPLAY_NAMES.get(domain_name, domain_name)
+        reason = NOT_ENGAGED_REASONS.get(domain_name, "Not applicable to this query.")
+        domain_sections.append(f"### {display_name} — NOT ENGAGED")
+        domain_sections.append("")
+        domain_sections.append(f"*Not applicable to this query. {reason}*")
+        domain_sections.append("")
+        domain_sections.append("---")
+        domain_sections.append("")
+
+    response_text = "\n".join([
+        "## Executive Summary",
+        "",
+        "The document warehouse contains no documents relevant to this query. "
+        "This may mean the required documents have not yet been uploaded, "
+        "or the query does not match any content in the current project.",
+        "",
+        "**Overall Confidence:** GREY",
+        f"**Documents assessed:** {len(document_ids)}",
+        "",
+        "---",
+        "",
+        "## Domain Assessments",
+        "",
+        *domain_sections,
+        "## Contradictions Detected",
+        "",
+        "No contradictions detected across the documents assessed.",
+        "",
+        "---",
+        "",
+        f"*Audit Reference: {audit_ref} · Query submitted: {timestamp}*",
+    ])
 
     logger.info(
         "query_grey_response",
