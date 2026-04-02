@@ -6,9 +6,9 @@ Submit queries, retrieve audit logs, and list contradiction flags.
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from src.clients import get_supabase_client
 from src.logging_config import get_logger
@@ -29,16 +29,14 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/projects/{project_id}", tags=["queries"])
 
-# In-memory store for query processing status.
-# Keyed by query_id (str), values are dicts with "status" and optional "response"/"error".
-_query_status: dict[str, dict[str, Any]] = {}
-
 
 def _run_query_pipeline(
     query_id: str,
     request: QueryRequest,
 ) -> None:
-    """Run the query pipeline in a background thread and store results."""
+    """Run the query pipeline in a background thread and persist results to Supabase."""
+    supabase = get_supabase_client()
+
     try:
         logger.info(
             "background_query_started",
@@ -82,10 +80,18 @@ def _run_query_pipeline(
             "audit_log_id": str(result.audit_log_id) if result.audit_log_id else None,
         }
 
-        _query_status[query_id] = {
-            "status": "COMPLETE",
-            "response": response_data,
-        }
+        try:
+            supabase.table("query_jobs").update({
+                "status": "COMPLETE",
+                "response": response_data,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", query_id).execute()
+        except Exception as db_exc:
+            logger.error(
+                "query_jobs_update_failed",
+                query_id=query_id,
+                error=str(db_exc),
+            )
 
         logger.info(
             "background_query_complete",
@@ -100,10 +106,18 @@ def _run_query_pipeline(
             stage=exc.stage,
             error=exc.message,
         )
-        _query_status[query_id] = {
-            "status": "FAILED",
-            "error": exc.message,
-        }
+        try:
+            supabase.table("query_jobs").update({
+                "status": "FAILED",
+                "error_message": exc.message,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", query_id).execute()
+        except Exception as db_exc:
+            logger.error(
+                "query_jobs_failure_update_failed",
+                query_id=query_id,
+                error=str(db_exc),
+            )
 
     except Exception as exc:
         logger.error(
@@ -111,10 +125,18 @@ def _run_query_pipeline(
             query_id=query_id,
             error=str(exc),
         )
-        _query_status[query_id] = {
-            "status": "FAILED",
-            "error": str(exc),
-        }
+        try:
+            supabase.table("query_jobs").update({
+                "status": "FAILED",
+                "error_message": str(exc),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", query_id).execute()
+        except Exception as db_exc:
+            logger.error(
+                "query_jobs_failure_update_failed",
+                query_id=query_id,
+                error=str(db_exc),
+            )
 
 
 @router.post("/query", response_model=QueryAcceptedResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -129,17 +151,17 @@ async def submit_query(
     Returns immediately with a query_id. The pipeline runs in the background.
     Poll GET /projects/{id}/queries/{query_id}/status for results.
     """
+    supabase = get_supabase_client()
+
     # Verify project access (RLS will enforce, but give clear error early)
-    supabase_client = get_supabase_client()
     try:
-        supabase_client.table("projects").select("id").eq(
+        supabase.table("projects").select("id").eq(
             "id", str(project_id)
         ).eq("owner_id", str(user_id)).single().execute()
     except Exception:
-        return error_response(
+        raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            error_code="PROJECT_NOT_FOUND",
-            message=f"Project {project_id} not found or access denied.",
+            detail="Project not found or access denied.",
         )
 
     query_id = str(uuid.uuid4())
@@ -150,8 +172,21 @@ async def submit_query(
         query_text=body.query_text,
     )
 
-    # Mark as processing before launching background task
-    _query_status[query_id] = {"status": "PROCESSING"}
+    # Insert query job row before launching background task
+    try:
+        supabase.table("query_jobs").insert({
+            "id": query_id,
+            "project_id": str(project_id),
+            "user_id": str(user_id),
+            "query_text": body.query_text,
+            "status": "PROCESSING",
+        }).execute()
+    except Exception as exc:
+        logger.error("query_jobs_insert_failed", query_id=query_id, error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create query job.",
+        )
 
     background_tasks.add_task(_run_query_pipeline, query_id, request)
 
@@ -169,19 +204,29 @@ async def get_query_status(
     user_id: AuthenticatedUser,
 ) -> QueryStatusResponse:
     """Get the processing status of an async query. Returns the full response when complete."""
-    status_entry = _query_status.get(str(query_id))
+    supabase = get_supabase_client()
 
-    if not status_entry:
-        return error_response(
-            status_code=status.HTTP_404_NOT_FOUND,
-            error_code="QUERY_NOT_FOUND",
-            message=f"Query {query_id} not found.",
+    try:
+        result = (
+            supabase.table("query_jobs")
+            .select("id, status, response, error_message")
+            .eq("id", str(query_id))
+            .eq("project_id", str(project_id))
+            .single()
+            .execute()
         )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Query not found.",
+        )
+
+    row = result.data
 
     return QueryStatusResponse(
         query_id=query_id,
-        status=status_entry["status"],
-        response=status_entry.get("response"),
+        status=row["status"],
+        response=row.get("response"),
     )
 
 
