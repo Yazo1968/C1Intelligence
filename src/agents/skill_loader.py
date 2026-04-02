@@ -5,7 +5,9 @@ and the project-specific playbook at runtime.
 
 Non-negotiable rules:
 - Never contains a hardcoded list of filenames
-- Scans skills/{domain}/ using pathlib.Path.glob("*.md")
+- Scans skills/orchestrators/{domain}/ for Tier 1 orchestrators, skills/smes/{domain}/ for Tier 2 SMEs
+- Falls back to skills/{domain}/ for legacy paths
+- Resolution order: orchestrators/ → smes/ → legacy
 - Loads playbooks/{project_id}.md if it exists
 - Sorts files alphabetically for deterministic order
 - Returns empty string on missing domain folder (does not raise)
@@ -44,7 +46,17 @@ class SkillLoader:
         sections: list[str] = []
 
         # --- Layer 1: Domain skill files ---
-        domain_dir = SKILLS_DIR / domain
+        # Resolution order: orchestrators/{domain} → smes/{domain} → {domain} (legacy)
+        orchestrator_path = SKILLS_DIR / "orchestrators" / domain
+        sme_path = SKILLS_DIR / "smes" / domain
+        legacy_path = SKILLS_DIR / domain
+
+        if orchestrator_path.is_dir():
+            domain_dir = orchestrator_path
+        elif sme_path.is_dir():
+            domain_dir = sme_path
+        else:
+            domain_dir = legacy_path
 
         if not domain_dir.is_dir():
             logger.warning(

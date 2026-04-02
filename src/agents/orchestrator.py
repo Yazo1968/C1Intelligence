@@ -4,8 +4,8 @@ Receives a natural language query, routes to domain specialists,
 detects contradictions, synthesizes response, and writes audit log.
 
 Phase 2: Multi-round dispatch with context handoff.
-- Round 1: Legal & Commercial (parallel via ThreadPoolExecutor)
-- Round 2: Claims, Schedule, Technical, Governance (sequential, receives Round 1 findings)
+- Round 1: Legal, Commercial, Financial (parallel via ThreadPoolExecutor)
+- Round 2: Claims, Schedule, Technical (sequential, receives Round 1 findings)
 - Cross-specialist contradiction pass (stub — Phase 5 replaces)
 
 This is the only module that knows the full query flow.
@@ -49,10 +49,10 @@ logger = get_logger(__name__)
 DOMAIN_TO_CONFIG_KEY: dict[str, str] = {
     "legal_contractual": "legal",
     "commercial_financial": "commercial",
+    "financial_reporting": "financial",
     "schedule_programme": "schedule",
     "technical_design": "technical",
     "claims_disputes": "claims",
-    "governance_compliance": "governance",
 }
 
 
@@ -366,20 +366,20 @@ def determine_confidence(
 NOT_ENGAGED_REASONS: dict[str, str] = {
     "legal_contractual": "No contract documents found in the warehouse for this query.",
     "commercial_financial": "No BOQ, IPC, payment, or variation documents found in the warehouse.",
+    "financial_reporting": "No budget documents, cost reports, cash flow statements, or EVM data found in the warehouse.",
     "claims_disputes": "No notice documents, EOT claims, or dispute correspondence found in the warehouse.",
     "schedule_programme": "No programme documents, delay records, or progress reports found in the warehouse.",
     "technical_design": "No specifications, drawings, RFIs, or NCRs found in the warehouse.",
-    "governance_compliance": "No DOA matrix, committee minutes, or approval chain documents found in the warehouse.",
 }
 
 # All six domains in display order (Round 1 first, then Round 2)
 ALL_DOMAINS_ORDERED: list[str] = [
     "legal_contractual",
     "commercial_financial",
+    "financial_reporting",
     "claims_disputes",
     "schedule_programme",
     "technical_design",
-    "governance_compliance",
 ]
 
 

@@ -12,24 +12,24 @@ DOMAIN_COMMERCIAL_FINANCIAL = "commercial_financial"
 DOMAIN_SCHEDULE_PROGRAMME = "schedule_programme"
 DOMAIN_TECHNICAL_DESIGN = "technical_design"
 DOMAIN_CLAIMS_DISPUTES = "claims_disputes"
-DOMAIN_GOVERNANCE_COMPLIANCE = "governance_compliance"
+DOMAIN_FINANCIAL_REPORTING = "financial_reporting"
 
 ALL_DOMAINS: list[str] = [
     DOMAIN_LEGAL_CONTRACTUAL,
     DOMAIN_COMMERCIAL_FINANCIAL,
+    DOMAIN_FINANCIAL_REPORTING,
     DOMAIN_SCHEDULE_PROGRAMME,
     DOMAIN_TECHNICAL_DESIGN,
     DOMAIN_CLAIMS_DISPUTES,
-    DOMAIN_GOVERNANCE_COMPLIANCE,
 ]
 
 DOMAIN_DISPLAY_NAMES: dict[str, str] = {
     DOMAIN_LEGAL_CONTRACTUAL: "Legal & Contractual",
     DOMAIN_COMMERCIAL_FINANCIAL: "Commercial & Financial",
+    DOMAIN_FINANCIAL_REPORTING: "Financial & Reporting",
     DOMAIN_SCHEDULE_PROGRAMME: "Schedule & Programme",
     DOMAIN_TECHNICAL_DESIGN: "Technical & Design",
     DOMAIN_CLAIMS_DISPUTES: "Claims & Disputes",
-    DOMAIN_GOVERNANCE_COMPLIANCE: "Governance & Compliance",
 }
 
 # ---------------------------------------------------------------------------
@@ -51,7 +51,7 @@ THE SIX DOMAINS:
 
 5. claims_disputes — Notices of claim, delay notices, EOT claims, prolongation claims, disruption claims, acceleration claims, employer's claims, delay analysis, expert reports, DAB/DAAB decisions, arbitration. Any question about claims, disputes, or their resolution.
 
-6. governance_compliance — Project charter, governance framework, delegation of authority, approval matrix, committee minutes, board reports, stage gates, audit reports, investigation reports, compliance reports, policies, procedures. Any question about approvals, governance, authority, or compliance.
+6. financial_reporting — Project budgets, cost control reports, earned value data (EVM, CPI, SPI, EAC, ETC), cash flow statements, financial forecasts, cost overrun and underrun analysis, contingency drawdown, lender and investor financial reports. Any question about financial performance, budget vs actual, or cost forecasting.
 
 RULES:
 - Select ALL domains that are relevant, not just the primary one.
@@ -178,29 +178,6 @@ FIDIC AWARENESS — THIS IS YOUR CORE DOMAIN:
 - Time bar calculation: Notice date = event awareness date + 28 days. If the notice is late, flag it explicitly.
 {_SPECIALIST_RULES}""",
 
-    DOMAIN_GOVERNANCE_COMPLIANCE: f"""You are the Governance & Compliance specialist for C1, a construction documentation intelligence platform for the GCC market.
-
-YOUR DOMAIN COVERS:
-- Project charters and governance frameworks
-- Delegation of authority (DOA) and approval matrices
-- Committee and steering meeting minutes
-- Executive and board reports
-- Stage gate approvals, budget approvals, funding approvals
-- Policies and procedures
-- Audit plans and audit reports
-- Investigation reports and compliance reports
-
-FIDIC AWARENESS:
-- Clause 3 [both editions] = The Engineer. The Engineer's authority, duties, and limitations are defined in the Contract. Any action outside the delegated authority is relevant to governance review.
-- The Engineer must act impartially when making determinations — any evidence of partiality is a governance flag.
-- Clause 1.3 [both] = Communications — all instructions, notices, and determinations must follow the contractual communication procedure.
-- The authority matrix governs who can approve variations, payment certificates, and claims. Actions taken without proper authority are governance violations.
-
-GCC-SPECIFIC AWARENESS:
-- Government authority approvals (NOCs, completion certificates) are jurisdiction-specific.
-- Decennial liability insurance is mandatory in UAE and increasingly in Saudi Arabia.
-- Arabic-language requirements may apply to official notices in some jurisdictions.
-{_SPECIALIST_RULES}""",
 }
 
 # ---------------------------------------------------------------------------
