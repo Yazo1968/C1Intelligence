@@ -26,7 +26,7 @@ const PROSE_CLASSES = [
 export function SpecialistFindingCard({ finding }: { finding: SpecialistFinding }) {
   const domainLabel = domainLabels[finding.domain] ?? finding.domain;
 
-  const { processedMarkdown, footnotes } = useMemo(
+  const processedMarkdown = useMemo(
     () => parseCitations(finding.findings),
     [finding.findings],
   );
@@ -41,24 +41,20 @@ export function SpecialistFindingCard({ finding }: { finding: SpecialistFinding 
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
+            components={{
+              div: ({ className, children, ...props }) =>
+                className === 'citation-footnotes' ? (
+                  <div className="mt-3 pt-2 border-t border-gray-100 space-y-0.5" {...props}>{children}</div>
+                ) : <div {...props}>{children}</div>,
+              span: ({ className, children, ...props }) =>
+                className === 'citation-label' ? (
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider block mb-1" {...props}>{children}</span>
+                ) : <span {...props}>{children}</span>,
+            }}
           >
             {processedMarkdown}
           </ReactMarkdown>
         </div>
-
-        {footnotes.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Sources</p>
-            <ol className="space-y-1">
-              {footnotes.map((fn, i) => (
-                <li key={i} className="flex gap-2 text-xs text-gray-400 leading-relaxed">
-                  <span className="shrink-0 font-medium">{i + 1}.</span>
-                  <span>{fn}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
       </div>
     </div>
   );
