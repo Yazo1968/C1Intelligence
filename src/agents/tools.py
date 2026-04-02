@@ -164,9 +164,9 @@ def _build_source_label(chunk: dict) -> str:
     Falls back to the default order when citation_fields is not set.
 
     Examples:
-      "Contract Agreement, Ref. YD_PROC_PRD-000097.01, 2023-07-06, Chunk 10"
-      "Non-Conformance Report, Ref. NCR-0042, 2024-03-14, Chunk 3"
-      "FIDIC Conditions of Contract, Ref. 2017, Chunk 44"
+      "Contract Agreement, Ref. YD_PROC_PRD-000097.01, 2023-07-06"
+      "Non-Conformance Report, Ref. NCR-0042, 2024-03-14"
+      "FIDIC Conditions of Contract, Ref. 2017"
     """
     citation_fields: list[str] = chunk.get("citation_fields") or [
         "type_name", "reference_number", "date",
@@ -187,9 +187,15 @@ def _build_source_label(chunk: dict) -> str:
             if value:
                 parts.append(str(value))
 
-    # Always append chunk index as locator
-    parts.append(f"Chunk {chunk.get('chunk_index', '?')}")
-    return ", ".join(parts) if parts else chunk.get("filename", "Unknown source")
+    if not parts:
+        # No identifiers available — use chunk index as last resort
+        chunk_index = chunk.get("chunk_index")
+        if chunk_index is not None:
+            parts.append(f"Chunk {chunk_index}")
+        else:
+            parts.append(chunk.get("filename") or "Unknown source")
+
+    return ", ".join(parts)
 
 
 def _execute_search_chunks(tool_input: dict, project_id: str) -> dict:
