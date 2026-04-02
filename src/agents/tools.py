@@ -1,13 +1,18 @@
 """
 C1 — Shared Agent Tools
-Four tools available to every specialist agent, defined as Anthropic tool
-definitions and backed by executor functions that call Supabase directly.
+Tool definitions and executors for all agent types.
 
-Tools:
+TOOL_DEFINITIONS — four tools available to all agents (SMEs and orchestrators):
 1. search_chunks — semantic + full-text search against pgvector document_chunks
 2. get_document — retrieve document metadata and all chunks
 3. get_contradictions — check existing contradiction flags for given documents
 4. get_related_documents — find documents by type and optional date range
+
+ORCHESTRATOR_TOOL_DEFINITIONS — the above four plus:
+5. invoke_sme — call a Tier 2 SME with a targeted question (Tier 1 orchestrators only)
+
+Tier 1 orchestrators (legal, commercial, financial) use ORCHESTRATOR_TOOL_DEFINITIONS.
+Tier 2 SMEs (claims, schedule, technical) use TOOL_DEFINITIONS.
 """
 
 from __future__ import annotations
@@ -114,6 +119,48 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
             },
             "required": ["document_type"],
+        },
+    },
+]
+
+ORCHESTRATOR_TOOL_DEFINITIONS: list[dict] = TOOL_DEFINITIONS + [
+    {
+        "name": "invoke_sme",
+        "description": (
+            "Invoke a Tier 2 SME agent with a targeted, specific question. "
+            "Use this when the query requires specialist expertise beyond your orchestrator scope — "
+            "e.g., delay analysis (schedule SME), notice compliance (claims SME), "
+            "or design defect assessment (technical SME). "
+            "The SME will retrieve relevant documents and return structured findings. "
+            "Ask one focused question per invocation. "
+            "Valid SME domains: 'claims', 'schedule', 'technical'."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "sme_domain": {
+                    "type": "string",
+                    "enum": ["claims", "schedule", "technical"],
+                    "description": "The Tier 2 SME domain to invoke.",
+                },
+                "question": {
+                    "type": "string",
+                    "description": (
+                        "The specific targeted question for the SME. "
+                        "This is NOT the user's raw query — it is a focused question "
+                        "derived from your orchestrator analysis. Be precise."
+                    ),
+                },
+                "context": {
+                    "type": "string",
+                    "description": (
+                        "Optional additional context to pass to the SME — "
+                        "e.g., relevant findings you have already established, "
+                        "or constraints the SME should be aware of."
+                    ),
+                },
+            },
+            "required": ["sme_domain", "question"],
         },
     },
 ]
@@ -426,6 +473,116 @@ def _execute_get_related_documents(tool_input: dict, project_id: str) -> dict:
     return {"documents": documents, "total": len(documents)}
 
 
+def _execute_invoke_sme(tool_input: dict, project_id: str) -> dict:
+    """
+    Invoke a Tier 2 SME agent with a targeted question from a Tier 1 orchestrator.
+
+    Validates the requested domain is a Tier 2 SME. Runs retrieval for the
+    targeted question. Instantiates the SME via BaseSpecialist and runs it.
+    Returns the SME's findings as a structured dict.
+
+    All imports are lazy to avoid circular imports — base_specialist imports
+    tools.py, so tools.py must not import base_specialist at module level.
+    """
+    # --- Lazy imports (avoid circular: base_specialist imports tools.py) ---
+    from src.agents.specialist_config import SPECIALIST_CONFIGS
+    from src.agents.retrieval import retrieve_chunks
+    from src.agents.base_specialist import BaseSpecialist
+    from src.clients import get_supabase_client as _get_supabase, get_gemini_client as _get_gemini
+
+    sme_domain: str = tool_input["sme_domain"]
+    question: str = tool_input["question"]
+    context: str | None = tool_input.get("context")
+
+    # --- Validate domain is Tier 2 SME ---
+    config = SPECIALIST_CONFIGS.get(sme_domain)
+    if config is None or config.tier != 2:
+        valid_smes = [k for k, v in SPECIALIST_CONFIGS.items() if v.tier == 2]
+        return {
+            "error": True,
+            "message": (
+                f"'{sme_domain}' is not a valid Tier 2 SME domain. "
+                f"Valid domains: {valid_smes}"
+            ),
+        }
+
+    # --- Build targeted query — include context if provided ---
+    targeted_query = question
+    if context:
+        targeted_query = f"{question}\n\nContext from orchestrator:\n{context}"
+
+    # --- Retrieve chunks for the targeted question ---
+    try:
+        gemini_client = _get_gemini()
+        supabase_client = _get_supabase()
+        retrieval_result = retrieve_chunks(
+            supabase_client=supabase_client,
+            gemini_client=gemini_client,
+            query_text=question,
+            project_id=project_id,
+        )
+    except Exception as exc:
+        logger.error(
+            "invoke_sme_retrieval_error",
+            sme_domain=sme_domain,
+            project_id=project_id,
+            error=str(exc),
+        )
+        return {"error": True, "message": f"Retrieval failed for SME '{sme_domain}': {exc}"}
+
+    # --- Convert RetrievedChunk objects to dicts for BaseSpecialist ---
+    chunks_as_dicts: list[dict] = [
+        {
+            "content": chunk.text,
+            "document_id": str(chunk.document_id) if chunk.document_id else "",
+            "chunk_index": chunk.chunk_index,
+            "score": chunk.relevance_score,
+            "is_reference": chunk.is_reference,
+            "filename": chunk.filename,
+            "document_reference_number": chunk.document_reference_number,
+            "document_date": chunk.document_date,
+            "document_type": chunk.document_type,
+            "document_type_name": chunk.document_type_name,
+            "document_reference": chunk.document_reference,
+        }
+        for chunk in retrieval_result.chunks
+    ]
+
+    # --- Instantiate and run the SME ---
+    try:
+        sme = BaseSpecialist(config=config)
+        findings = sme.run(
+            query=targeted_query,
+            project_id=project_id,
+            retrieved_chunks=chunks_as_dicts,
+            round_1_findings=None,
+        )
+    except Exception as exc:
+        logger.error(
+            "invoke_sme_execution_error",
+            sme_domain=sme_domain,
+            project_id=project_id,
+            error=str(exc),
+        )
+        return {"error": True, "message": f"SME '{sme_domain}' failed to produce findings: {exc}"}
+
+    logger.info(
+        "invoke_sme_complete",
+        sme_domain=sme_domain,
+        project_id=project_id,
+        confidence=findings.confidence,
+        tools_called=findings.tools_called,
+    )
+
+    return {
+        "domain": findings.domain,
+        "findings": findings.findings,
+        "confidence": findings.confidence,
+        "sources_used": findings.sources_used,
+        "tools_called": findings.tools_called,
+    }
+
+
 # =============================================================================
 # Tool Dispatcher
 # =============================================================================
@@ -435,6 +592,7 @@ _TOOL_EXECUTORS: dict[str, Callable] = {
     "get_document": _execute_get_document,
     "get_contradictions": _execute_get_contradictions,
     "get_related_documents": _execute_get_related_documents,
+    "invoke_sme": _execute_invoke_sme,
 }
 
 
