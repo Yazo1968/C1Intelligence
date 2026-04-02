@@ -1,4 +1,4 @@
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useNavigate, useParams } from 'react-router-dom';
 
 const navItems = [
   { label: 'Documents', tab: 'documents' },
@@ -14,6 +14,17 @@ interface SidebarProps {
 
 export function Sidebar({ projectName, activeTab, onTabChange }: SidebarProps) {
   const { projectId } = useParams();
+  const navigate = useNavigate();
+
+  const handleTabClick = (tab: string) => {
+    if (onTabChange) {
+      onTabChange(tab);
+    } else if (projectId) {
+      // When onTabChange is not available (e.g. on Audit Log page),
+      // navigate back to the workspace. The tab will default to 'documents'.
+      navigate(`/projects/${projectId}`);
+    }
+  };
 
   return (
     <aside className="w-64 bg-navy-900 text-white flex flex-col shrink-0 min-h-screen">
@@ -36,7 +47,7 @@ export function Sidebar({ projectName, activeTab, onTabChange }: SidebarProps) {
           {navItems.map((item) => (
             <button
               key={item.tab}
-              onClick={() => onTabChange?.(item.tab)}
+              onClick={() => handleTabClick(item.tab)}
               className={`w-full text-left px-5 py-2 text-sm transition-colors cursor-pointer ${
                 activeTab === item.tab
                   ? 'bg-white/10 text-white font-medium'

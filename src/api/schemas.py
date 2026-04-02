@@ -79,6 +79,18 @@ class SubmitQueryRequest(BaseModel):
     query_text: str
 
 
+class QueryAcceptedResponse(BaseModel):
+    query_id: uuid.UUID
+    status: str
+    message: str
+
+
+class QueryStatusResponse(BaseModel):
+    query_id: uuid.UUID
+    status: str
+    response: dict[str, Any] | None = None
+
+
 class QueryResponseSchema(BaseModel):
     query_text: str
     response_text: str

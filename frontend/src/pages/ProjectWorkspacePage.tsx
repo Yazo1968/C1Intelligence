@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
 import { DocumentTable } from '../components/documents/DocumentTable';
@@ -9,9 +9,12 @@ import { ContradictionAlert } from '../components/query/ContradictionAlert';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Spinner } from '../components/ui/Spinner';
 import { listDocuments } from '../api/documents';
-import { submitQuery, getContradictions } from '../api/queries';
+import { submitQuery, getQueryStatus, getContradictions } from '../api/queries';
 import { listProjects } from '../api/projects';
 import type { DocumentResponse, QueryResponseSchema, ContradictionResponse, ProjectResponse } from '../api/types';
+
+const QUERY_POLL_INTERVAL_MS = 5_000;
+const QUERY_POLL_MAX_MS = 15 * 60 * 1_000; // 15 minutes
 
 export function ProjectWorkspacePage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -26,10 +29,25 @@ export function ProjectWorkspacePage() {
   const [queryResponse, setQueryResponse] = useState<QueryResponseSchema | null>(null);
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryError, setQueryError] = useState<string | null>(null);
+  const [queryStatusMessage, setQueryStatusMessage] = useState<string | null>(null);
+  const queryPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const queryPollStartRef = useRef<number>(0);
 
   // Contradictions state
   const [contradictions, setContradictions] = useState<ContradictionResponse[]>([]);
   const [contradictionsLoading, setContradictionsLoading] = useState(false);
+
+  const stopQueryPolling = useCallback(() => {
+    if (queryPollRef.current) {
+      clearInterval(queryPollRef.current);
+      queryPollRef.current = null;
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => stopQueryPolling();
+  }, [stopQueryPolling]);
 
   const fetchDocuments = useCallback(async () => {
     if (!projectId) return;
@@ -69,14 +87,51 @@ export function ProjectWorkspacePage() {
   const handleQuery = async (queryText: string) => {
     if (!projectId) return;
     setQueryError(null);
+    setQueryResponse(null);
     setQueryLoading(true);
+    setQueryStatusMessage('Submitting query...');
+    stopQueryPolling();
+
     try {
       const res = await submitQuery(projectId, queryText);
-      setQueryResponse(res);
+      const queryId = res.query_id;
+      setQueryStatusMessage('Analysing documents across specialist domains...');
+
+      // Start polling
+      queryPollStartRef.current = Date.now();
+      queryPollRef.current = setInterval(async () => {
+        // Stop after 15 minutes
+        if (Date.now() - queryPollStartRef.current > QUERY_POLL_MAX_MS) {
+          stopQueryPolling();
+          setQueryLoading(false);
+          setQueryStatusMessage(null);
+          setQueryError('Query timed out. The analysis may still be running — check the Audit Log.');
+          return;
+        }
+
+        try {
+          const statusRes = await getQueryStatus(projectId, queryId);
+
+          if (statusRes.status === 'COMPLETE' && statusRes.response) {
+            stopQueryPolling();
+            setQueryResponse(statusRes.response);
+            setQueryLoading(false);
+            setQueryStatusMessage(null);
+          } else if (statusRes.status === 'FAILED') {
+            stopQueryPolling();
+            setQueryLoading(false);
+            setQueryStatusMessage(null);
+            setQueryError('Query analysis failed. Please try again.');
+          }
+        } catch {
+          // Transient network error — keep polling
+        }
+      }, QUERY_POLL_INTERVAL_MS);
+
     } catch (err) {
       setQueryError(err instanceof Error ? err.message : 'Query failed');
-    } finally {
       setQueryLoading(false);
+      setQueryStatusMessage(null);
     }
   };
 
@@ -103,6 +158,13 @@ export function ProjectWorkspacePage() {
         {activeTab === 'query' && (
           <div className="space-y-5">
             <QueryInput onSubmit={handleQuery} loading={queryLoading} />
+
+            {queryLoading && queryStatusMessage && (
+              <div className="flex items-center gap-2 text-sm text-navy-700">
+                <Spinner className="h-4 w-4" />
+                <span>{queryStatusMessage}</span>
+              </div>
+            )}
 
             {queryError && (
               <div className="bg-red-50 border border-red-200 rounded-md p-4 text-sm text-red-700">

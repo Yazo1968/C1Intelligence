@@ -142,7 +142,7 @@ class BaseSpecialist:
                 # On final round (max reached), call without tools to force text response
                 call_kwargs: dict = {
                     "model": CLAUDE_MODEL,
-                    "max_tokens": 4096,
+                    "max_tokens": 4000,
                     "system": system_prompt,
                     "messages": messages,
                 }
@@ -294,51 +294,51 @@ class BaseSpecialist:
     ) -> SpecialistFindings:
         """
         Parse the specialist's text response into SpecialistFindings.
-        Extracts the JSON block from the response text.
+        Uses the narrative text before the JSON fence as findings.
+        Falls back gracefully when the JSON block is missing or malformed.
         """
-        # Try to extract JSON from ```json ... ``` fences
         json_block: dict = {}
+        text_before_json = text
 
         try:
             json_start = text.index("```json")
             json_end = text.index("```", json_start + 7)
             json_str = text[json_start + 7 : json_end].strip()
             json_block = json.loads(json_str)
+            # Use only the narrative before the JSON fence
+            text_before_json = text[:json_start].strip()
         except (ValueError, json.JSONDecodeError) as exc:
             logger.warning(
                 "specialist_json_parse_failed",
                 domain=self._config.domain,
                 error=str(exc),
             )
-            # Fall back: use the full text as findings with AMBER confidence
-            return SpecialistFindings(
-                domain=self._config.domain,
-                findings=text,
-                confidence="AMBER",
-                sources_used=[],
-                tools_called=tools_called,
-                round_number=self._config.round_assignment,
-                flagged_contradictions=[],
-            )
 
-        # Validate confidence value
-        confidence = json_block.get("confidence", "GREY")
-        if confidence not in ("GREEN", "AMBER", "RED", "GREY"):
-            logger.warning(
-                "specialist_invalid_confidence",
-                domain=self._config.domain,
-                confidence=confidence,
-            )
+        if json_block:
+            # Prefer the narrative text before the JSON fence.
+            # Fall back to json_block["findings"] only if narrative is empty.
+            findings_text = text_before_json or json_block.get("findings", text)
+            confidence = json_block.get("confidence", "AMBER")
+            if confidence not in ("GREEN", "AMBER", "RED", "GREY"):
+                confidence = "AMBER"
+            sources_used = json_block.get("sources_used", [])
+            flagged = json_block.get("flagged_contradictions", [])
+        else:
+            # JSON completely absent or unparseable — use text before any JSON-like
+            # content to avoid exposing raw JSON in the output
+            findings_text = text_before_json
             confidence = "AMBER"
+            sources_used = []
+            flagged = []
 
         return SpecialistFindings(
             domain=self._config.domain,
-            findings=json_block.get("findings", text),
+            findings=findings_text,
             confidence=confidence,
-            sources_used=json_block.get("sources_used", []),
+            sources_used=sources_used,
             tools_called=tools_called,
             round_number=self._config.round_assignment,
-            flagged_contradictions=json_block.get("flagged_contradictions", []),
+            flagged_contradictions=flagged,
         )
 
     def _error_findings(

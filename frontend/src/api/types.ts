@@ -94,6 +94,18 @@ export interface Contradiction {
 
 export type Confidence = 'GREEN' | 'AMBER' | 'RED' | 'GREY';
 
+export interface QueryAcceptedResponse {
+  query_id: string;
+  status: string;
+  message: string;
+}
+
+export interface QueryStatusResponse {
+  query_id: string;
+  status: 'PROCESSING' | 'COMPLETE' | 'FAILED';
+  response: QueryResponseSchema | null;
+}
+
 export interface QueryResponseSchema {
   query_text: string;
   response_text: string;

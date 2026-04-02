@@ -1,8 +1,12 @@
 import { apiClient } from './client';
-import type { QueryResponseSchema, QueryLogEntry, ContradictionResponse } from './types';
+import type { QueryAcceptedResponse, QueryStatusResponse, QueryLogEntry, ContradictionResponse } from './types';
 
-export function submitQuery(projectId: string, queryText: string): Promise<QueryResponseSchema> {
-  return apiClient.post<QueryResponseSchema>(`/projects/${projectId}/query`, { query_text: queryText });
+export function submitQuery(projectId: string, queryText: string): Promise<QueryAcceptedResponse> {
+  return apiClient.post<QueryAcceptedResponse>(`/projects/${projectId}/query`, { query_text: queryText });
+}
+
+export function getQueryStatus(projectId: string, queryId: string): Promise<QueryStatusResponse> {
+  return apiClient.get<QueryStatusResponse>(`/projects/${projectId}/queries/${queryId}/status`);
 }
 
 export function getQueryLog(projectId: string): Promise<QueryLogEntry[]> {
