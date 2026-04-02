@@ -364,8 +364,59 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 - FIDIC Layer 2 ingestion complete — 6 books, 1917 chunks, verified in Supabase
 - Phase 3 Legal skill files complete — 5 files, all verified
 
-**Next session:** Task 1.1 Part 2 — API Engineer — replace _query_status
-in-memory dict with Supabase query_jobs persistence in src/api/routes/queries.py
+**Note:** C1_QUERY_IMPROVEMENT_PLAN.md Phases 1 and 2 now fully complete (Tasks 1.1–1.5, 2.1–2.4). C1_MULTIAGENT_ARCHITECTURE_PLAN.md Phase A complete. Next: Phase B (skill migration and new SME skill files) per C1_MULTIAGENT_ARCHITECTURE_PLAN.md.
+
+---
+
+## C1_MULTIAGENT_ARCHITECTURE_PLAN Phase A — Three-Tier Architecture Foundation — ✅ Complete
+
+**Date:** 2026-04-02
+**Active agent:** Agent Orchestrator (all tasks)
+**Quality Guardian:** PASS on all five tasks individually + Phase A validation query
+**Governing document:** docs/C1_MULTIAGENT_ARCHITECTURE_PLAN.md v1.0
+
+**Task A.1 — Domain reclassification.** Commit: `a6512e7`
+- `tier` field added to `SpecialistConfig` (tier=1 = orchestrator, tier=2 = SME)
+- `governance` domain removed entirely from all data structures
+- `financial` domain added as new Tier 1 orchestrator
+- `legal` and `commercial` reclassified as tier=1; `claims`, `schedule`, `technical` reclassified as tier=2
+- `DOMAIN_FINANCIAL_REPORTING` constant added to prompts.py; governance constant deleted
+- `DOMAIN_DISPLAY_NAMES` updated; governance specialist system prompt removed (dead code)
+- `DOMAIN_ROUTER_SYSTEM_PROMPT` updated — governance description replaced with financial
+- `skills/` restructured: `skills/legal/` → `skills/smes/legal/` (5 skill files); `skills/orchestrators/` created with legal, commercial, financial subdirs; `skills/smes/` created with claims, schedule, technical subdirs; `skills/governance/` deleted
+- `skill_loader.py` updated: three-path resolution — orchestrators/ → smes/ → legacy fallback
+
+**Task A.2 — SME invocation tool.** Commit: `b4c9a09`
+- `invoke_sme` executor added to `tools.py`
+- `ORCHESTRATOR_TOOL_DEFINITIONS` exported — extends `TOOL_DEFINITIONS` with `invoke_sme`
+- `invoke_sme` validates tier=2 before proceeding; runs retrieval for targeted question; instantiates SME via `BaseSpecialist`; returns structured findings
+- All imports inside executor are lazy (avoids circular import with `base_specialist.py`)
+
+**Task A.3 — BaseOrchestrator base class.** Commit: `891e4a7`
+- `src/agents/base_orchestrator.py` created (388 lines)
+- Tier=1 validation on instantiation — raises `ValueError` for tier=2 configs
+- Uses `ORCHESTRATOR_TOOL_DEFINITIONS` (includes `invoke_sme`)
+- Loads directive files via `SkillLoader` (resolves to `skills/orchestrators/{domain}/`)
+- System prompt frames agent as senior professional lead, not document analyst
+- `run()` signature identical to `BaseSpecialist.run()` for uniform dispatch
+- Returns `SpecialistFindings` — no new model introduced
+
+**Task A.4 — Directive files for Legal and Commercial orchestrators.** Commit: `ad18d55`
+- `skills/orchestrators/legal/directive.md` created (92 lines) — senior legal counsel role, 6 direct analysis areas, 3 SME delegation authorities, 8-section output structure
+- `skills/orchestrators/commercial/directive.md` created (88 lines) — senior QS/commercial manager role, 5 direct analysis areas, 3 SME delegation authorities, 7-section output structure
+- All five Legal SME skill files in `skills/smes/legal/` confirmed untouched
+
+**Task A.5 — Main orchestrator routing update.** Commit: `1216704`
+- `BaseOrchestrator` imported into `orchestrator.py`; used for all Round 1 dispatch
+- Tier=1 routing: domains with `config.tier == 1` go to `round_1_keys`; tier=2 domains silently skipped
+- Round 2 SME dispatch block entirely removed — Tier 2 SMEs invoked on-demand via `invoke_sme`
+- `ALL_DOMAINS_ORDERED` reduced from 6 to 3 (Tier 1 only) — output declares Legal, Commercial, Financial
+- `round_2_keys` and `round_2_findings` variables eliminated
+
+**Phase A validation query:** "What is the contract type, who are the parties, and what are the key contractual dates?"
+- Result: AMBER confidence, `legal_contractual` engaged, forensic-grade output produced
+- Legal orchestrator correctly identified FIDIC 1999 Yellow Book, both parties, contract reference, key dates and gaps
+- Output quality equal to pre-Phase A standard — PASS
 
 ---
 
@@ -382,5 +433,5 @@ in-memory dict with Supabase query_jobs persistence in src/api/routes/queries.py
 | Document control system integration | Phase 2 feature | Phase 2 |
 | Document download endpoint | Deferred from Phase D | After Phase D |
 | CORS `allow_methods`/`allow_headers` tightening | `allow_methods=["*"]` and `allow_headers=["*"]` in `src/api/main.py` are acceptable for a known frontend but candidates for tightening | Future hardening session (not Phase A scope) |
-| **Live end-to-end test of `scripts/ingest_reference.py`** (HIGH) | Docling and Gemini API unavailable in Claude Code environment — script created and code-reviewed but not executed against a real PDF | **Must be completed before AGENT_PLAN Phase 3 goes into production** |
 | `function_search_path_mutable` on all RPC functions | Pre-existing Supabase security advisory affecting all 7 RPC functions across migrations 001, 006, and 007 — not introduced by Phase C1 | Future hardening session |
+| Duplicate `## Executive Summary` header in response output | `build_response_text` emits `## Executive Summary` then the generated summary begins with `## EXECUTIVE SUMMARY` — cosmetic double header | LOW — housekeeping session |
