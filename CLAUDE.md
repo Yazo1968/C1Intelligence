@@ -40,25 +40,27 @@ Every session, before writing any code, confirm which governing document applies
 
 ---
 
-## Current Active Workstream
+## Current Active Workstreams
 
-**`docs/AGENT_PLAN.md` — Phase 3: Legal & Contractual Skills**
+Two workstreams are active. Read both governing documents at every session start.
 
-This is the active workstream. Read `docs/AGENT_PLAN.md` and `docs/SKILLS_STANDARDS.md` fully before starting any session in this workstream.
+**Workstream 1 — `docs/C1_QUERY_IMPROVEMENT_PLAN.md` v1.2**
+Phases 1 and 2 are complete. Remaining work:
+- Phase 3: Two-stage routing (Round 0 classifier backend, frontend display, domain filter)
+- Phase 4: Prompt caching
 
-Phase 3 is knowledge authorship, not code work. Skill files are written in markdown, reviewed by Yasser as domain expert, and deployed by dropping files into `skills/legal/`. Claude Code is not used for skill file content. See `docs/SKILLS_STANDARDS.md` v1.1 for the full authorship standard.
+Phase 3 Task 3.1 is the next task in this workstream.
 
-Before Phase 3 skills are used in production, the following must be completed:
-1. Review and approve `docs/research/legal_domain_research_summary.md`
-2. Ingest FIDIC General Conditions for all three books in use in the GCC via `scripts/ingest_reference.py`: Red Book (Construction) 1999 and 2017, Yellow Book (Plant & Design-Build) 1999 and 2017, Silver Book (EPC/Turnkey) 1999 and 2017
-3. Define five validation scenarios per `SKILLS_STANDARDS.md` Section 7
+**Workstream 2 — `docs/C1_MULTIAGENT_ARCHITECTURE_PLAN.md` v1.0**
+Full three-tier multi-agent architecture redesign. Nothing built yet.
+- Phase A: Three-tier architecture foundation (remove governance, add financial, reclassify tiers)
+- Phases B–F follow in sequence after Phase A is stable
 
-Five skill files to author in `skills/legal/`:
-- `contract_assembly.md`
-- `engineer_identification.md`
-- `notice_and_instruction_compliance.md`
-- `entitlement_basis.md`
-- `key_dates_and_securities.md`
+Phase A Task A.1 is the next task in this workstream.
+
+**Sequencing:** Yasser decides which workstream runs first in any given session. Do not assume sequencing — read the session prompt for instruction. Both workstreams use the same codebase; tasks that touch overlapping files must be declared before starting.
+
+**Skill authorship** is governed by `docs/SKILLS_STANDARDS.md` v1.2. Legal skill files (5 files) are complete in `skills/legal/`. Future skill authorship follows the same standard.
 
 ---
 
