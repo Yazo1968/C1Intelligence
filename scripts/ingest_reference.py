@@ -30,7 +30,7 @@ load_dotenv(override=True)
 
 from src.config import ALLOWED_EXTENSIONS  # noqa: E402
 from src.clients import get_supabase_client  # noqa: E402
-from src.ingestion.parser import parse_document_text_layer  # noqa: E402
+from src.ingestion.parser import parse_document  # noqa: E402
 from src.ingestion.chunker import chunk_document  # noqa: E402
 from src.ingestion.embedder import embed_chunks  # noqa: E402
 
@@ -86,11 +86,11 @@ def main() -> None:
     print(f"Validating: {filename} ({ext})")
 
     # ------------------------------------------------------------------
-    # Step 2: Parse with PyMuPDF (text-layer extraction)
+    # Step 2: Parse with Docling
     # ------------------------------------------------------------------
-    print("Parsing document (text-layer)...")
+    print("Parsing document...")
     try:
-        parsed = parse_document_text_layer(file_path, filename)
+        parsed = parse_document(file_path, filename)
     except Exception as exc:
         print(f"ERROR: Parsing failed: {exc}", file=sys.stderr)
         sys.exit(1)
