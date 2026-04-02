@@ -331,6 +331,27 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 
 ---
 
+## FIDIC Layer 2 Ingestion — Reference Documents (Ingestion Engineer) — ✅ Complete
+
+**Date:** 2026-04-01
+**Active agent:** Ingestion Engineer
+
+**Six FIDIC General Conditions ingested into reference_documents and reference_chunks:**
+- FIDIC Red Book 1999 — 237 chunks
+- FIDIC Red Book 2017 — 312 chunks
+- FIDIC Yellow Book 1999 — 217 chunks
+- FIDIC Yellow Book 2017 — 463 chunks
+- FIDIC Silver Book 1999 — 241 chunks
+- FIDIC Silver Book 2017 — 447 chunks
+
+**Total: 6 documents, 1,917 chunks, 830,188 tokens. All ACTIVE in Supabase. Verified by session coordinator.**
+
+**Operational note:** Layer 2 ingestion via scripts/ingest_reference.py must be run on Railway or a machine with sufficient RAM. Local execution on a standard Windows machine fails due to Docling memory requirements on large PDFs. Docling remains the sole parser across Layer 1 and Layer 2.
+
+**HIGH deferred item from Phase C1 — now closed.**
+
+---
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |
