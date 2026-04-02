@@ -45,6 +45,7 @@ class RetrievedChunk(BaseModel):
     filename: str | None = None
     document_reference_number: str | None = None
     document_type_name: str | None = None
+    citation_fields: list[str] | None = None
 
 
 class RetrievalResult(BaseModel):

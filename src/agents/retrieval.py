@@ -513,6 +513,7 @@ def _build_retrieved_chunks(
                 filename=filename,
                 document_reference_number=doc_ref_number,
                 document_type_name=doc_type_name,
+                citation_fields=row.get("citation_fields"),
             )
         )
 

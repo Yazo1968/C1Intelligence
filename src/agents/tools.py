@@ -158,30 +158,38 @@ def _generate_query_embedding(query: str) -> list[float]:
 def _build_source_label(chunk: dict) -> str:
     """
     Build a human-readable source label from chunk metadata fields.
-    Uses whatever fields are available, skips those that are None.
+
+    Uses citation_fields from the document_types table when available —
+    an ordered list of which fields to include (e.g., ['type_name', 'reference_number', 'date']).
+    Falls back to the default order when citation_fields is not set.
 
     Examples:
       "Contract Agreement, Ref. YD_PROC_PRD-000097.01, 2023-07-06, Chunk 10"
       "Non-Conformance Report, Ref. NCR-0042, 2024-03-14, Chunk 3"
       "FIDIC Conditions of Contract, Ref. 2017, Chunk 44"
     """
+    citation_fields: list[str] = chunk.get("citation_fields") or [
+        "type_name", "reference_number", "date",
+    ]
     parts: list[str] = []
-    # Use document type name if available, else fall back to filename
-    if chunk.get("document_type_name"):
-        parts.append(chunk["document_type_name"])
-    elif chunk.get("filename"):
-        parts.append(chunk["filename"])
-    # Append reference number if available
-    if chunk.get("document_reference_number"):
-        parts.append(f"Ref. {chunk['document_reference_number']}")
-    # Append date if available
-    if chunk.get("document_date"):
-        parts.append(str(chunk["document_date"]))
-    # Always append chunk index as fallback locator
-    chunk_index = chunk.get("chunk_index")
-    if chunk_index is not None:
-        parts.append(f"Chunk {chunk_index}")
-    return ", ".join(parts) if parts else "Unknown source"
+
+    for field in citation_fields:
+        if field == "type_name":
+            value = chunk.get("document_type_name") or chunk.get("filename")
+            if value:
+                parts.append(value)
+        elif field == "reference_number":
+            value = chunk.get("document_reference_number")
+            if value:
+                parts.append(f"Ref. {value}")
+        elif field == "date":
+            value = chunk.get("document_date")
+            if value:
+                parts.append(str(value))
+
+    # Always append chunk index as locator
+    parts.append(f"Chunk {chunk.get('chunk_index', '?')}")
+    return ", ".join(parts) if parts else chunk.get("filename", "Unknown source")
 
 
 def _execute_search_chunks(tool_input: dict, project_id: str) -> dict:
