@@ -3,10 +3,13 @@ C1 — Master Orchestrator
 Receives a natural language query, routes to domain specialists,
 detects contradictions, synthesizes response, and writes audit log.
 
-Phase 2: Multi-round dispatch with context handoff.
-- Round 1: Legal, Commercial, Financial (parallel via ThreadPoolExecutor)
-- Round 2: Claims, Schedule, Technical (sequential, receives Round 1 findings)
-- Cross-specialist contradiction pass (stub — Phase 5 replaces)
+Phase A: Tier-based dispatch.
+- Tier 1 orchestrators (legal, commercial, financial) run in parallel via
+  ThreadPoolExecutor using BaseOrchestrator. Each may invoke Tier 2 SMEs
+  on-demand via the invoke_sme tool during their own agentic loop.
+- Tier 2 SMEs (claims, schedule, technical) are not dispatched directly.
+  They are invoked by Tier 1 orchestrators as needed.
+- Cross-specialist contradiction pass (stub — Phase 7 replaces)
 
 This is the only module that knows the full query flow.
 """
@@ -34,6 +37,7 @@ from src.agents.prompts import DOMAIN_DISPLAY_NAMES
 from src.agents.retrieval import retrieve_chunks
 from src.agents.domain_router import identify_domains
 from src.agents.base_specialist import BaseSpecialist
+from src.agents.base_orchestrator import BaseOrchestrator
 from src.agents.specialist_config import SPECIALIST_CONFIGS
 from src.agents.contradiction import detect_contradictions, write_contradiction_flags
 from src.agents.contradiction_cross import cross_specialist_contradiction_pass
@@ -65,8 +69,8 @@ def process_query(request: QueryRequest) -> QueryResponse:
     3.  Retrieve chunks via pgvector hybrid search
     4.  If empty → GREY confidence, skip specialists
     5a. Map domain names → config keys, split into Round 1 / Round 2
-    5b. Round 1: run relevant specialists in parallel (ThreadPoolExecutor)
-    5c. Round 2: run relevant specialists sequentially with Round 1 handoff
+    5b. Round 1: run Tier 1 orchestrators in parallel (ThreadPoolExecutor)
+    5c. (Tier 2 SMEs invoked on-demand by orchestrators via invoke_sme)
     6.  Cross-specialist contradiction pass (stub — Phase 5)
     7.  Detect document contradictions (Claude)
     8.  Write contradiction flags to DB (non-blocking)
@@ -109,7 +113,6 @@ def process_query(request: QueryRequest) -> QueryResponse:
     # Step 5a: Map domain names to config keys, split into rounds
     # ------------------------------------------------------------------
     round_1_keys: list[str] = []
-    round_2_keys: list[str] = []
 
     for domain_name in domains_engaged:
         config_key = DOMAIN_TO_CONFIG_KEY.get(domain_name)
@@ -128,16 +131,14 @@ def process_query(request: QueryRequest) -> QueryResponse:
             )
             continue
 
-        if config.round_assignment == 1:
+        if config.tier == 1:
             round_1_keys.append(config_key)
-        else:
-            round_2_keys.append(config_key)
+        # Tier 2 SMEs are not dispatched directly — invoked via invoke_sme
 
     logger.info(
         "round_routing_complete",
         domains_engaged=domains_engaged,
         round_1_keys=round_1_keys,
-        round_2_keys=round_2_keys,
     )
 
     # Convert retrieved chunks to dict format for BaseSpecialist.run()
@@ -168,7 +169,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
         with ThreadPoolExecutor(max_workers=len(round_1_keys)) as executor:
             futures = {
                 key: executor.submit(
-                    BaseSpecialist(config=SPECIALIST_CONFIGS[key]).run,
+                    BaseOrchestrator(config=SPECIALIST_CONFIGS[key]).run,
                     query=request.query_text,
                     project_id=str(request.project_id),
                     retrieved_chunks=retrieved_chunks_dicts,
@@ -183,7 +184,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
                     round_1_findings.append(finding)
                 except Exception as exc:
                     logger.error(
-                        "round_1_specialist_failed",
+                        "round_1_orchestrator_failed",
                         domain=key,
                         error=str(exc),
                     )
@@ -193,53 +194,9 @@ def process_query(request: QueryRequest) -> QueryResponse:
             findings_count=len(round_1_findings),
         )
 
-    # ------------------------------------------------------------------
-    # Step 5c: Round 2 — sequential dispatch with Round 1 handoff
-    # ------------------------------------------------------------------
-    round_2_findings: list[SpecialistFindings] = []
-
-    if round_2_keys:
-        # Serialize Round 1 findings for handoff
-        round_1_handoff: dict | None = None
-        if round_1_findings:
-            round_1_handoff = {
-                f.domain: {
-                    "findings": f.findings,
-                    "confidence": f.confidence,
-                    "sources_used": f.sources_used,
-                }
-                for f in round_1_findings
-            }
-
-        logger.info(
-            "round_2_started",
-            specialists=round_2_keys,
-            round_1_findings_available=round_1_handoff is not None,
-        )
-
-        for key in round_2_keys:
-            try:
-                finding = BaseSpecialist(config=SPECIALIST_CONFIGS[key]).run(
-                    query=request.query_text,
-                    project_id=str(request.project_id),
-                    retrieved_chunks=retrieved_chunks_dicts,
-                    round_1_findings=round_1_handoff,
-                )
-                round_2_findings.append(finding)
-            except Exception as exc:
-                logger.error(
-                    "round_2_specialist_failed",
-                    domain=key,
-                    error=str(exc),
-                )
-
-        logger.info(
-            "round_2_complete",
-            findings_count=len(round_2_findings),
-        )
-
-    # Combine all findings
-    all_findings: list[SpecialistFindings] = round_1_findings + round_2_findings
+    # Tier 2 SMEs (claims, schedule, technical) are invoked on-demand by
+    # Tier 1 orchestrators via the invoke_sme tool. No direct Round 2 dispatch.
+    all_findings: list[SpecialistFindings] = round_1_findings
 
     # ------------------------------------------------------------------
     # Step 6: Cross-specialist contradiction pass (stub — Phase 5)
@@ -304,8 +261,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
         project_id=str(request.project_id),
         confidence=confidence.value,
         domains_engaged=domains_engaged,
-        round_1_count=len(round_1_findings),
-        round_2_count=len(round_2_findings),
+        orchestrator_count=len(round_1_findings),
         contradiction_count=len(contradictions),
         cross_specialist_contradictions=len(cross_specialist_contradictions),
         audit_log_id=str(audit_log_id),
@@ -372,14 +328,12 @@ NOT_ENGAGED_REASONS: dict[str, str] = {
     "technical_design": "No specifications, drawings, RFIs, or NCRs found in the warehouse.",
 }
 
-# All six domains in display order (Round 1 first, then Round 2)
+# Only Tier 1 orchestrator domains appear as top-level output sections.
+# Tier 2 SME findings are synthesised into Tier 1 orchestrator output.
 ALL_DOMAINS_ORDERED: list[str] = [
     "legal_contractual",
     "commercial_financial",
     "financial_reporting",
-    "claims_disputes",
-    "schedule_programme",
-    "technical_design",
 ]
 
 
