@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import type { SpecialistFinding } from '../../api/types';
+import { parseCitations } from './parseCitations';
 
 const domainLabels: Record<string, string> = {
   legal_contractual: 'Legal & Contractual',
@@ -23,6 +26,11 @@ const PROSE_CLASSES = [
 export function SpecialistFindingCard({ finding }: { finding: SpecialistFinding }) {
   const domainLabel = domainLabels[finding.domain] ?? finding.domain;
 
+  const { processedMarkdown, footnotes } = useMemo(
+    () => parseCitations(finding.findings),
+    [finding.findings],
+  );
+
   return (
     <div className="border border-gray-200 rounded-lg bg-white">
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
@@ -30,8 +38,27 @@ export function SpecialistFindingCard({ finding }: { finding: SpecialistFinding 
       </div>
       <div className="px-4 py-3">
         <div className={PROSE_CLASSES}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{finding.findings}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw]}
+          >
+            {processedMarkdown}
+          </ReactMarkdown>
         </div>
+
+        {footnotes.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Sources</p>
+            <ol className="space-y-1">
+              {footnotes.map((fn, i) => (
+                <li key={i} className="flex gap-2 text-xs text-gray-400 leading-relaxed">
+                  <span className="shrink-0 font-medium">{i + 1}.</span>
+                  <span>{fn}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
       </div>
     </div>
   );
