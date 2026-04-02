@@ -1,6 +1,6 @@
 # C1 Intelligence — Query Pipeline Improvement Plan
 
-**Version:** 1.1
+**Version:** 1.2
 **Date:** April 2026
 **Status:** Active
 **Owner:** Yasser (Product Owner) — Strategic Partner (Claude)
@@ -52,8 +52,8 @@
 | 2 | Error handling uses `error_response()` returns | "Failed to fetch" on query submission | ✅ Fixed — `c7e9fb4` |
 | 3 | Synthesis layer: no executive summary, no N/A declarations | Output not professional | ✅ Fixed — `7c2a461` |
 | 4 | System prompt: no professional output standard | Inconsistent format, verbose prose | ✅ Fixed — `7c2a461` |
-| 5 | Citations use UUID + chunk number | Meaningless to auditors — not professional | 🔴 Active — Task 1.4 |
-| 6 | No footnote/superscript citation rendering | Inline brackets instead of professional footnote format | 🔴 Active — Task 2.4 |
+| 5 | Citations use UUID + chunk number | Meaningless to auditors — not professional | ✅ Fixed — `f9f6f1a`, `d80506b`, `350e253` |
+| 6 | No footnote/superscript citation rendering | Inline brackets instead of professional footnote format | ✅ Fixed — `310de5d` |
 | 7 | No two-stage routing — all domains activate on every query | High cost, slow response, poor UX | 🔴 Active — Phase 3 |
 | 8 | Skill files loaded as plain string — no prompt caching | Full input token cost on every query | 🔴 Active — Phase 4 |
 
@@ -81,11 +81,12 @@
 
 ---
 
-### Task 1.4 — Fix citation quality ⬅ NEXT TASK
+### Task 1.4 — Fix citation quality ✅ COMPLETE
 
+**Commit:** `f9f6f1a`
 **Agent:** Ingestion Engineer + Agent Orchestrator
-**Files:** `src/agents/retrieval.py`, `src/agents/models.py`, `src/agents/tools.py`, `src/agents/base_specialist.py`, new migration `010_retrieval_metadata.sql`
-**Prerequisite:** Tasks 1.1–1.3 complete ✅
+**Files:** `src/agents/retrieval.py`, `src/agents/models.py`, `src/agents/tools.py`, `src/agents/base_specialist.py`, migration `010_retrieval_metadata.sql`
+**What was done:** `RetrievedChunk` extended with `filename`, `document_reference_number`, `document_date`, `document_type_name`. RPC functions updated via migration 010 to JOIN with `documents` table and return metadata fields. `search_chunks` tool result formatter updated to surface metadata to the agent. Citation instruction in `_SYSTEM_PROMPT_PREFIX` updated — agent instructed to use document name, reference, date, and clause. UUID citations eliminated.
 
 **Problem:**
 Citations currently appear as `[Source: 54a0ef82-c8c7-48e5-bda0-5c1d480c7bc8, Chunk 10]`. The UUID is meaningless to an auditor. The chunk number is an internal index. Professional citations must identify the document by name, reference number, date, and the clause or section where the evidence appears.
@@ -160,6 +161,14 @@ Confirm citations read as document names and references, not UUIDs and chunk num
 
 ---
 
+### Task 1.5 — citation_fields from document_types wired into source labels ✅ COMPLETE
+
+**Commits:** `d80506b` (citation_fields wired), `350e253` (chunk index removed from source labels), `d73ed95` (agent prohibited from writing Chunk N)
+**Agent:** Ingestion Engineer + Agent Orchestrator
+**What was done:** `citation_fields` column from `document_types` table wired into the source label builder so domain-specific citation prefixes (e.g. Sub-Clause, Article, Clause) are used correctly per document type. Chunk index (`Chunk N`) removed entirely from all source label output. Agent system prompt updated to explicitly prohibit writing "Chunk N" or any internal index reference in findings text.
+
+---
+
 ## Phase 2 — Professional Output Format
 
 ### Task 2.1 — Rewrite synthesis layer for executive report format ✅ COMPLETE
@@ -182,11 +191,12 @@ Confirm citations read as document names and references, not UUIDs and chunk num
 
 ---
 
-### Task 2.4 — Footnote/superscript citation rendering
+### Task 2.4 — Footnote/superscript citation rendering ✅ COMPLETE
 
+**Commit:** `310de5d`
 **Agent:** API Engineer (frontend)
 **Files:** `frontend/src/components/query/SpecialistFindingCard.tsx`, new `parseCitations` utility
-**Prerequisite:** Task 1.4 complete — citations must be meaningful before rendering as footnotes
+**What was done:** `parseCitations` utility built — scans markdown for citation bracket patterns, replaces inline citations with superscript numbers, builds numbered footnote list. `SpecialistFindingCard` updated to pass findings through `parseCitations` before rendering. Footnote section rendered below findings with separator line, text-xs sizing, and muted colour. Citations render as superscripts in text with full citation detail in section footer.
 
 **Problem:**
 Professional audit reports, legal opinions, and due diligence memoranda use numbered superscript citations in text with full citation details in a footnote section at the bottom of each section. Inline `[Source: ...]` brackets are functional but not at the professional presentation standard required by the target audience.
@@ -333,11 +343,12 @@ Log cache usage on every API call. Confirm `cache_read_input_tokens > 0` in Rail
 | 1 | 1.1 Persist query state to Supabase | DB Architect + API Engineer | ✅ Complete | `c7e9fb4` |
 | 1 | 1.2 Fix query submission error handling | API Engineer | ✅ Complete | `c7e9fb4` |
 | 1 | 1.3 End-to-end query test | Yasser | ✅ Complete | — |
-| 1 | **1.4 Fix citation quality** | Ingestion Engineer + Agent Orchestrator | 🔴 Next | — |
+| 1 | 1.4 Fix citation quality | Ingestion Engineer + Agent Orchestrator | ✅ Complete | `f9f6f1a` |
+| 1 | 1.5 citation_fields wired into source labels | Ingestion Engineer + Agent Orchestrator | ✅ Complete | `d80506b`, `350e253`, `d73ed95` |
 | 2 | 2.1 Rewrite synthesis layer | Agent Orchestrator | ✅ Complete | `7c2a461` |
 | 2 | 2.2 Upgrade system prompt | Agent Orchestrator | ✅ Complete | `7c2a461` |
 | 2 | 2.3 Output quality review | Yasser | ✅ Complete | — |
-| 2 | **2.4 Footnote/superscript citation rendering** | API Engineer (frontend) | 🔴 Pending 1.4 | — |
+| 2 | 2.4 Footnote/superscript citation rendering | API Engineer (frontend) | ✅ Complete | `310de5d` |
 | 3 | 3.1 Round 0 classifier backend | Agent Orchestrator + API Engineer | 🔴 Pending 2.4 | — |
 | 3 | 3.2 Round 0 frontend | API Engineer (frontend) | 🔴 Pending 3.1 | — |
 | 3 | 3.3 Domain filter in full query | Agent Orchestrator | 🔴 Pending 3.2 | — |
@@ -359,4 +370,4 @@ Log cache usage on every API call. Confirm `cache_read_input_tokens > 0` in Rail
 
 ---
 
-*Document Control: Version 1.1 — April 2026 — Tasks 1.1–1.3 and 2.1–2.3 marked complete with commits; Task 1.4 (citation quality) and Task 2.4 (footnote rendering) added; objectives and defects table updated*
+*Document Control: Version 1.2 — April 2026 — Tasks 1.4, 1.5, and 2.4 marked complete with commits; Task 1.5 (citation_fields + chunk index removal) added; defects table updated; Phases 1 and 2 now fully complete.*
