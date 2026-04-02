@@ -266,8 +266,18 @@ def process_query(request: QueryRequest) -> QueryResponse:
     confidence = determine_confidence(all_findings, contradictions, retrieval)
 
     # ------------------------------------------------------------------
-    # Step 10: Write audit log (must succeed — before response text so
-    # audit_log_id can be embedded in the report footer)
+    # Step 10: Build response text (includes executive summary via Claude)
+    # ------------------------------------------------------------------
+    response_text = build_response_text(
+        all_findings,
+        contradictions,
+        confidence,
+        request.query_text,
+        document_count=len(document_ids),
+    )
+
+    # ------------------------------------------------------------------
+    # Step 11: Write audit log (must succeed)
     # ------------------------------------------------------------------
     all_citations = _collect_all_citations(all_findings)
 
@@ -279,23 +289,11 @@ def process_query(request: QueryRequest) -> QueryResponse:
         project_id=request.project_id,
         user_id=request.user_id,
         query_text=request.query_text,
-        response_text="",  # Placeholder — full text built after audit ID is known
+        response_text=response_text,
         confidence=confidence,
         domains_engaged=domains_engaged,
         document_ids=document_ids,
         citations=all_citations,
-    )
-
-    # ------------------------------------------------------------------
-    # Step 11: Build response text (includes executive summary via Claude)
-    # ------------------------------------------------------------------
-    response_text = build_response_text(
-        all_findings,
-        contradictions,
-        confidence,
-        request.query_text,
-        document_count=len(document_ids),
-        audit_log_id=audit_log_id,
     )
 
     # ------------------------------------------------------------------
@@ -536,20 +534,7 @@ def _grey_response(
     Handle the GREY path: retrieval returned no relevant documents.
     Still writes an audit log entry and produces a professional-format report.
     """
-    audit_log_id = write_audit_log(
-        supabase_client=supabase_client,
-        project_id=request.project_id,
-        user_id=request.user_id,
-        query_text=request.query_text,
-        response_text="",  # Placeholder — full text built after audit ID is known
-        confidence=ConfidenceLevel.GREY,
-        domains_engaged=domains_engaged,
-        document_ids=document_ids,
-        citations=[],
-    )
-
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    audit_ref = str(audit_log_id) if audit_log_id else "pending"
 
     # Build all six domains as NOT ENGAGED
     domain_sections: list[str] = []
@@ -584,8 +569,20 @@ def _grey_response(
         "",
         "---",
         "",
-        f"*Audit Reference: {audit_ref} · Query submitted: {timestamp}*",
+        f"*Query submitted: {timestamp}*",
     ])
+
+    audit_log_id = write_audit_log(
+        supabase_client=supabase_client,
+        project_id=request.project_id,
+        user_id=request.user_id,
+        query_text=request.query_text,
+        response_text=response_text,
+        confidence=ConfidenceLevel.GREY,
+        domains_engaged=domains_engaged,
+        document_ids=document_ids,
+        citations=[],
+    )
 
     logger.info(
         "query_grey_response",
