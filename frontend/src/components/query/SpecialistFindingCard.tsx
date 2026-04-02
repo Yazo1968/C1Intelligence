@@ -1,3 +1,4 @@
+import ReactMarkdown from 'react-markdown';
 import { CitationInline } from './CitationInline';
 import type { SpecialistFinding } from '../../api/types';
 
@@ -10,6 +11,15 @@ const domainLabels: Record<string, string> = {
   governance_compliance: 'Governance & Compliance',
 };
 
+const PROSE_CLASSES = [
+  'prose prose-sm max-w-none text-gray-700',
+  'prose-headings:text-navy-900 prose-headings:font-semibold',
+  'prose-strong:text-gray-900',
+  'prose-ul:my-1 prose-li:my-0.5',
+  'prose-table:text-xs prose-th:bg-gray-50 prose-th:font-medium',
+  'prose-td:border prose-td:border-gray-200 prose-td:px-2 prose-td:py-1',
+].join(' ');
+
 export function SpecialistFindingCard({ finding }: { finding: SpecialistFinding }) {
   const domainLabel = domainLabels[finding.domain] ?? finding.domain;
 
@@ -19,7 +29,9 @@ export function SpecialistFindingCard({ finding }: { finding: SpecialistFinding 
         <h4 className="text-sm font-semibold text-navy-900">{domainLabel}</h4>
       </div>
       <div className="px-4 py-3 space-y-3">
-        <p className="text-sm text-gray-700 leading-relaxed">{finding.analysis}</p>
+        <div className={PROSE_CLASSES}>
+          <ReactMarkdown>{finding.analysis}</ReactMarkdown>
+        </div>
 
         {finding.key_findings.length > 0 && (
           <ul className="space-y-2">
