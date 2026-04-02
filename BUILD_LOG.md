@@ -352,6 +352,23 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 
 ---
 
+## Session — Query Pipeline Improvements (Strategic Planning) — ✅ Session Complete
+
+**Date:** 2026-04-02
+**Work completed:**
+- Async document upload with status polling implemented — commit `4c52238`
+- Markdown rendering for specialist findings — commit `1647cc3`
+- query_jobs migration 009 applied to live Supabase (table live, RLS enabled)
+- C1_QUERY_IMPROVEMENT_PLAN.md produced — 4 phases, 10 tasks
+- PyMuPDF revert (Docling sole parser restored) — commit `6491e07`
+- FIDIC Layer 2 ingestion complete — 6 books, 1917 chunks, verified in Supabase
+- Phase 3 Legal skill files complete — 5 files, all verified
+
+**Next session:** Task 1.1 Part 2 — API Engineer — replace _query_status
+in-memory dict with Supabase query_jobs persistence in src/api/routes/queries.py
+
+---
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |

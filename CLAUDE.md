@@ -33,7 +33,7 @@ Every session, before writing any code, confirm which governing document applies
 | `docs/AGENT_PLAN.md` | Agent architecture phases 1–8 — **current active workstream** | Every session |
 | `docs/SKILLS_STANDARDS.md` | Skill file authorship standards — governs all skill file content | When working on skill files |
 | `BUILD_LOG.md` | Completion record and deferred items | Read at session start; update at session end |
-| `C1_CLEANUP_PLAN.md` | **Archived** — Phases A–E complete. Reference only if a historical decision needs tracing. | Do not treat as active workstream |
+| `docs/C1_QUERY_IMPROVEMENT_PLAN.md` | Active workstream — query pipeline, output format, routing, caching | Every session until plan is complete |
 
 **These documents must be kept current.** When a phase or task completes, the relevant governing document is updated before the session is closed. The Quality Guardian confirms the document accurately reflects what was built. A phase is not complete until the document is updated and committed.
 
