@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { SpecialistFinding } from '../../api/types';
 
 const domainLabels: Record<string, string> = {
@@ -29,7 +30,7 @@ export function SpecialistFindingCard({ finding }: { finding: SpecialistFinding 
       </div>
       <div className="px-4 py-3">
         <div className={PROSE_CLASSES}>
-          <ReactMarkdown>{finding.findings}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{finding.findings}</ReactMarkdown>
         </div>
       </div>
     </div>

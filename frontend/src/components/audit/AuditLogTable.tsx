@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ConfidenceBadge } from '../query/ConfidenceBadge';
 import { Badge } from '../ui/Badge';
 import { EmptyState } from '../ui/EmptyState';
@@ -72,7 +73,7 @@ export function AuditLogTable({ entries, loading }: { entries: QueryLogEntry[]; 
                     <div className="max-w-3xl py-3">
                       <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Full Response</h4>
                       <div className="prose prose-sm max-w-none text-gray-700 prose-headings:text-navy-900 prose-headings:font-semibold prose-strong:text-gray-900 prose-ul:my-1 prose-li:my-0.5 prose-table:text-xs prose-th:bg-gray-50 prose-th:font-medium prose-td:border prose-td:border-gray-200 prose-td:px-2 prose-td:py-1">
-                        <ReactMarkdown>{entry.response_text}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{entry.response_text}</ReactMarkdown>
                       </div>
                       <p className="mt-3 text-xs text-gray-400 font-mono">
                         Audit Log ID: {entry.id}
