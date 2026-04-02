@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { DocumentResponse, DocumentUploadResponse } from './types';
+import type { DocumentResponse, DocumentStatusResponse, DocumentUploadResponse } from './types';
 
 export function listDocuments(projectId: string): Promise<DocumentResponse[]> {
   return apiClient.get<DocumentResponse[]>(`/projects/${projectId}/documents`);
@@ -7,6 +7,10 @@ export function listDocuments(projectId: string): Promise<DocumentResponse[]> {
 
 export function getDocument(projectId: string, docId: string): Promise<DocumentResponse> {
   return apiClient.get<DocumentResponse>(`/projects/${projectId}/documents/${docId}`);
+}
+
+export function getDocumentStatus(projectId: string, docId: string): Promise<DocumentStatusResponse> {
+  return apiClient.get<DocumentStatusResponse>(`/projects/${projectId}/documents/${docId}/status`);
 }
 
 export function uploadDocument(

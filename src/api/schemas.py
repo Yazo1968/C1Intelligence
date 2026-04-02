@@ -63,6 +63,13 @@ class DocumentUploadResponse(BaseModel):
     classification: dict[str, Any] | None = None
     validation_gaps: list[dict[str, Any]] | None = None
     error_message: str | None = None
+    message: str | None = None
+
+
+class DocumentStatusResponse(BaseModel):
+    document_id: uuid.UUID
+    status: str
+    filename: str
 
 
 # ---------------------------------------------------------------------------

@@ -55,6 +55,13 @@ export interface DocumentUploadResponse {
   classification: ClassificationInfo | null;
   validation_gaps: ValidationGap[] | null;
   error_message: string | null;
+  message: string | null;
+}
+
+export interface DocumentStatusResponse {
+  document_id: string;
+  status: 'QUEUED' | 'EXTRACTING' | 'CLASSIFYING' | 'STORED' | 'FAILED';
+  filename: string;
 }
 
 export interface Citation {

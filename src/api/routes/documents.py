@@ -9,14 +9,14 @@ import os
 import tempfile
 import uuid
 
-from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, File, Form, UploadFile, status
 
 from src.clients import get_supabase_client
 from src.config import ALLOWED_MIME_TYPES
 from src.logging_config import get_logger
 from src.api.auth import AuthenticatedUser
 from src.api.errors import error_response
-from src.api.schemas import DocumentResponse, DocumentUploadResponse
+from src.api.schemas import DocumentResponse, DocumentStatusResponse, DocumentUploadResponse
 from src.ingestion.models import IngestionError, UploadRequest
 from src.ingestion.pipeline import ingest_document
 from src.ingestion.status_tracker import create_document_record
@@ -26,18 +26,62 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/projects/{project_id}/documents", tags=["documents"])
 
 
-@router.post("", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
+def _run_ingestion_pipeline(
+    temp_path: str,
+    file_size: int,
+    request: UploadRequest,
+    document_id: uuid.UUID,
+) -> None:
+    """Run the ingestion pipeline in a background thread. Cleans up temp file on completion."""
+    try:
+        logger.info(
+            "background_ingestion_started",
+            document_id=str(document_id),
+            filename=request.filename,
+        )
+        ingest_document(
+            file_path=temp_path,
+            file_size_bytes=file_size,
+            request=request,
+            document_id=document_id,
+        )
+        logger.info(
+            "background_ingestion_complete",
+            document_id=str(document_id),
+            filename=request.filename,
+        )
+    except IngestionError as exc:
+        logger.error(
+            "background_ingestion_failed",
+            document_id=str(document_id),
+            stage=exc.stage,
+            error=exc.message,
+        )
+    except Exception as exc:
+        logger.error(
+            "background_ingestion_unexpected_error",
+            document_id=str(document_id),
+            error=str(exc),
+        )
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+@router.post("", response_model=DocumentUploadResponse, status_code=status.HTTP_202_ACCEPTED)
 async def upload_document(
     project_id: uuid.UUID,
     user_id: AuthenticatedUser,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     contract_id: uuid.UUID | None = Form(None),
     user_selected_type_id: int | None = Form(None),
     upload_notes: str | None = Form(None),
 ) -> DocumentUploadResponse:
     """
-    Upload a document to a project. Runs the full ingestion pipeline:
-    validation → Gemini upload → classification → metadata extraction → storage.
+    Upload a document to a project. Creates the document record and stores
+    the original file, then launches ingestion in the background.
+    Returns immediately with HTTP 202 and the document_id for status polling.
     """
     # Verify the project belongs to the user (RLS will enforce this,
     # but we check early to give a clear error)
@@ -111,42 +155,21 @@ async def upload_document(
             )
             # Storage failure must never block ingestion — continue
 
-        result = ingest_document(
-            file_path=temp_path,
-            file_size_bytes=file_size,
-            request=request,
-            document_id=document_id,
+        # Launch ingestion in background — temp file cleanup happens inside
+        background_tasks.add_task(
+            _run_ingestion_pipeline,
+            temp_path,
+            file_size,
+            request,
+            document_id,
         )
-
-        classification_dict = None
-        if result.classification:
-            classification_dict = {
-                "document_type_id": result.classification.document_type_id,
-                "document_type_name": result.classification.document_type_name,
-                "category": result.classification.category,
-                "tier": result.classification.tier,
-                "confidence": result.classification.confidence,
-                "reasoning": result.classification.reasoning,
-            }
-
-        validation_gaps = None
-        if result.validation and result.validation.gaps:
-            validation_gaps = [
-                {
-                    "field_name": g.field_name,
-                    "requirement_level": g.requirement_level,
-                    "message": g.message,
-                }
-                for g in result.validation.gaps
-            ]
+        # Prevent finally block from deleting temp file before background task runs
+        temp_path = None
 
         return DocumentUploadResponse(
-            document_id=result.document_id,
-            status=result.status,
-            queued_for_review=result.queued_for_review,
-            classification=classification_dict,
-            validation_gaps=validation_gaps,
-            error_message=result.error_message,
+            document_id=document_id,
+            status="QUEUED",
+            message="Document received. Processing has started.",
         )
 
     except IngestionError as exc:
@@ -157,7 +180,7 @@ async def upload_document(
             document_id=exc.document_id,
         )
     finally:
-        # Clean up temp file
+        # Clean up temp file only if background task was NOT launched
         if temp_path and os.path.exists(temp_path):
             os.unlink(temp_path)
 
@@ -187,6 +210,38 @@ async def list_documents(
         )
 
     return [_to_document_response(d) for d in response.data]
+
+
+@router.get("/{document_id}/status", response_model=DocumentStatusResponse)
+async def get_document_status(
+    project_id: uuid.UUID,
+    document_id: uuid.UUID,
+    user_id: AuthenticatedUser,
+) -> DocumentStatusResponse:
+    """Get the processing status of a document. Used for polling after async upload."""
+    supabase_client = get_supabase_client()
+
+    try:
+        response = (
+            supabase_client.table("documents")
+            .select("id, status, filename")
+            .eq("id", str(document_id))
+            .eq("project_id", str(project_id))
+            .single()
+            .execute()
+        )
+    except Exception:
+        return error_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="DOCUMENT_NOT_FOUND",
+            message=f"Document {document_id} not found in project {project_id}.",
+        )
+
+    return DocumentStatusResponse(
+        document_id=uuid.UUID(response.data["id"]),
+        status=response.data["status"],
+        filename=response.data["filename"],
+    )
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
