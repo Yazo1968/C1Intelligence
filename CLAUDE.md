@@ -30,7 +30,8 @@ Every session, before writing any code, confirm which governing document applies
 |---|---|---|
 | `README.md` | Platform architecture, warehouse design, API endpoints | Every session |
 | `CLAUDE.md` | This file — behavioural contract | Every session |
-| `docs/AGENT_PLAN.md` | Agent architecture phases 1–8 — **current active workstream** | Every session |
+| `docs/C1_MULTIAGENT_ARCHITECTURE_PLAN.md` | Active architecture reference — 3-tier multi-agent system | Read before any agent architecture work |
+| `docs/archive/AGENT_PLAN_v1.4.md` | Archived — Phase 1-3 history and skill authorship standards | Reference only |
 | `docs/SKILLS_STANDARDS.md` | Skill file authorship standards — governs all skill file content | When working on skill files |
 | `BUILD_LOG.md` | Completion record and deferred items | Read at session start; update at session end |
 | `docs/C1_QUERY_IMPROVEMENT_PLAN.md` | Active workstream — query pipeline, output format, routing, caching | Every session until plan is complete |
