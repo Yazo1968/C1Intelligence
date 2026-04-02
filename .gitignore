@@ -29,5 +29,8 @@ env/
 .DS_Store
 Thumbs.db
 
+# FIDIC reference PDFs — copyrighted, keep local only
+docs/FIDIC books/
+
 # Logs
 *.log

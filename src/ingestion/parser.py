@@ -150,3 +150,78 @@ def _extract_page_count(result: object, detected_format: str) -> int | None:
         pass
 
     return None
+
+
+def parse_document_text_layer(file_path: str, filename: str) -> ParsedDocument:
+    """
+    Parse a text-based digital PDF using PyMuPDF (fitz) for direct text
+    extraction. No OCR, no page rendering, no layout analysis.
+
+    Use this for Layer 2 reference documents (FIDIC, PMBOK, etc.) that are
+    always digital text-layer PDFs. For Layer 1 project documents that may
+    be scanned, use parse_document() which uses Docling with full OCR.
+
+    Args:
+        file_path: Absolute path to the PDF file on disk.
+        filename: Original filename (used for logging).
+
+    Returns:
+        ParsedDocument with extracted text, sections, page count, and format.
+
+    Raises:
+        IngestionError: If parsing fails or no text is extracted.
+    """
+    logger.info(
+        "parsing_document_text_layer",
+        filename=filename,
+        file_path=file_path,
+    )
+
+    try:
+        import fitz  # PyMuPDF — lazy import
+    except ImportError as exc:
+        raise IngestionError(
+            stage="parse",
+            message="PyMuPDF (fitz) is not installed. Run: pip install pymupdf",
+        ) from exc
+
+    try:
+        doc = fitz.open(file_path)
+        page_texts: list[str] = []
+        for page in doc:
+            text = page.get_text()
+            if text and text.strip():
+                page_texts.append(text)
+        page_count = len(doc)
+        doc.close()
+    except Exception as exc:
+        raise IngestionError(
+            stage="parse",
+            message=f"PyMuPDF parse failed: {exc}",
+        ) from exc
+
+    full_text = "\n\n".join(page_texts)
+
+    if not full_text or not full_text.strip():
+        raise IngestionError(
+            stage="parse",
+            message=f"Parse failed: no extractable text found in {filename}",
+        )
+
+    sections = _extract_sections_from_markdown(full_text)
+
+    logger.info(
+        "document_parsed_text_layer",
+        filename=filename,
+        text_length=len(full_text),
+        section_count=len(sections),
+        page_count=page_count,
+        pages_with_text=len(page_texts),
+    )
+
+    return ParsedDocument(
+        text=full_text,
+        sections=sections,
+        page_count=page_count,
+        format="pdf",
+    )
