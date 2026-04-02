@@ -1,5 +1,4 @@
 import ReactMarkdown from 'react-markdown';
-import { CitationInline } from './CitationInline';
 import type { SpecialistFinding } from '../../api/types';
 
 const domainLabels: Record<string, string> = {
@@ -28,26 +27,10 @@ export function SpecialistFindingCard({ finding }: { finding: SpecialistFinding 
       <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
         <h4 className="text-sm font-semibold text-navy-900">{domainLabel}</h4>
       </div>
-      <div className="px-4 py-3 space-y-3">
+      <div className="px-4 py-3">
         <div className={PROSE_CLASSES}>
-          <ReactMarkdown>{finding.analysis}</ReactMarkdown>
+          <ReactMarkdown>{finding.findings}</ReactMarkdown>
         </div>
-
-        {finding.key_findings.length > 0 && (
-          <ul className="space-y-2">
-            {finding.key_findings.map((kf, i) => (
-              <li key={i} className="flex gap-2 text-sm">
-                <span className="text-navy-700 mt-0.5 shrink-0">&bull;</span>
-                <span className="text-gray-800 leading-relaxed">
-                  {kf.statement}
-                  {kf.citations.map((c, j) => (
-                    <CitationInline key={j} citation={c} />
-                  ))}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </div>
   );

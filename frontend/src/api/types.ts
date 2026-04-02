@@ -64,23 +64,14 @@ export interface DocumentStatusResponse {
   filename: string;
 }
 
-export interface Citation {
-  document_id: string | null;
-  document_type: string | null;
-  document_date: string | null;
-  document_reference: string | null;
-  excerpt: string | null;
-}
-
-export interface KeyFinding {
-  statement: string;
-  citations: Citation[];
-}
-
 export interface SpecialistFinding {
   domain: string;
-  analysis: string;
-  key_findings: KeyFinding[];
+  findings: string;
+  confidence: string;
+  sources_used: string[];
+  tools_called: string[];
+  round_number: number;
+  flagged_contradictions: string[];
 }
 
 export interface Contradiction {
