@@ -16,7 +16,7 @@ from src.config import ALLOWED_MIME_TYPES
 from src.logging_config import get_logger
 from src.api.auth import AuthenticatedUser
 from src.api.errors import error_response
-from src.api.schemas import DocumentResponse, DocumentStatusResponse, DocumentUploadResponse
+from src.api.schemas import DocumentDownloadResponse, DocumentResponse, DocumentStatusResponse, DocumentUploadResponse
 from src.ingestion.models import IngestionError, UploadRequest
 from src.ingestion.pipeline import ingest_document
 from src.ingestion.status_tracker import create_document_record
@@ -241,6 +241,70 @@ async def get_document_status(
         document_id=uuid.UUID(response.data["id"]),
         status=response.data["status"],
         filename=response.data["filename"],
+    )
+
+
+@router.get("/{document_id}/download", response_model=DocumentDownloadResponse)
+async def download_document(
+    project_id: uuid.UUID,
+    document_id: uuid.UUID,
+    user_id: AuthenticatedUser,
+) -> DocumentDownloadResponse:
+    """
+    Generate a short-lived signed URL for downloading the original uploaded file.
+    The signed URL expires in 60 seconds. The client should open it immediately.
+    Returns 404 if the document has no stored file (storage_path is NULL).
+    """
+    supabase_client = get_supabase_client()
+
+    try:
+        response = (
+            supabase_client.table("documents")
+            .select("id, filename, storage_path")
+            .eq("id", str(document_id))
+            .eq("project_id", str(project_id))
+            .single()
+            .execute()
+        )
+    except Exception:
+        return error_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="DOCUMENT_NOT_FOUND",
+            message=f"Document {document_id} not found in project {project_id}.",
+        )
+
+    storage_path = response.data.get("storage_path")
+    filename = response.data.get("filename", "document")
+
+    if not storage_path:
+        return error_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            error_code="DOCUMENT_FILE_NOT_STORED",
+            message=f"Document {document_id} has no stored file. The original may not have been saved.",
+        )
+
+    try:
+        signed = supabase_client.storage.from_("document-originals").create_signed_url(
+            path=storage_path,
+            expires_in=60,
+        )
+    except Exception as exc:
+        logger.error(
+            "document_signed_url_failed",
+            document_id=str(document_id),
+            storage_path=storage_path,
+            error=str(exc),
+        )
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="SIGNED_URL_FAILED",
+            message="Failed to generate download URL. Please try again.",
+        )
+
+    return DocumentDownloadResponse(
+        download_url=signed["signedURL"],
+        filename=filename,
+        expires_in=60,
     )
 
 

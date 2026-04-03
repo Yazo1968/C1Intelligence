@@ -72,6 +72,12 @@ class DocumentStatusResponse(BaseModel):
     filename: str
 
 
+class DocumentDownloadResponse(BaseModel):
+    download_url: str
+    filename: str
+    expires_in: int = 60
+
+
 # ---------------------------------------------------------------------------
 # Queries
 # ---------------------------------------------------------------------------
