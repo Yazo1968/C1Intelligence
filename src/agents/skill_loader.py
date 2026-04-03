@@ -120,6 +120,59 @@ class SkillLoader:
 
         return "\n\n".join(sections)
 
+    def load_grounding_schema(self, domain: str) -> dict | None:
+        """
+        Load the grounding_schema.json file for a domain if it exists.
+
+        Looks in the same directory as the domain's skill markdown files,
+        using the same resolution order as load():
+          orchestrators/{domain} → smes/{domain} → {domain} (legacy)
+
+        Returns the parsed JSON dict if found, None if not present.
+        Absence of a grounding schema is not an error — it means no
+        automatic confidence capping is applied for that domain.
+        """
+        import json as _json
+
+        orchestrator_path = SKILLS_DIR / "orchestrators" / domain
+        sme_path = SKILLS_DIR / "smes" / domain
+        legacy_path = SKILLS_DIR / domain
+
+        if orchestrator_path.is_dir():
+            domain_dir = orchestrator_path
+        elif sme_path.is_dir():
+            domain_dir = sme_path
+        else:
+            domain_dir = legacy_path
+
+        schema_path = domain_dir / "grounding_schema.json"
+
+        if not schema_path.is_file():
+            logger.debug(
+                "grounding_schema_not_found",
+                domain=domain,
+                expected_path=str(schema_path),
+            )
+            return None
+
+        try:
+            content = schema_path.read_text(encoding="utf-8")
+            schema = _json.loads(content)
+            logger.info(
+                "grounding_schema_loaded",
+                domain=domain,
+                path=str(schema_path),
+            )
+            return schema
+        except (OSError, _json.JSONDecodeError) as exc:
+            logger.error(
+                "grounding_schema_load_error",
+                domain=domain,
+                path=str(schema_path),
+                error=str(exc),
+            )
+            return None
+
     def _generate_project_context(self, project_id: str) -> str:
         """
         Auto-generate project context from Supabase when no flat playbook exists.
