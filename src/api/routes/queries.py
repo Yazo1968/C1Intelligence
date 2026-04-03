@@ -170,6 +170,7 @@ async def submit_query(
         project_id=project_id,
         user_id=user_id,
         query_text=body.query_text,
+        risk_mode=body.risk_mode,
     )
 
     # Insert query job row before launching background task

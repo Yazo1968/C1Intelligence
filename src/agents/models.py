@@ -25,6 +25,7 @@ class QueryRequest(BaseModel):
     project_id: uuid.UUID
     user_id: uuid.UUID
     query_text: str
+    risk_mode: bool = False
 
 
 class RetrievedChunk(BaseModel):

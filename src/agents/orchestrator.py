@@ -59,6 +59,29 @@ DOMAIN_TO_CONFIG_KEY: dict[str, str] = {
     "claims_disputes": "claims",
 }
 
+_RISK_FRAMING_DIRECTIVE: str = """
+
+--- RISK ASSESSMENT MODE ---
+
+This query has been submitted in Risk Assessment Mode. In addition to
+your standard domain assessment, you must frame your findings as risk
+exposures. For each significant finding:
+
+- State the risk description clearly
+- Classify likelihood: HIGH / MEDIUM / LOW
+- Classify impact: HIGH / MEDIUM / LOW
+- Derive overall risk rating: HIGH (if either likelihood or impact is HIGH),
+  MEDIUM (if both are MEDIUM, or one is MEDIUM and one is LOW),
+  LOW (if both are LOW)
+- State the recommended action in one sentence
+
+Your FLAGS section must use the risk register format:
+RISK [ID] | [Domain] | [Description] | Likelihood: [H/M/L] |
+Impact: [H/M/L] | Rating: [HIGH/MEDIUM/LOW] | Action: [sentence]
+
+--- END RISK ASSESSMENT MODE ---
+"""
+
 
 def process_query(request: QueryRequest) -> QueryResponse:
     """
@@ -164,13 +187,19 @@ def process_query(request: QueryRequest) -> QueryResponse:
     round_1_findings: list[SpecialistFindings] = []
 
     if round_1_keys:
-        logger.info("round_1_started", specialists=round_1_keys)
+        logger.info("round_1_started", specialists=round_1_keys,
+                    risk_mode=request.risk_mode)
+
+        # Append risk framing directive to query text when risk_mode is active
+        effective_query = request.query_text
+        if request.risk_mode:
+            effective_query = request.query_text + _RISK_FRAMING_DIRECTIVE
 
         with ThreadPoolExecutor(max_workers=len(round_1_keys)) as executor:
             futures = {
                 key: executor.submit(
                     BaseOrchestrator(config=SPECIALIST_CONFIGS[key]).run,
-                    query=request.query_text,
+                    query=effective_query,
                     project_id=str(request.project_id),
                     retrieved_chunks=retrieved_chunks_dicts,
                     round_1_findings=None,

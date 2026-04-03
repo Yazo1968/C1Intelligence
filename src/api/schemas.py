@@ -77,6 +77,7 @@ class DocumentStatusResponse(BaseModel):
 # ---------------------------------------------------------------------------
 class SubmitQueryRequest(BaseModel):
     query_text: str
+    risk_mode: bool = False
 
 
 class QueryAcceptedResponse(BaseModel):
