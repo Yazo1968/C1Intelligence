@@ -506,6 +506,55 @@ Six skill files created in `skills/smes/technical/`:
 
 ---
 
+## C1_MULTIAGENT_ARCHITECTURE_PLAN Phase C, D, E — Financial Orchestrator, Risk Mode, Layer 2 Split — ✅ Complete
+
+**Date:** April 2026
+**Governing document:** docs/C1_MULTIAGENT_ARCHITECTURE_PLAN.md v1.0
+
+**Phase C — Financial Orchestrator:**
+No code change required — financial domain was fully wired in Phase A.
+Task C.2: `skills/orchestrators/financial/directive.md` created (109 lines).
+Commit: `ac87569`
+
+**Phase D — Risk Reporting Mode:**
+Task D.1: `risk_mode: bool = False` added to `QueryRequest` (models.py) and
+`SubmitQueryRequest` (schemas.py). `_RISK_FRAMING_DIRECTIVE` constant added to
+orchestrator.py. When `risk_mode=True`, directive appended to effective query
+for all Tier 1 orchestrators. `risk_mode` passed through queries.py.
+Commit: `6d1fcc9`
+
+Task D.2: Frontend risk report toggle added to `QueryInput.tsx` (amber-styled
+checkbox). `submitQuery` in `queries.ts` accepts `riskMode` parameter and sends
+`risk_mode` in request body. `handleQuery` in `ProjectWorkspacePage.tsx`
+accepts and passes `riskMode`. Button label and loading message change when
+risk mode is active. Commit: `560c962`
+
+**Phase E — Layer 2 Split and Jurisdiction Tagging:**
+Task E.1: Migration 012 applied to Supabase — `layer_type TEXT NOT NULL DEFAULT '2b'`
+column added to `reference_documents` with CHECK constraint `('2a', '2b')`.
+All 6 existing FIDIC books tagged `layer_type = '2b'`, `jurisdiction = 'international'`.
+Column comments added.
+
+Task E.2: `scripts/ingest_reference.py` updated — `--layer` flag added
+(choices: `2a`, `2b`, default: `2b`), `layer_type: args.layer` written to
+`reference_documents` insert dict, docstring and `--jurisdiction` help updated.
+Commit: `047ac02`
+
+Task E.3: Migration 013 applied to Supabase — both reference search RPC
+functions (`search_chunks_reference_semantic`, `search_chunks_reference_fulltext`)
+replaced with updated versions accepting optional `p_layer_type TEXT DEFAULT NULL`
+and `p_jurisdiction TEXT DEFAULT NULL` parameters. NULL = no filter (backward
+compatible). Non-NULL filters to the specified layer/jurisdiction. Both functions
+also now return `name`, `document_type`, `layer_type`, `jurisdiction` columns.
+Migration SQL file created at `supabase/migrations/013_layer2_retrieval_filters.sql`.
+Commit: `d09076d`
+
+**Supabase state after Phase E:** 10 tracked migrations (004–013),
+13 total migrations applied (001–013). 4 RPC functions. 6 FIDIC reference
+documents, all Layer 2b international.
+
+---
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |
