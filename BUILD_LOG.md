@@ -677,6 +677,37 @@ saving on cache hits. Cache lifetime: 5 minutes.
 Next priority: Category 3 security hardening (Items 11, 12) or Category 2 Phase 2 features — requires Yasser's direction.
 | Approval workflows | Phase 2 feature | Phase 2 |
 | Five user roles and authority matrix | Phase 2 feature | Phase 2 |
+
+---
+
+## Session — Feature 1: Cross-Specialist Contradiction Detection — ✅ Complete
+
+**Date:** 2026-04-03
+**Active agent:** Agent Orchestrator, Quality Guardian
+**Quality Guardian:** PASS — independently verified by session coordinator
+
+**What was built:**
+- `src/agents/contradiction_cross.py` — replaced stub with full Claude-based
+  implementation. Uses `CONTRADICTION_TOOL` imported from `contradiction.py`
+  (not redefined). System prompt focused on dates, values, and factual positions
+  across domain specialists. Returns `list[ContradictionFlag]`. Non-fatal on
+  any API or parsing error.
+- `src/agents/orchestrator.py` — two changes: `anthropic_client` now passed
+  to `cross_specialist_contradiction_pass`; results merged into `contradictions`
+  immediately after `detect_contradictions` so that write-back, confidence
+  scoring, and response assembly all handle cross-specialist flags without
+  further changes.
+- Commit: `72e1608`
+
+**Known limitation:** Cross-specialist contradiction flags use domain names
+as document references (e.g. "LEGAL", "SCHEDULE"). The DB write-back in
+`write_contradiction_flags` resolves references to document UUIDs — this
+resolution will fail gracefully for domain-name references and log a warning.
+The contradiction still surfaces correctly in the query response text.
+
+**C1_REMAINING_WORK.md after this session:** Item 7 removed. Remaining Phase 2
+items: Party ID resolution, approval workflows, user roles, document control
+integration.
 | Document control system integration | Phase 2 feature | Phase 2 |
 | Document download endpoint | Deferred from Phase D | After Phase D |
 | CORS `allow_methods`/`allow_headers` tightening | `allow_methods=["*"]` and `allow_headers=["*"]` in `src/api/main.py` are acceptable for a known frontend but candidates for tightening | Future hardening session (not Phase A scope) |

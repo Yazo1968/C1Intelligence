@@ -28,8 +28,12 @@ that question determines which feature gets built first.
 ## Feature 1 — Cross-Specialist Contradiction Detection
 
 **Scope:** Medium
-**Current state:** `contradiction_cross.py` returns `[]` intentionally. The
-intra-document contradiction detection (`contradiction.py`) is fully working.
+**Current state:** ✅ Complete — implemented in commit `72e1608`.
+`cross_specialist_contradiction_pass()` uses Claude with a construction-specific
+system prompt to compare specialist findings and return `list[ContradictionFlag]`.
+Results are merged into the main contradictions list before confidence scoring
+and response assembly. Intra-document detection (`contradiction.py`) also
+fully working.
 **Prerequisite:** None. This is purely a code change.
 
 ### What it is
@@ -211,7 +215,7 @@ pilot. Build to that client's system, not generically.
 
 | Priority | Feature | Trigger |
 |---|---|---|
-| 1 | Cross-specialist contradiction detection | Build now — no trigger needed |
+| 1 | Cross-specialist contradiction detection | ✅ Complete — `72e1608` |
 | 2 | User roles and authority matrix | Second organisation onboarding |
 | 3 | Party ID resolution | Client requires it for dispute use case |
 | 4 | Approval workflows | After roles live; separate planning session |

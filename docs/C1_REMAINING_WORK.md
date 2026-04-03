@@ -74,24 +74,6 @@ resolve them at ingestion time. The data model supports it — the
 
 ---
 
-### Item 7 — Cross-specialist contradiction detection
-
-**Scope:** Medium
-**Reference:** AGENT_PLAN Phase 7
-**Current state:** `contradiction_cross.py` returns `[]` intentionally
-
-The current `contradiction.py` detects intra-document contradictions.
-Cross-specialist contradiction detection (e.g. the Legal orchestrator
-finds a completion date that conflicts with the Schedule SME's analysis)
-is not yet implemented.
-
-**What is needed:**
-- Implement `contradiction_cross.py` with logic to compare findings
-  across Tier 1 orchestrators for conflicting values on the same field
-- Integrate with the existing `ContradictionFlag` model and write-back
-
----
-
 ### Item 8 — Approval workflows
 
 **Scope:** Large
@@ -131,7 +113,6 @@ project document management system rather than manual upload.
 |---|---|---|---|---|---|
 | 5 | HNSW/IVFFlat vector index | External dependency | — | Small | pgvector upgrade |
 | 6 | Party ID resolution | Phase 2 | — | Medium-large | Parties API |
-| 7 | Cross-specialist contradiction detection | Phase 2 | — | Medium | — |
 | 8 | Approval workflows | Phase 2 | — | Large | — |
 | 9 | Five user roles and authority matrix | Phase 2 | — | Large | — |
 | 10 | Document control system integration | Phase 2 | — | Large | — |
