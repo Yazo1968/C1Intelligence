@@ -1,21 +1,20 @@
 # Engineer Identification
 
 **Skill type:** Mixed
-- Contract-type-specific: the contract administrator role differs
-  fundamentally between Red/Yellow Book (Engineer) and Silver Book
-  (Employer's Representative). Authority scope, independence obligation,
-  and determination mechanism are book-specific.
+- Contract-type-specific: the contract administrator role, authority scope,
+  independence obligation, and determination mechanism differ by standard form
+  — the role must be identified from retrieved documents before any
+  form-specific analysis
 - Contract-type-agnostic: the requirement to identify the contract
   administrator from project documents, map delegated authority, and
-  flag authority anomalies applies regardless of book type.
+  flag authority anomalies applies regardless of standard form
 **Layer dependency:**
-- Layer 1 — project documents: Contract Agreement, Particular
-  Conditions, Engineer/Employer's Representative appointment letter,
-  any delegation instruments, correspondence revealing actual authority
-  exercised
-- Layer 2 — reference standards: FIDIC Clause 3 (Engineer / Employer's
-  Representative) for the relevant book and edition — structural
-  comparison and authority scope
+- Layer 1 — project documents: Contract Agreement, amendment document,
+  contract administrator appointment letter, any delegation instruments,
+  correspondence revealing actual authority exercised
+- Layer 2b — reference standards: Contract administrator provisions from
+  the governing standard form (whatever form is in the warehouse) —
+  for authority scope and independence obligation assessment
 **Domain:** Legal & Contractual SME
 **Invoked by:** Legal orchestrator
 
@@ -24,57 +23,64 @@
 ## When to apply this skill
 
 Apply when a query concerns the identity, authority, or actions of the
-contract administrator (Engineer or Employer's Representative), whether
-a specific instruction or determination was within delegated authority,
-whether the Engineer is acting with the required independence, or
-whether a GCC split-role arrangement creates ambiguity about which
-entity has authority for a specific action.
+contract administrator, whether a specific instruction or determination
+was within delegated authority, whether the contract administrator is
+acting with any required independence, or whether a split-role
+arrangement creates ambiguity about which entity has authority for a
+specific action.
 
 ---
 
 ## Before you begin
 
 ### Foundational requirement
-This skill requires the book type and edition to be confirmed.
-Read the contract_assembly findings first. If book type is
+This skill requires the standard form and version to be confirmed.
+Read the contract_assembly findings first. If standard form is
 UNCONFIRMED: state CANNOT ASSESS this skill. The contract administrator
-role is fundamentally different between books — analysis without
-confirmed book type is not possible.
+role differs fundamentally between standard forms — analysis without
+a confirmed standard form is not possible.
 
 ### Layer 1 documents to retrieve (project-specific)
 
 Call `search_chunks` and `get_related_documents` to retrieve:
-- The Particular Conditions (Clause 3 and any amendment)
-- The Contract Data / Appendix to Tender (Engineer / Employer's
-  Representative named entity)
-- Engineer / Employer's Representative appointment letter or agreement
-- Any delegation letters from the Engineer to a named representative
-- Correspondence issued by the Engineer or Employer's Representative
+- The amendment document (contract administrator provisions and any amendment)
+- The contract data, appendix to tender, or equivalent schedule
+  (contract administrator named entity)
+- Contract administrator appointment letter or agreement
+- Any delegation letters from the contract administrator to a named
+  representative
+- Correspondence issued by the contract administrator
   (to establish actual authority exercised in practice)
-- Any Project Management Consultant (PMC) or Supervision Consultant
-  appointment letter where a split-role arrangement may exist
+- Any consultant appointment letter where a split-role arrangement
+  may exist
 
-**If the Particular Conditions are not retrieved:**
-State CANNOT CONFIRM the Engineer's scope of authority, independence
-position, or any amendment to the standard Clause 3 role.
+**If the amendment document is not retrieved:**
+State CANNOT CONFIRM the contract administrator's scope of authority,
+independence position, or any amendment to the standard role.
 
 **If no appointment document is retrieved:**
-State CANNOT CONFIRM the identity of the named Engineer or Employer's
-Representative from the project documents.
+State CANNOT CONFIRM the identity of the named contract administrator
+from the project documents.
 
-### Layer 2 documents to retrieve (reference standards)
+### Layer 2b documents to retrieve (reference standards)
 
-After confirming book type from contract_assembly findings, call
-`search_chunks` to retrieve from Layer 2:
-- FIDIC Clause 3 for the confirmed book and edition (Engineer's duties
-  and authority / Employer's Representative)
-- FIDIC Clause 3.5 (1999) or Clause 3.7 (2017) — Engineer's
-  determination provisions (Red and Yellow Book only)
+After confirming standard form from contract_assembly findings, call
+`search_chunks` with `layer_type = '2b'` to retrieve:
+- Contract administrator provisions for the confirmed standard form
+  (search by subject matter: "contract administrator engineer authority
+  duties")
+- Determination provisions (search by subject matter: "determination
+  fair engineer independent")
 
-**Purpose:** To establish what the standard FIDIC Clause 3 says, so
-that Particular Conditions amendments can be assessed against the
-baseline. Do not apply standard Clause 3 provisions without checking
-whether they have been amended by the Particular Conditions.
+**Purpose:** To establish what the standard form says about the contract
+administrator role, so that amendment provisions can be assessed against
+the baseline. Do not apply standard form provisions without checking
+whether they have been amended by the project's amendment document.
+
+**If the governing standard form is not retrieved from Layer 2b:**
+State CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE for the contract
+administrator role provisions. Do not describe the role from training
+knowledge.
 
 ---
 
@@ -83,123 +89,118 @@ whether they have been amended by the Particular Conditions.
 ### Step 1 — Confirm the contract administrator role
 *Contract-type-specific*
 
-From the confirmed book type (contract_assembly findings) and the
-retrieved Particular Conditions:
+From the confirmed standard form (contract_assembly findings) and the
+retrieved amendment document, identify the contract administrator role
+as defined in the governing standard form. Different standard forms use
+different roles with different titles and different scopes of authority
+and independence:
 
-**Red Book / Yellow Book:**
-The contract administrator is the Engineer. Retrieve the Engineer's
-identity from the Contract Data or Appendix to Tender. The Engineer
-acts on behalf of the Employer but has an independence obligation under
-FIDIC when making determinations.
+- Some standard forms appoint an independent contract administrator
+  (with an obligation to act impartially when making determinations)
+- Some standard forms appoint the employer's own representative
+  (acting as the employer's agent with no independence obligation)
+- Some standard forms have a hybrid arrangement
+- Bespoke contracts may define the role differently
 
-**Silver Book:**
-There is no Engineer. The contract administrator is the Employer's
-Representative. The Employer's Representative acts solely as the
-Employer's agent — there is no independence obligation in the Silver
-Book. Any reference to an "Engineer" in a Silver Book project is
-anomalous — flag it.
+**Retrieve the relevant provision from Layer 2b to confirm which model
+the governing standard form uses.** If Layer 2b retrieval returns no
+result: state CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE.
+Do not characterise the role from training knowledge.
 
-**If book type is not confirmed:** State CANNOT IDENTIFY the contract
-administrator role. Do not proceed.
+**If standard form is not confirmed:** State CANNOT IDENTIFY the
+contract administrator role. Do not proceed.
 
 ### Step 2 — Identify the named contract administrator
 *Contract-type-agnostic*
 
-From the retrieved Contract Data, Appendix to Tender, or appointment
+From the retrieved contract data, appendix to tender, or appointment
 letter, identify:
-- The named entity appointed as Engineer or Employer's Representative
+- The named entity appointed as contract administrator
 - The named individual representative (if stated)
 - The date of appointment (if retrievable)
 
-**Do not assume any entity is the Engineer or Employer's Representative
-without a retrieved document that names them.** If no appointment
-document is found after searching: state CANNOT CONFIRM the identity
-of the contract administrator from the warehouse documents.
+**Do not assume any entity is the contract administrator without a
+retrieved document that names them.** If no appointment document is
+found after searching: state CANNOT CONFIRM the identity of the
+contract administrator from the warehouse documents.
 
 ### Step 3 — Assess delegated authority scope
 *Contract-type-specific*
 
-From the retrieved Particular Conditions, identify any amendment to
-Clause 3 that defines or restricts the contract administrator's
-authority. Key authority questions:
+From the retrieved amendment document, identify any amendment that
+defines or restricts the contract administrator's authority.
+Key authority questions:
 
-**Red Book / Yellow Book (contract-type-specific):**
-- Is the Engineer's authority to approve variations restricted by a
-  financial threshold requiring Employer consent? Extract the threshold
-  from the Particular Conditions — do not apply any default.
-- Is the Engineer required to obtain Employer consent before issuing
-  specific instructions, determinations, or certificates? Extract from
-  Particular Conditions.
-- Does the Engineer have authority to grant EOT, determine claims, and
-  issue payment certificates without Employer pre-approval? Extract
-  from Particular Conditions.
+- Is the contract administrator's authority to approve variations
+  restricted by a financial threshold requiring employer consent?
+  Extract the threshold from the amendment document — do not apply
+  any default.
+- Is the contract administrator required to obtain employer consent
+  before issuing specific instructions, determinations, or certificates?
+  Extract from the amendment document.
+- Does the contract administrator have authority to grant time
+  extensions, determine claims, and issue payment certificates without
+  employer pre-approval? Extract from the amendment document.
 
-**Silver Book (contract-type-specific):**
-- The Employer's Representative acts on Employer instructions — there
-  is no independence obligation. The scope of the Representative's
-  authority is defined by the Employer's instructions, not by FIDIC.
-  Retrieve the appointment letter or Employer instructions if available.
-
-**If the Particular Conditions are not retrieved:**
+**If the amendment document is not retrieved:**
 State CANNOT CONFIRM the delegated authority scope. Do not state any
 authority threshold or restriction.
 
-### Step 4 — Assess Engineer's independence position
-*Contract-type-specific — Red Book and Yellow Book only*
-*Not applicable to Silver Book*
+### Step 4 — Assess independence position
+*Contract-type-specific*
 
-Under FIDIC (Red and Yellow, both editions), the Engineer must act
-impartially when making determinations — not as the Employer's agent.
-GCC Particular Conditions frequently modify this by requiring Employer
-consent before the Engineer makes determinations, or by removing the
-Engineer's independence obligation.
+Some standard forms impose an independence or impartiality obligation
+on the contract administrator when making determinations. This
+obligation may be modified or removed by the project's amendment
+document.
 
-From the retrieved Particular Conditions, identify:
-- Whether Clause 3.5 (1999) or Clause 3.7 (2017) has been amended
-- Whether the Engineer is required to obtain Employer approval before
-  making a determination or issuing a certificate
-- Whether the independence obligation has been modified or removed
+From the retrieved Layer 2b standard form provisions and the retrieved
+amendment document, identify:
+- Whether the governing standard form imposes an independence obligation
+  (from Layer 2b — if not retrieved: CANNOT CONFIRM)
+- Whether the amendment document modifies that obligation
+- Whether the contract administrator is required to obtain employer
+  approval before making determinations or issuing certificates
 
-**Classify the Engineer's independence position based only on what
-the retrieved Particular Conditions say.** If the Particular Conditions
-have not been retrieved: state CANNOT ASSESS the independence position.
+**Classify the independence position based only on what the retrieved
+documents say.** If the amendment document has not been retrieved:
+state CANNOT ASSESS the independence position.
 
-### Step 5 — Identify GCC split-role arrangements
-*Contract-type-agnostic (pattern) / Contract-type-specific (implications)*
+### Step 5 — Identify split-role arrangements
+*Contract-type-agnostic*
 
-In GCC projects, the Engineer role is frequently split between a Project
-Management Consultant (PMC) handling commercial and contractual
-administration and a Supervision Consultant handling technical
-supervision. This split is not recognised in standard FIDIC — it is a
-GCC practice that creates ambiguity about which entity has authority
-for which category of instruction.
+On some projects, the contract administrator role is split between
+multiple entities — for example, one entity handling commercial and
+contractual administration and another handling technical supervision.
+This split may or may not be recognised in the governing standard form.
+If it is not, it creates ambiguity about which entity has authority for
+which category of instruction.
 
 From the retrieved documents, identify:
-- Whether a PMC appointment document exists in the warehouse
-- Whether a Supervision Consultant appointment document exists
+- Whether multiple consultant appointment documents exist in the
+  warehouse that may indicate a split arrangement
 - Whether the contract documents define which entity exercises which
-  part of the Engineer's role
-- Whether correspondence shows different entities acting as Engineer
-  for different purposes
+  part of the contract administrator's role
+- Whether correspondence shows different entities acting as contract
+  administrator for different purposes
 
 **Identify the split only from retrieved documents.** Do not assume
-a split arrangement exists because a PMC or Supervision Consultant
-appears in the warehouse — confirm from the documents which entity
-is named as the Engineer in the contract and what authority each
-entity has been delegated.
+a split arrangement exists. Confirm from the documents which entity
+is named as the contract administrator and what authority each entity
+has been delegated.
 
 ### Step 6 — Assess instructions and determinations issued
 *Contract-type-agnostic*
 
-If the query or context involves specific Engineer instructions or
-determinations, assess for each:
+If the query or context involves specific instructions or determinations,
+assess for each:
 - Was it issued by the named contract administrator or a delegated
   representative?
-- Was it within the authority scope confirmed from the Particular
-  Conditions?
-- Was it issued in writing (required under all FIDIC books and editions)?
-- Did it comply with the Clause 1.3 notice requirements (form, method,
-  recipient)?
+- Was it within the authority scope confirmed from the amendment document?
+- Was it issued in writing (confirm the form requirement from the
+  retrieved standard form provisions)?
+- Did it comply with the notice requirements stated in the retrieved
+  contract documents?
 
 **Authority excess flag:** If a retrieved instruction or determination
 was issued by an entity or individual whose authority cannot be confirmed
@@ -211,24 +212,25 @@ characterise this as valid or invalid without the authority source.
 ## Classification and decision rules
 
 **Contract administrator identity:**
-Named in retrieved Contract Data or appointment letter → CONFIRMED —
+Named in retrieved contract data or appointment letter → CONFIRMED —
 state entity and source document
 Not found after searching → CANNOT CONFIRM — flag; state what was
 searched and not found
 
 **Delegated authority:**
-Authority scope confirmed from retrieved Particular Conditions →
+Authority scope confirmed from retrieved amendment document →
 state scope and source document
-Particular Conditions not retrieved → CANNOT CONFIRM authority scope
+Amendment document not retrieved → CANNOT CONFIRM authority scope
 
-**Independence position (Red/Yellow only):**
-Independence obligation present and unmodified in retrieved PC →
-INDEPENDENT — cite source
-Independence obligation modified in retrieved PC → MODIFIED — describe
-the modification and cite source
-Independence obligation absent from retrieved PC AND PC retrieved →
-INDEPENDENCE OBLIGATION NOT FOUND IN RETRIEVED PC — flag
-Particular Conditions not retrieved → CANNOT ASSESS
+**Independence position:**
+Independence obligation confirmed from Layer 2b AND unmodified in
+retrieved amendment document → INDEPENDENT — cite sources
+Independence obligation confirmed from Layer 2b AND modified in
+retrieved amendment document → MODIFIED — describe the modification
+and cite sources
+Layer 2b not retrieved → CANNOT CONFIRM — STANDARD FORM NOT IN
+WAREHOUSE — independence position cannot be assessed
+Amendment document not retrieved → CANNOT ASSESS
 
 **Split-role arrangement:**
 Confirmed from retrieved appointment documents → CONFIRMED SPLIT —
@@ -240,49 +242,48 @@ DOCUMENTS — note this does not mean no split exists
 
 ## When to call tools
 
-**Signal:** Contract Data or Appendix to Tender names an entity as
-Engineer but no appointment letter has been retrieved
+**Signal:** Contract data or appendix names an entity as contract
+administrator but no appointment letter has been retrieved
 **Action:** `search_chunks` with query "[entity name] appointment
-engineer"; `get_related_documents` with document type "Appointment
-Letter" or "Consultant Agreement"
-**Look for:** Appointment instrument confirming the entity's role and
-scope
+contract administrator"; `get_related_documents` with document type
+"Appointment Letter" or "Consultant Agreement"
+**Look for:** Appointment instrument confirming the entity's role and scope
 
-**Signal:** Instructions or correspondence in the warehouse reference
-a PMC or Supervision Consultant acting as Engineer but no appointment
-document establishes their authority
-**Action:** `search_chunks` with query "PMC project management
-consultant appointment authority engineer"; `get_related_documents`
-with document type "Appointment Letter"
+**Signal:** Instructions or correspondence reference a consultant
+acting as contract administrator but no appointment document establishes
+their authority
+**Action:** `search_chunks` with query "appointment authority contract
+administrator"; `get_related_documents` with document type
+"Appointment Letter"
 **Look for:** Appointment instrument defining which entity exercises
-which part of the Engineer's role
+which part of the contract administrator's role
 
-**Signal:** Particular Conditions Clause 3 amendment is referenced
-in the contract_assembly findings but the clause content has not been
-retrieved
-**Action:** `get_document` on the Particular Conditions document ID;
-`search_chunks` with query "clause 3 engineer authority approval
-Employer consent"
+**Signal:** Amendment document references a contract administrator
+authority amendment but the clause content has not been retrieved
+**Action:** `get_document` on the amendment document ID; `search_chunks`
+with query "contract administrator authority approval employer consent"
 **Look for:** The specific amendment text — authority thresholds,
 consent requirements, independence modifications
 
-**Signal:** Layer 2 FIDIC Clause 3 has not been retrieved for the
-confirmed book and edition
-**Action:** `search_chunks` with query "[FIDIC book name] [edition]
-clause 3 engineer authority"
-**Look for:** Standard FIDIC Clause 3 text for structural comparison
+**Signal:** Layer 2b contract administrator provisions have not been
+retrieved for the confirmed standard form
+**Action:** `search_chunks` with `layer_type = '2b'` and query
+"[standard form name] contract administrator engineer authority"
+**Look for:** Standard form contract administrator provisions for
+structural comparison
 
 ---
 
 ## Always flag — regardless of query
 
-1. **Silver Book with a document referencing an Engineer** — this is
-   anomalous; the Silver Book has no Engineer; flag and identify the
-   document that makes the reference.
+1. **Contract administrator role not confirmed from Layer 2b** — flag
+   when the governing standard form's contract administrator provisions
+   were not retrieved; state that independence position and authority
+   scope cannot be confirmed.
 
-2. **Engineer's independence modified or removed by Particular
-   Conditions** — always flag; state the modification and its forensic
-   implication for any determination or certificate in dispute.
+2. **Independence modified or removed by amendment document** — always
+   flag; state the modification and its forensic implication for any
+   determination or certificate in dispute.
 
 3. **Instructions or determinations issued by an entity whose authority
    cannot be confirmed from retrieved documents** — always flag;
@@ -294,11 +295,15 @@ clause 3 engineer authority"
    state the split pattern identified and the absence of a formal
    authority allocation document.
 
-5. **Employer consent requirement before Engineer determinations** —
-   if the retrieved Particular Conditions require Employer consent
-   before the Engineer can determine claims or certify payment, always
-   flag; state the clause and its forensic implication for any
-   contested determination.
+5. **Employer consent requirement before contract administrator
+   determinations** — if the retrieved amendment document requires
+   employer consent before the contract administrator can determine
+   claims or certify payment, always flag; state the clause and its
+   forensic implication for any contested determination.
+
+6. **Governing standard not retrieved from Layer 2b** — flag when the
+   contract administrator role provisions could not be retrieved; state
+   what standard would need to be ingested to resolve it.
 
 ---
 
@@ -306,6 +311,16 @@ clause 3 engineer authority"
 
 ```
 ## Engineer Identification Assessment
+
+### Evidence Declaration
+Layer 2b retrieved: [YES / NO / PARTIAL]
+Layer 2b source: [standard form name — or NOT RETRIEVED]
+Layer 2b provisions retrieved: [description — or NONE]
+Layer 2a retrieved: [YES / NO / NOT APPLICABLE]
+Layer 2a source: [policy name — or NOT RETRIEVED / NOT APPLICABLE]
+Layer 1 primary document: [name and reference — or NOT RETRIEVED]
+Layer 1 amendment document: [name — or NOT RETRIEVED / NOT APPLICABLE]
+Provisions CANNOT CONFIRM: [list — or NONE]
 
 ### Documents Retrieved (Layer 1)
 [List every document retrieved relevant to this skill, with reference
@@ -315,15 +330,17 @@ numbers and dates.]
 [List every document required for this analysis not found in the
 warehouse. State which analysis steps are affected.]
 
-### Layer 2 Reference Retrieved
-[State whether FIDIC Clause 3 for the confirmed book and edition was
-retrieved from Layer 2. If not: state that standard form text has been
-applied from analytical knowledge.]
+### Layer 2b Reference Retrieved
+[State whether the contract administrator provisions for the confirmed
+standard form were retrieved from Layer 2b. If not: state CANNOT CONFIRM —
+STANDARD FORM NOT IN WAREHOUSE and list which analysis steps
+are affected.]
 
 ### Contract Administrator Role
-Book type confirmed: [YES — from contract_assembly / NO — CANNOT ASSESS]
-Role: [Engineer (Red/Yellow) / Employer's Representative (Silver) /
-CANNOT CONFIRM]
+Standard form confirmed: [YES — from contract_assembly / NO — CANNOT ASSESS]
+Role title: [title as stated in retrieved standard form / CANNOT CONFIRM]
+Independence obligation: [CONFIRMED FROM LAYER 2b / NOT FOUND IN LAYER 2b /
+CANNOT CONFIRM — standard form not retrieved]
 Analysis gate: [PROCEED / CANNOT ASSESS — state reason]
 
 ### Named Contract Administrator
@@ -333,27 +350,30 @@ Named individual representative: [name if stated / NOT STATED IN
 RETRIEVED DOCUMENTS]
 
 ### Delegated Authority Scope
-Source: [Particular Conditions reference, or CANNOT CONFIRM]
-Authority to grant EOT: [YES / RESTRICTED — state threshold and source /
-CANNOT CONFIRM]
+Source: [amendment document reference, or CANNOT CONFIRM]
+Authority to grant time extensions: [YES / RESTRICTED — state threshold
+and source / CANNOT CONFIRM]
 Authority to determine claims: [YES / REQUIRES EMPLOYER CONSENT —
 state source / CANNOT CONFIRM]
 Authority to certify payment: [YES / RESTRICTED — state threshold /
 CANNOT CONFIRM]
-Financial approval threshold: [value from retrieved PC / CANNOT CONFIRM]
-Other restrictions: [from retrieved PC / NONE FOUND / CANNOT CONFIRM]
+Financial approval threshold: [value from retrieved amendment document /
+CANNOT CONFIRM]
+Other restrictions: [from retrieved amendment document / NONE FOUND /
+CANNOT CONFIRM]
 
-### Independence Position (Red/Yellow Book only)
-Applicable: [YES / NOT APPLICABLE — Silver Book]
+### Independence Position
+Applicable: [YES — confirmed from Layer 2b / NOT APPLICABLE — standard
+form does not impose independence obligation / CANNOT CONFIRM — Layer 2b
+not retrieved]
 Independence obligation: [PRESENT AND UNMODIFIED / MODIFIED — describe /
-NOT FOUND IN RETRIEVED PC / CANNOT ASSESS — PC not retrieved]
-Source: [Particular Conditions reference]
+NOT FOUND IN RETRIEVED AMENDMENT DOCUMENT / CANNOT ASSESS]
+Source: [amendment document reference and Layer 2b source]
 
 ### Split-Role Arrangement
 Identified from retrieved documents: [YES — describe / NOT IDENTIFIED]
-PMC appointment in warehouse: [YES — reference / NOT FOUND]
-Supervision Consultant appointment in warehouse: [YES — reference /
-NOT FOUND]
+First consultant appointment in warehouse: [YES — reference / NOT FOUND]
+Second consultant appointment in warehouse: [YES — reference / NOT FOUND]
 Authority allocation documented: [YES — describe / NOT DOCUMENTED IN
 RETRIEVED DOCUMENTS]
 
@@ -379,28 +399,28 @@ Summary: [two to three sentences — facts from retrieved documents only]
 *Reference only — do not apply any value or position from this section
 without first confirming it from retrieved project documents.*
 
-**FIDIC Clause 3 — structural summary (analytical reference):**
-Under Red Book and Yellow Book (both editions), Clause 3 defines the
-Engineer's role and authority. The Engineer has an independence
-obligation when making determinations under Clause 3.5 (1999) or
-Clause 3.7 (2017). Under the 2017 editions, the Engineer's
-determination is time-limited — failure to determine within the
-prescribed period has a deemed rejection effect. The Silver Book
-replaces the Engineer entirely with the Employer's Representative,
-who has no independence obligation. Retrieve the specific clause text
-from Layer 2 before applying its provisions.
+**Contract administrator models — analytical reference:**
+Standard forms of contract vary in how they define the contract
+administrator role. Some appoint an independent professional who owes
+duties to both parties when making determinations. Some appoint the
+employer's own representative who acts solely as the employer's agent.
+Some use a hybrid model. The applicable model must be retrieved from
+the governing standard form in Layer 2b — do not assume which model
+applies.
 
-**GCC split-role pattern (analytical reference):**
-GCC government projects frequently appoint a PMC to handle commercial
-and contractual administration and a Supervision Consultant to handle
-technical supervision. This split is not addressed in standard FIDIC
-and creates authority ambiguity. The presence of two consulting
-entities in the project documents is the signal — confirm the
-authority allocation from retrieved appointment documents.
+**Split-role patterns — analytical reference:**
+On complex projects, the contract administration function is sometimes
+divided between entities — one handling commercial and contractual
+matters and another handling technical supervision. This arrangement
+is not addressed in most standard forms and creates authority ambiguity.
+The presence of multiple consulting entities in the project documents
+is the signal — confirm the authority allocation from retrieved
+appointment documents.
 
-**FIDIC 2017 Clause 3.7 — analytical reference:**
-Under FIDIC 2017, the Engineer's determination is subject to a time
-limit. Failure to issue a determination within the prescribed period
-results in a deemed rejection which triggers the Notice of
-Dissatisfaction (NOD) period. The prescribed period is stated in the
-Contract Data — retrieve from Layer 1 before stating any period.
+**Determination time limits — analytical reference:**
+Some standard forms impose time limits on the contract administrator
+to issue determinations. Failure to determine within the prescribed
+period may have procedural consequences (such as deemed rejection or
+deemed acceptance). The prescribed period and its consequences must be
+retrieved from the governing standard form in Layer 2b and confirmed
+against any amendment in Layer 1.
