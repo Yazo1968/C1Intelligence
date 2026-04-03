@@ -121,6 +121,32 @@ class ConfidenceLevel(str, Enum):
     GREY = "GREY"
 
 
+class LayerRetrievalStatus(str, Enum):
+    RETRIEVED = "RETRIEVED"
+    NOT_RETRIEVED = "NOT_RETRIEVED"
+    PARTIAL = "PARTIAL"
+
+
+class EvidenceRecord(BaseModel):
+    """
+    Records what was retrieved from each warehouse layer during specialist
+    analysis. Populated by parsing the Evidence Declaration block from
+    the specialist's output. Used to apply automatic confidence caps.
+    """
+    layer2b_status: LayerRetrievalStatus = LayerRetrievalStatus.NOT_RETRIEVED
+    layer2b_source: str | None = None          # standard form name if retrieved
+    layer2a_status: LayerRetrievalStatus = LayerRetrievalStatus.NOT_RETRIEVED
+    layer2a_source: str | None = None          # policy name if retrieved
+    layer1_primary_document: str | None = None
+    layer1_amendment_document_status: LayerRetrievalStatus = (
+        LayerRetrievalStatus.NOT_RETRIEVED
+    )
+    provisions_cannot_confirm: list[str] = Field(
+        default_factory=list,
+        description="Provisions where retrieval failed and output is CANNOT CONFIRM",
+    )
+
+
 class QueryResponse(BaseModel):
     """Final response returned to the API layer."""
     query_text: str
@@ -157,4 +183,8 @@ class SpecialistFindings(BaseModel):
     round_number: int = Field(description="1 or 2")
     flagged_contradictions: list[str] = Field(
         default_factory=list, description="contradiction_flag IDs surfaced"
+    )
+    evidence_record: EvidenceRecord | None = Field(
+        default=None,
+        description="Parsed from the Evidence Declaration block in the findings output",
     )
