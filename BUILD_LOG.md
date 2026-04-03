@@ -712,5 +712,53 @@ integration.
 | Document download endpoint | Deferred from Phase D | After Phase D |
 | CORS `allow_methods`/`allow_headers` tightening | `allow_methods=["*"]` and `allow_headers=["*"]` in `src/api/main.py` are acceptable for a known frontend but candidates for tightening | Future hardening session (not Phase A scope) |
 | `function_search_path_mutable` on all RPC functions | Pre-existing Supabase security advisory affecting all 7 RPC functions across migrations 001, 006, and 007 — not introduced by Phase C1 | Future hardening session |
+
+---
+
+## Session — Migration 016: HNSW indexes + Feature 1 cross-specialist contradiction — ✅ Complete
+
+**Date:** 2026-04-03
+**Active agents:** DB Architect (Migration 016), Agent Orchestrator (Feature 1), Quality Guardian
+**Quality Guardian:** PASS on all items — independently verified by session coordinator
+
+**Feature 1 — Cross-specialist contradiction detection:**
+- `src/agents/contradiction_cross.py` — stub replaced with full Claude-based
+  implementation. Imports CONTRADICTION_TOOL from contradiction.py. System
+  prompt focused on dates, values, and factual positions across specialists.
+  Returns list[ContradictionFlag] in all code paths. Non-fatal on error.
+- `src/agents/orchestrator.py` — anthropic_client passed to
+  cross_specialist_contradiction_pass; results merged into contradictions
+  list before confidence scoring and response assembly.
+- Known limitation: cross-specialist flags use domain names as document
+  references — DB write-back skips these gracefully with a warning log.
+  Flags still surface correctly in the query response.
+- Commit: `72e1608`
+
+**Migration 016 — HNSW halfvec indexes:**
+- `supabase/migrations/016_hnsw_halfvec_indexes.sql` — HNSW indexes on
+  document_chunks and reference_chunks using halfvec(3072) cast.
+  halfvec type supports up to 4,000 dimensions, covering our 3,072-dimension
+  embeddings. Cosine distance matches the <=> operator in all four retrieval
+  RPC functions. Both indexes confirmed live in Supabase.
+- Applied to live Supabase by session coordinator (version 20260403093332).
+- This resolves the previously documented external dependency. The halfvec
+  cast technique was present in Supabase documentation all along — it was
+  incorrectly documented as blocked in earlier sessions. That was an error
+  by the session coordinator.
+- Commit: `55e4967`
+
+**Note — check_pgvector_version migration:**
+- A migration named check_pgvector_version (version 20260403084941) is
+  tracked in Supabase. This was created accidentally when apply_migration
+  was used instead of execute_sql to check the pgvector version. The
+  migration body is a SELECT statement and has no effect on the schema.
+  It is harmless but is recorded here for completeness.
+
+**Database state after this session:** 16 migrations applied (001–016).
+HNSW indexes live on both chunk tables. C1 is now enterprise-scale ready
+for retrieval performance.
+
+**C1_REMAINING_WORK.md after this session:** External dependency category
+removed entirely. One category remains: Phase 2 product features (4 items).
 | Duplicate `## Executive Summary` header in response output | `build_response_text` emits `## Executive Summary` then the generated summary begins with `## EXECUTIVE SUMMARY` — cosmetic double header | LOW — housekeeping session |
 | Section 7 (Claims domain) internal sub-section numbering | SKILLS_STANDARDS.md v1.3 — Section 7 (renamed from 6) internal sub-sections still numbered 6.1–6.5 | LOW — cosmetic; fix in next SKILLS_STANDARDS update |
