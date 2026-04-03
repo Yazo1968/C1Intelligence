@@ -27,6 +27,7 @@ class QueryRequest(BaseModel):
     user_id: uuid.UUID
     query_text: str
     risk_mode: bool = False
+    domains: list[str] | None = None
 
 
 @dataclass

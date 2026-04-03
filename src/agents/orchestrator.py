@@ -158,10 +158,18 @@ def process_query(request: QueryRequest) -> QueryResponse:
             round_1_keys.append(config_key)
         # Tier 2 SMEs are not dispatched directly — invoked via invoke_sme
 
+    # If caller specified domains, filter round_1_keys to only those requested
+    if request.domains:
+        requested_config_keys = {
+            DOMAIN_TO_CONFIG_KEY.get(d, d) for d in request.domains
+        }
+        round_1_keys = [k for k in round_1_keys if k in requested_config_keys]
+
     logger.info(
         "round_routing_complete",
         domains_engaged=domains_engaged,
         round_1_keys=round_1_keys,
+        domain_filter=request.domains,
     )
 
     # Convert retrieved chunks to dict format for BaseSpecialist.run()

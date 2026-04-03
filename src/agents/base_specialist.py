@@ -182,7 +182,13 @@ class BaseSpecialist:
                 call_kwargs: dict = {
                     "model": CLAUDE_MODEL,
                     "max_tokens": 4000,
-                    "system": system_prompt,
+                    "system": [
+                        {
+                            "type": "text",
+                            "text": system_prompt,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ],
                     "messages": messages,
                 }
                 if tool_round < self._config.max_tool_rounds:
