@@ -1,21 +1,26 @@
 # NCR Management
 
-**Skill type:** Contract-type-agnostic for the assessment framework
-The review of NCR logs, assessment of non-conformance patterns,
-and evaluation of close-out status applies regardless of FIDIC
-book or edition. The contractual consequence of unresolved NCRs
-(rectification obligation, right to withhold payment, right to
-reject Taking-Over) is contract-type-specific and must be confirmed
-from the retrieved Particular Conditions.
+**Skill type:** Mixed
+- Contract-type-agnostic: the review of NCR logs, assessment of
+  non-conformance patterns, and evaluation of close-out status
+  applies regardless of standard form or version
+- Contract-type-specific: the contractual consequence of unresolved
+  NCRs — the rectification obligation, the right to withhold payment,
+  the right to refuse completion acceptance — must be confirmed from
+  the retrieved governing standard in Layer 2b and the amendment
+  document
 **Layer dependency:**
 - Layer 1 — project documents: NCR log; individual NCR forms;
   corrective action reports; re-inspection records; close-out
-  records; Particular Conditions (defects and testing clauses);
-  Taking-Over Certificate (to assess NCR status at handover);
+  records; amendment document (quality, rectification, and defects
+  clauses); completion certificate (to assess NCR status at handover);
+  Contract Data or equivalent (defects liability period); project
   specification (to confirm the requirement breached)
-- Layer 2 — reference standards: FIDIC Clause 7 (Plant, Materials
-  and Workmanship) and Clause 11 (Defects After Taking Over) for
-  the confirmed book and edition
+- Layer 2b — reference standards: quality and workmanship provisions
+  for the confirmed standard form; defects liability provisions
+  (if ingested)
+- Layer 2a — internal standards: quality management procedures,
+  NCR management policies (if applicable)
 **Domain:** Technical & Construction SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
@@ -39,11 +44,12 @@ a project.
 Read the invoking orchestrator findings.
 
 From the invoking orchestrator extract:
-- Confirmed FIDIC book and edition
-- Taking-Over Certificate date (if issued) — marks the boundary
-  between the construction phase NCR obligation and the DNP defects
-  obligation
-- DNP period as confirmed from retrieved Contract Data
+- Confirmed standard form and version
+- Completion certificate date (if issued) — marks the boundary
+  between the construction phase NCR obligation and the defects
+  liability period obligation
+- Defects liability period as confirmed from retrieved Contract
+  Data or equivalent
 
 ### Layer 1 documents to retrieve (project-specific)
 
@@ -52,10 +58,10 @@ Call `search_chunks` and `get_related_documents` to retrieve:
 - Individual NCR forms for NCRs relevant to the query
 - Corrective action reports
 - Re-inspection records and close-out documentation
-- The Taking-Over Certificate (to establish the handover date)
-- The project specification — for the sections relevant to NCRs
-  in the log
-- The Particular Conditions — defects and testing clauses
+- The completion certificate (to establish the handover date)
+- The project specification — sections relevant to NCRs in the log
+- The amendment document — quality, rectification, and defects
+  clauses
 
 **If the NCR log is not retrieved:**
 State CANNOT ASSESS the NCR position from warehouse documents.
@@ -66,19 +72,28 @@ formal quality management.
 **If individual NCR forms are not retrieved for NCRs referenced
 in the log:**
 State the NCR references from the log but note that the detailed
-description and close-out status cannot be confirmed from
-warehouse documents for those NCRs.
+description and close-out status cannot be confirmed from warehouse
+documents for those NCRs.
 
-### Layer 2 documents to retrieve (reference standards)
+### Layer 2b documents to retrieve (reference standards)
 
-Call `search_chunks` to retrieve from Layer 2:
-- FIDIC Clause 7 for the confirmed book and edition
-- FIDIC Clause 11 (Defects After Taking Over) for the confirmed
-  book and edition
+Call `search_chunks` with `layer_type = '2b'` to retrieve:
+- Quality and workmanship obligations for the confirmed standard
+  form (search by subject matter: "quality workmanship materials
+  plant obligation")
+- Defects liability provisions for the confirmed standard form
+  (search by subject matter: "defects liability rectification
+  defects period")
 
-**Purpose:** To establish the FIDIC framework for the rectification
-obligation and defects liability. The specific obligations and
-periods are in the retrieved Particular Conditions and Contract Data.
+**Purpose:** To establish the standard form quality and defects
+framework for comparison against the retrieved amendment document.
+The specific obligations and periods are in the retrieved amendment
+document and Contract Data.
+
+**If the governing standard form is not retrieved from Layer 2b:**
+State CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE for the
+quality and defects provisions. Confidence cap: AMBER. Proceed
+with Layer 1 documents only.
 
 ---
 
@@ -91,7 +106,7 @@ From the retrieved NCR log:
 - Total number of NCRs raised
 - Number closed (and close-out date range)
 - Number open at the time of the query
-- Number open at the Taking-Over Certificate date (if the TOC
+- Number open at the completion certificate date (if the certificate
   has been retrieved and its date confirmed)
 - Date range of NCR activity
 
@@ -100,8 +115,7 @@ From the retrieved NCR log:
 ### Step 2 — Assess each NCR (or a material sample)
 *Contract-type-agnostic*
 
-For each NCR in scope (all NCRs for a full assessment, or those
-relevant to the query):
+For each NCR in scope:
 - NCR reference and date raised
 - Description of the non-conformance from the retrieved NCR form
 - Trade or work package affected
@@ -112,75 +126,76 @@ relevant to the query):
   retrieved records / CANNOT CONFIRM close-out
 
 **Do not mark an NCR as closed without a retrieved close-out
-record.** The log may show a status but the close-out must be
-confirmed from the retrieved close-out document or re-inspection
-record.
+record.** The log may show a status but close-out must be confirmed
+from the retrieved close-out document or re-inspection record.
 
 ### Step 3 — Assess NCR patterns
 *Contract-type-agnostic*
 
 From the retrieved NCR log and individual NCRs:
-- Is there a pattern of NCRs on the same trade, material,
-  or system? (Multiple NCRs for the same sub-contractor, for
-  the same material, or for the same specification clause)
-- Is there a pattern in the timing? (NCRs clustering in a
-  specific period may indicate a supervision gap or resource issue)
-- Is there a pattern of repeat NCRs — the same non-conformance
-  raised multiple times after a previous close-out, indicating
-  the corrective action was not effective?
+- Is there a pattern of NCRs on the same trade, material, or
+  system? (Multiple NCRs for the same sub-contractor, material,
+  or specification clause)
+- Is there a pattern in timing? (NCRs clustering in a specific
+  period may indicate a supervision gap or resource issue)
+- Are there repeat NCRs — the same non-conformance raised multiple
+  times after a previous close-out, indicating the corrective
+  action was not effective?
 
 **Identify patterns only from retrieved documents.** State the
 specific NCR references that constitute the pattern.
 
-### Step 4 — Assess NCR status at Taking-Over
+### Step 4 — Assess NCR status at completion acceptance
 *Contract-type-agnostic*
 
-From the retrieved Taking-Over Certificate date and the NCR log:
-- How many NCRs were open at the Taking-Over Certificate date?
-- Were open NCRs recorded on the Taking-Over Certificate or in
-  the snagging list?
+From the retrieved completion certificate date and the NCR log:
+- How many NCRs were open at the completion certificate date?
+- Were open NCRs recorded on the completion certificate or in
+  the outstanding works / snagging list?
 
-**If the Taking-Over Certificate date is known from retrieved
+**If the completion certificate date is confirmed from retrieved
 documents:** Cross-reference against the NCR log to identify
 open NCRs at that date.
 
-**If the Taking-Over Certificate has not been retrieved:**
+**If the completion certificate has not been retrieved:**
 State CANNOT CONFIRM the NCR position at handover.
 
-Forensic significance: if the Employer accepted the Taking-Over
-with open NCRs recorded, the Employer may have accepted the
-works subject to those items being remedied during the DNP.
-If open NCRs were not recorded on the Taking-Over Certificate:
-the Employer's right to refuse Taking-Over for those items may
-have been waived. This is a contractual analysis — flag and
-note that legal advice may be required.
+Forensic significance: if the employer accepted handover with
+open NCRs recorded, the employer may have accepted the works
+subject to those items being remedied during the defects liability
+period. If open NCRs were not recorded at handover: the employer's
+right to refuse acceptance for those items may have been affected.
+Flag and note that legal advice may be required on the contractual
+consequence.
 
-### Step 5 — Assess DNP defects vs construction phase NCRs
+### Step 5 — Assess defects liability period vs construction phase NCRs
 *Contract-type-specific*
 
-From the retrieved DNP period (confirmed from Contract Data) and
-the Taking-Over Certificate date:
-- Are there NCRs or defect records raised after the Taking-Over
-  Certificate date that fall within the DNP?
-- These are DNP defects under FIDIC Clause 11 — different
-  from construction phase NCRs
+From the retrieved defects liability period (confirmed from
+Contract Data or equivalent) and the completion certificate date:
+- Are there NCRs or defect records raised after the completion
+  certificate date that fall within the defects liability period?
+- These are defects liability period items — treat under the
+  defects liability framework in the retrieved amendment document,
+  which differs from the construction phase NCR framework
 
-**Separate construction phase NCRs from DNP defects in the
-output.** The contractual framework for each differs — extract
-the applicable provisions from the retrieved Particular Conditions.
+**Separate construction phase NCRs from defects liability period
+items in the output.** The contractual framework for each differs —
+extract the applicable provisions from the retrieved amendment
+document.
 
-### Step 6 — Assess rectification and close-out
+### Step 6 — Assess rectification and close-out obligation
 *Contract-type-specific*
 
-From the retrieved Particular Conditions:
+From the retrieved amendment document and Layer 2b provisions:
 - What is the contractual mechanism for instructing rectification?
-- Who bears the cost of rectification (Contractor's obligation
-  under Clause 7 for workmanship/materials non-conformances)?
+- Who bears the cost of rectification?
 - Is there a payment withholding mechanism for open NCRs?
 
 **The rectification terms to apply are those in the retrieved
-Particular Conditions.** Do not apply standard form provisions
-without PC confirmation.
+amendment document.** Do not apply any standard form position
+without retrieved confirmation. If Layer 2b not retrieved: state
+CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE.
 
 ---
 
@@ -188,28 +203,27 @@ without PC confirmation.
 
 **NCR status:**
 
-Close-out record retrieved → CLOSED — state date
+Close-out record retrieved → CLOSED — state date and source
 Close-out not in any retrieved document → CANNOT CONFIRM CLOSE-OUT
 NCR log shows open at date of query → OPEN
-NCR open at confirmed Taking-Over Certificate date →
+NCR open at confirmed completion certificate date →
 OPEN AT HANDOVER — flag
 
 **NCR pattern:**
 
 Three or more NCRs on the same trade, material, or specification
-clause → PATTERN IDENTIFIED — state the NCRs and the common
-factor
+clause → PATTERN IDENTIFIED — state the NCRs and the common factor
 Repeat NCR (same non-conformance after previous close-out) →
 REPEAT NON-CONFORMANCE — flag; state the recurrence
 No pattern from retrieved documents → NO PATTERN IDENTIFIED
 
-**DNP defects:**
+**Defects liability period items:**
 
-NCR/defect raised after TOC date and within confirmed DNP period
-→ DNP DEFECT under Clause 11 — treat under DNP framework
-Defect raised after DNP expiry → POST-DNP DEFECT — state the
-forensic implication (Contractor's liability under FIDIC may
-have ended, subject to decennial liability where applicable)
+NCR or defect raised after completion certificate date and within
+confirmed defects liability period → DEFECTS LIABILITY PERIOD ITEM
+— treat under the defects liability framework
+Defect raised after defects liability period expiry → POST-LIABILITY
+PERIOD DEFECT — state the forensic implication
 
 ---
 
@@ -217,16 +231,16 @@ have ended, subject to decennial liability where applicable)
 
 **Signal:** NCR log not retrieved
 **Action:** `get_related_documents` with document type "NCR Log",
-"Non-Conformance Report Log"; `search_chunks` with query
-"NCR non-conformance log register quality"
+"Non-Conformance Report Log"; `search_chunks` with query "NCR
+non-conformance log register quality"
 **Look for:** The full NCR register
 
 **Signal:** Individual NCR close-out not confirmed
 **Action:** `search_chunks` with query "NCR [reference] close-out
 corrective action completed"; `get_related_documents` with
 document type "Corrective Action Report", "Re-inspection Record"
-**Look for:** The close-out record or re-inspection confirming
-the non-conformance has been rectified
+**Look for:** The close-out record confirming the non-conformance
+has been rectified
 
 **Signal:** Specification clause for an NCR not confirmed
 **Action:** `search_chunks` with query "[NCR subject] specification
@@ -234,37 +248,48 @@ clause requirement"; `get_related_documents` with document type
 "Project Specification"
 **Look for:** The specification section the NCR references
 
-**Signal:** Taking-Over Certificate not retrieved — cannot
-confirm NCR status at handover
-**Action:** `get_related_documents` with document type "Taking-Over
-Certificate"; `search_chunks` with query "taking over certificate
-handover completion"
-**Look for:** The Taking-Over Certificate and its date
+**Signal:** Completion certificate not retrieved — cannot confirm
+NCR status at handover
+**Action:** `get_related_documents` with document type "Completion
+Certificate", "Taking-Over Certificate", "Certificate of Practical
+Completion"; `search_chunks` with query "completion certificate
+handover acceptance date"
+**Look for:** The completion certificate and its date
+
+**Signal:** Layer 2b quality and defects provisions not retrieved
+**Action:** `search_chunks` with `layer_type = '2b'` and query
+"quality workmanship materials defects liability rectification
+[standard form name]"
+**Look for:** Standard form quality and defects liability provisions
 
 ---
 
 ## Always flag — regardless of query
 
-1. **Open NCRs at the confirmed Taking-Over Certificate date** —
+1. **Open NCRs at the confirmed completion certificate date** —
    flag; state the number, the NCR references, and the forensic
    implication for the handover position.
 
 2. **Repeat NCRs — same non-conformance recurring** — flag; state
-   the pattern with NCR references; the forensic implication is
-   that the corrective action is ineffective.
+   the pattern with NCR references; the implication is that the
+   corrective action is ineffective.
 
 3. **Pattern of NCRs on the same trade or material** — flag; state
-   the trade/material and the NCR references; the implication is
+   the trade or material and the NCR references; the implication is
    a systemic quality failure in that area.
 
-4. **NCR close-out not confirmed from retrieved documents** —
-   flag each NCR where the log shows closed but no close-out
-   record has been retrieved; state that close-out cannot be
-   confirmed.
+4. **NCR close-out not confirmed from retrieved documents** — flag
+   each NCR where the log shows closed but no close-out record has
+   been retrieved.
 
 5. **NCR log absent from the warehouse** — flag; state that the
    quality management record cannot be assessed from warehouse
    documents.
+
+6. **Governing standard not in Layer 2b** — flag; state that the
+   rectification obligation and defects liability framework cannot
+   be confirmed from the warehouse and that confidence is capped
+   at AMBER.
 
 ---
 
@@ -273,6 +298,17 @@ handover completion"
 ```
 ## NCR Management Assessment
 
+### Evidence Declaration
+Layer 2b retrieved: [YES / NO / PARTIAL]
+Layer 2b source: [standard form name — or NOT RETRIEVED]
+Layer 2b provisions retrieved: [quality/workmanship, defects
+liability — or NONE]
+Layer 2a retrieved: [YES / NO / NOT APPLICABLE]
+Layer 2a source: [policy name — or NOT RETRIEVED / NOT APPLICABLE]
+Layer 1 primary document: [NCR log reference — or NOT RETRIEVED]
+Layer 1 amendment document: [name — or NOT RETRIEVED]
+Provisions CANNOT CONFIRM: [list — or NONE]
+
 ### Documents Retrieved (Layer 1)
 [List every document retrieved with reference numbers and dates.]
 
@@ -280,16 +316,19 @@ handover completion"
 [List every document required but not found. State which steps
 are affected.]
 
-### Layer 2 Reference Retrieved
-[State whether FIDIC Clause 7 and 11 were retrieved. If not:
-state analytical knowledge applied.]
+### Layer 2b Reference Retrieved
+[State whether quality/workmanship and defects liability provisions
+were retrieved from Layer 2b. If not: state CANNOT CONFIRM —
+STANDARD FORM NOT IN WAREHOUSE and list affected analysis steps.
+Confidence cap: AMBER.]
 
 ### NCR Log Summary
 NCR log retrieved: [YES — reference / NOT FOUND IN WAREHOUSE]
 Total NCRs in retrieved log: [number]
 Closed: [number]
 Open at date of query: [number]
-Open at Taking-Over Certificate date: [number / CANNOT CONFIRM — TOC not retrieved]
+Open at completion certificate date: [number /
+CANNOT CONFIRM — completion certificate not retrieved]
 Date range: [from retrieved log]
 
 ### NCR Register
@@ -301,34 +340,43 @@ Date range: [from retrieved log]
 ### Findings by NCR (for NCRs of significance)
 
 **NCR [reference]**
-Date raised: [from log/form]
+Date raised: [from log or form]
 Description: [from retrieved NCR form / SUMMARY FROM LOG ONLY]
-Specification clause: [from retrieved NCR or specification / NOT CONFIRMED]
+Specification clause: [from retrieved NCR or specification /
+NOT CONFIRMED]
 Corrective action: [from retrieved NCR]
 Close-out status: [CLOSED — date and source / OPEN /
 CANNOT CONFIRM — no close-out record retrieved]
-DNP classification: [CONSTRUCTION PHASE NCR / DNP DEFECT /
-CANNOT CLASSIFY — TOC date not confirmed]
+Classification: [CONSTRUCTION PHASE NCR / DEFECTS LIABILITY
+PERIOD ITEM / CANNOT CLASSIFY — completion certificate date
+not confirmed]
 
 ### Pattern Analysis
 Patterns identified: [YES — describe with NCR references /
 NO PATTERNS IDENTIFIED FROM RETRIEVED DOCUMENTS]
 Repeat NCRs: [YES — describe / NONE IDENTIFIED]
 
-### NCR Position at Taking-Over
-Taking-Over Certificate date: [from retrieved TOC / NOT CONFIRMED]
-Open NCRs at Taking-Over: [number and references / CANNOT CONFIRM]
-Recorded on TOC/snagging list: [YES / NO / CANNOT CONFIRM]
-Forensic note: [one sentence on the implication from retrieved documents]
+### NCR Position at Handover
+Completion certificate date: [from retrieved certificate /
+NOT CONFIRMED]
+Open NCRs at handover: [number and references / CANNOT CONFIRM]
+Recorded on completion certificate or snagging list: [YES / NO /
+CANNOT CONFIRM]
+Forensic note: [one sentence on the implication from retrieved
+documents]
 
-### DNP Defects (separate from construction phase NCRs)
-[List of defects raised during the confirmed DNP period,
-or NONE IDENTIFIED / CANNOT ASSESS — DNP period not confirmed]
+### Defects Liability Period Items (separate from construction phase NCRs)
+[List of defects raised during the confirmed defects liability
+period, or NONE IDENTIFIED / CANNOT ASSESS — defects liability
+period not confirmed]
 
 ### Rectification Position
-Contractual mechanism: [from retrieved PC / CANNOT CONFIRM]
-Cost allocation: [CONTRACTOR — Clause 7 / EMPLOYER / CANNOT CONFIRM]
-Payment withholding: [from retrieved PC / NOT STATED / CANNOT CONFIRM]
+Contractual mechanism: [from retrieved amendment document /
+CANNOT CONFIRM]
+Cost allocation: [from retrieved amendment document and Layer 2b /
+CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE]
+Payment withholding: [from retrieved amendment document /
+NOT STATED / CANNOT CONFIRM]
 
 ### FLAGS
 [Each flag with one-sentence forensic implication]
@@ -341,19 +389,30 @@ Summary: [two to three sentences — facts from retrieved documents only]
 ---
 
 ## Analytical framework
-*Reference only — do not apply any rectification obligation or
-liability position from this section without first confirming it
-from the retrieved project documents.*
+*Reference only — do not apply any rectification obligation,
+defects liability position, or quality standard from this section
+without first confirming it from the retrieved project documents
+and Layer 2b.*
 
-**FIDIC Clause 7 and 11 — analytical reference:**
-Clause 7 requires the Contractor to provide materials and
-workmanship in accordance with the contract. The Engineer
-(Red/Yellow) or Employer's Representative (Silver) may reject
-non-conforming work and instruct rectification. After Taking-Over,
-defects are addressed under Clause 11 during the DNP — the
-Contractor must remedy defects notified before the end of the DNP.
-The DNP duration is in the Contract Data — retrieve from Layer 1.
-After the Performance Certificate, the Contractor's liability
-for defects under FIDIC ends (subject to decennial liability
-where applicable). Retrieve the specific clauses from Layer 2
-and check the PC for amendments.
+**Quality and workmanship obligations — analytical reference:**
+Standard forms consistently require that materials and workmanship
+comply with the contract specification. The contract administrator
+(under most standard forms) may reject non-conforming work and
+instruct rectification. The contractor's rectification obligation
+typically covers construction phase NCRs at the contractor's cost
+where the non-conformance results from the contractor's failure to
+meet the specification. The specific mechanism — inspection,
+rejection, instruction, and rectification — is in the standard
+form and the amendment document; retrieve before applying.
+
+**Defects liability period — analytical reference:**
+After completion acceptance, most standard forms provide for a
+defects liability period during which defects are notified by the
+contract administrator and remedied by the contractor. The duration
+is in the Contract Data or equivalent — retrieve from Layer 1.
+The contractual name for this period varies by standard form.
+After the defects liability period, the contractor's contractual
+liability for defects typically ends (subject to any statutory
+long-stop liability under applicable law). Retrieve the period
+and the defects notification mechanism from Layer 2b and the
+amendment document before applying this framework.
