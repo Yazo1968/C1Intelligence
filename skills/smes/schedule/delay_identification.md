@@ -1,19 +1,20 @@
 # Delay Identification
 
 **Skill type:** Contract-type-specific
-The classification of delay events as Employer Risk Events, Neutral
-Events, or Contractor Risk Events depends on the entitlement event
-list in the retrieved Particular Conditions — which differs by FIDIC
-book and edition. The analysis framework for identifying delay events
+The classification of delay events as employer risk events, neutral
+events, or contractor risk events depends on the entitlement event
+list in the retrieved amendment document — which differs by standard
+form and version. The analysis framework for identifying delay events
 is contract-type-agnostic.
 **Layer dependency:**
 - Layer 1 — project documents: programme updates; as-built programme;
-  site diaries and daily reports; progress reports; instructions,
-  RFIs, and correspondence that caused or evidenced delays;
-  Particular Conditions (EOT clause, entitlement event list)
-- Layer 2 — reference standards: FIDIC EOT clause (8.4/8.5) for the
-  confirmed book and edition; SCL Protocol 2nd Edition 2017 (delay
-  event classification principles)
+  site diaries and daily reports; progress reports; instructions, RFIs,
+  and correspondence that caused or evidenced delays; amendment document
+  (time extension clause, entitlement event list)
+- Layer 2b — reference standards: time extension provision for the
+  confirmed standard form and version (whatever is in the warehouse);
+  SCL Protocol 2nd Edition 2017 (delay event classification principles,
+  if ingested)
 **Domain:** Schedule & Programme SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
@@ -23,8 +24,8 @@ is contract-type-agnostic.
 
 Apply when a query requires identification of delay events on a
 project, classification of those events by responsibility, or
-assessment of whether specific delay events qualify for EOT
-entitlement. Apply as the foundational step before
+assessment of whether specific delay events qualify for time
+extension entitlement. Apply as the foundational step before
 eot_quantification — delay events must be identified and classified
 before their critical path impact is quantified.
 
@@ -46,19 +47,18 @@ From critical_path_analysis:
 - Float position and ownership
 
 From the invoking orchestrator:
-- Confirmed FIDIC book and edition
-- Particular Conditions amendments to the EOT clause and entitlement
-  event list
+- Confirmed standard form and version
+- Amendment document provisions affecting the time extension clause
+  and entitlement event list
 
 **If no baseline programme has been retrieved:** Delay events can
 still be identified from contemporaneous records, but their critical
 path impact cannot be assessed. Flag this dependency.
 
-**If the Particular Conditions have not been retrieved:**
-State CANNOT CLASSIFY delay events as Employer Risk Events,
-Neutral Events, or Contractor Risk Events. The entitlement event
-list is in the Particular Conditions — not the General Conditions
-defaults.
+**If the amendment document has not been retrieved:**
+State CANNOT CLASSIFY delay events as employer risk events, neutral
+events, or contractor risk events. The entitlement event list is in
+the amendment document.
 
 ### Layer 1 documents to retrieve (project-specific)
 
@@ -69,14 +69,16 @@ Call `search_chunks` and `get_related_documents` to retrieve:
 - Site diaries and daily reports — the primary contemporaneous
   record of delay events
 - Monthly progress reports — record delay events and their causes
-- Engineer's Instructions — potential Employer-caused delay triggers
+- Contract administrator instructions — potential employer-caused
+  delay triggers
 - Notices of delay issued by the Contractor
 - RFI logs and responses — delayed responses may constitute
-  Employer-caused delay
+  employer-caused delay
 - Weather records (where weather delays are claimed)
-- Correspondence recording access problems, late information,
-  or Employer instructions
-- The Particular Conditions — EOT clause and entitlement event list
+- Correspondence recording access problems, late information, or
+  employer instructions
+- The amendment document — time extension clause and entitlement
+  event list
 
 **For each delay event identified:** the evidence must come from
 retrieved documents. Do not identify delay events from the claim
@@ -87,17 +89,24 @@ not been retrieved for the delay period:**
 State that delay events during this period have not been
 independently verified from contemporaneous warehouse documents.
 
-### Layer 2 documents to retrieve (reference standards)
+### Layer 2b documents to retrieve (reference standards)
 
-Call `search_chunks` to retrieve from Layer 2:
-- FIDIC Clause 8.4 (1999) or Clause 8.5 (2017) for the confirmed
-  book — the qualifying entitlement events list
+Call `search_chunks` with `layer_type = '2b'` to retrieve:
+- Time extension entitlement event provision for the confirmed
+  standard form (search by subject matter: "time extension
+  entitlement employer risk event qualifying event")
 - SCL Protocol 2nd Edition 2017 — delay event classification
-  principles, excusable vs compensable delay
+  principles (search by subject matter: "SCL Protocol excusable
+  compensable delay classification")
 
-**Purpose:** To establish the standard FIDIC entitlement events
-as the comparison baseline. The actual list to apply is always
-the retrieved Particular Conditions version.
+**Purpose:** To establish the standard form entitlement events as
+the comparison baseline. The actual list to apply is always the
+retrieved amendment document version.
+
+**If the governing standard form is not retrieved from Layer 2b:**
+State CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE for the
+entitlement event provisions. Do not characterise the standard
+event list from training knowledge.
 
 ---
 
@@ -118,34 +127,25 @@ reports, programme updates, correspondence, instructions):
 ### Step 2 — Confirm the entitlement event list
 *Contract-type-specific*
 
-From the retrieved Particular Conditions, confirm the entitlement
-event list under the EOT clause (Clause 8.4/8.5 or equivalent
-as amended).
+From the retrieved amendment document, confirm the entitlement
+event list under the time extension provision (as amended).
 
-**Do not apply the General Conditions entitlement event list
-without confirming from the retrieved Particular Conditions
-that it has not been amended.** Key differences between books
-that affect classification:
+Retrieve the standard form provision from Layer 2b to establish
+the baseline. Then apply the amendment document version — the
+amendment document governs.
 
-**Red Book:**
-Employer Risk Events include: variations, exceptionally adverse
-climatic conditions, Employer delays, unforeseeable shortages,
-unforeseeable physical conditions (Clause 4.12). Retrieve and
-apply the PC version.
+**Do not apply any entitlement event list without retrieving it
+from the amendment document.** The list differs materially between
+standard forms and between versions:
+- Some forms allocate physical conditions risk to the employer
+- Others allocate it to the contractor
+- Design risk allocation differs by contract type
+- The scope of force majeure or exceptional events varies
 
-**Yellow Book:**
-Same as Red Book except: Contractor bears design risk — design
-errors are not Employer Risk Events. Retrieve and apply the PC
-version.
-
-**Silver Book:**
-Narrower Employer Risk Event list. Unforeseeable physical
-conditions are generally NOT an Employer Risk Event under the
-Silver Book standard form. Retrieve and apply the PC version —
-the PC may further restrict or expand the standard list.
-
-If the Particular Conditions have not been retrieved: state
-CANNOT CLASSIFY delay events by entitlement category.
+Retrieve from Layer 2b for the standard form baseline and from
+Layer 1 for the project-specific version. If the amendment document
+has not been retrieved: state CANNOT CLASSIFY delay events by
+entitlement category.
 
 ### Step 3 — Classify each delay event
 *Contract-type-specific*
@@ -153,64 +153,68 @@ CANNOT CLASSIFY delay events by entitlement category.
 For each identified delay event, classify as:
 
 **Employer Risk Event:** The event falls within the entitlement
-events as stated in the retrieved Particular Conditions and the
-Employer (or Engineer/ERA acting on Employer instructions) caused
-or is responsible for it. Cite the specific retrieved PC provision.
+events as stated in the retrieved amendment document and the
+employer (or contract administrator acting on employer instructions)
+caused or is responsible for it. Cite the specific retrieved
+amendment provision.
 
-**Neutral Event:** The event is listed in the retrieved PC as
-entitling the Contractor to EOT but not Cost (e.g. exceptionally
-adverse climatic conditions where listed as neutral). Cite the
-retrieved PC provision.
+**Neutral Event:** The event is listed in the retrieved amendment
+document as entitling the Contractor to a time extension but not
+cost (e.g. exceptionally adverse climatic conditions where listed
+as neutral). Cite the retrieved provision.
 
 **Contractor Risk Event:** The event is caused by or falls within
 the Contractor's risk under the retrieved contract.
 
 **CANNOT CLASSIFY:** The event type cannot be determined because
-the Particular Conditions have not been retrieved, or the
-evidence does not allow classification.
+the amendment document has not been retrieved, or the evidence
+does not allow classification.
 
-**Do not classify any event without a retrieved PC provision
+**Do not classify any event without a retrieved amendment provision
 to support the classification.**
 
 ### Step 4 — Assess excusable vs compensable distinction
 *Contract-type-agnostic principle / contract-type-specific application*
 
-Under the SCL Protocol framework (Layer 2):
+Retrieve the SCL Protocol from Layer 2b if available. Map the
+excusable/compensable framework against the retrieved amendment
+document classification — the amendment document terms govern what
+is excusable and what is compensable for this project.
 
-Excusable delay: entitles the Contractor to EOT but not Cost.
-Compensable delay: entitles the Contractor to both EOT and Cost.
+Excusable delay: entitles the Contractor to a time extension but
+not cost.
+Compensable delay: entitles the Contractor to both time and cost.
 
-Map this framework against the retrieved Particular Conditions
-classification — the PC terms govern what is excusable and what
-is compensable for this project. Do not apply the SCL terminology
-without confirming the PC entitlement terms.
+Do not apply SCL terminology without confirming the amendment
+document entitlement terms.
 
 ### Step 5 — Assess weather and force majeure events
 *Contract-type-specific*
 
-**Exceptionally adverse climatic conditions:**
-This is a qualifying event under the standard FIDIC EOT clause
-(all books, both editions). However:
-- The standard is "exceptionally adverse" — not simply adverse
-  or inconvenient weather
-- Whether conditions are "exceptional" must be assessed against
-  the historical weather data for the location, which is typically
-  not in the warehouse — flag that exceptionality cannot be
-  confirmed without meteorological data not in the warehouse
+**Adverse weather or climatic conditions:**
+Retrieve the applicable provision from the amendment document and
+from Layer 2b. The standard for qualifying weather events varies
+by standard form (e.g. "exceptionally adverse" is a common
+threshold). Assess against the retrieved provision.
 
-**Force majeure / Exceptional events:**
-Under FIDIC 2017, force majeure is replaced by "Exceptional Events"
-(Clause 18). The events listed differ between editions. Identify
-from the retrieved Particular Conditions whether any exceptional
-event clause has been amended. Classify from retrieved documents.
+For weather events: the qualifying status must be assessed against
+historical weather data for the location, which is typically not
+in the warehouse — flag that exceptionality cannot be confirmed
+without meteorological comparison data.
 
-### Step 6 — Assess Employer-caused delay patterns
+**Force majeure or exceptional events:**
+Retrieve the applicable provision from the amendment document and
+from Layer 2b. Identify what events are listed and whether the
+amendment document modifies the standard form provision. Classify
+from retrieved documents only.
+
+### Step 6 — Assess employer-caused delay patterns
 *Contract-type-agnostic*
 
 From the retrieved documents, identify whether there are patterns
-of Employer-caused delay:
-- Late information or late drawings from the Engineer (Red/Yellow)
-  or Employer (Silver)
+of employer-caused delay:
+- Late information or late drawings from the contract administrator
+  or employer
 - Delayed RFI responses — compare RFI issue dates against response
   dates from retrieved RFI logs
 - Access restrictions — compare programme access dates against
@@ -230,27 +234,25 @@ evidencing it.
 Event recorded in contemporaneous records (site diary, progress
 report, correspondence) → EVIDENCED — state sources
 Event in claim submission but not in any retrieved contemporaneous
-record → NOT INDEPENDENTLY VERIFIED — flag; state which records
-were retrieved and which were not
-Event in neither the claim nor contemporaneous records →
+record → NOT INDEPENDENTLY VERIFIED — flag
+Event in neither claim nor contemporaneous records →
 NOT IDENTIFIED IN RETRIEVED DOCUMENTS
 
 **Delay event classification:**
 
-Event falls within retrieved PC entitlement event list →
-EMPLOYER RISK EVENT (EOT + Cost entitlement) or NEUTRAL EVENT
-(EOT only) — cite specific PC provision
-Event does not fall within retrieved PC entitlement event list →
-CONTRACTOR RISK EVENT — cite specific PC provision that excludes it
-Classification cannot be determined (PC not retrieved) →
-CANNOT CLASSIFY
+Event falls within retrieved amendment document entitlement event
+list → EMPLOYER RISK EVENT (time + cost) or NEUTRAL EVENT
+(time only) — cite specific amendment provision
+Event does not fall within retrieved amendment document entitlement
+event list → CONTRACTOR RISK EVENT — cite specific provision
+Classification cannot be determined (amendment document not
+retrieved) → CANNOT CLASSIFY
 
 **Weather:**
 
-Exceptionally adverse: CANNOT CONFIRM exceptionality without
-meteorological comparison data — flag; state that the event
-is recorded in retrieved documents but its qualifying status
-cannot be determined from warehouse documents alone
+Weather event recorded in retrieved documents → EVIDENCED —
+qualifying status (exceptionally adverse or equivalent standard)
+CANNOT CONFIRM without meteorological comparison data — flag
 
 ---
 
@@ -266,23 +268,23 @@ the delay event
 
 **Signal:** RFI delays claimed but no RFI log retrieved
 **Action:** `get_related_documents` with document type "RFI Log",
-"Request for Information"; `search_chunks` with query "RFI request
-information response outstanding"
-**Look for:** RFI register with issue dates, response dates, and
-any outstanding RFIs
+"Request for Information"; `search_chunks` with query "RFI
+request information response outstanding"
+**Look for:** RFI register with issue dates, response dates
 
 **Signal:** Late access claimed but no access records retrieved
 **Action:** `search_chunks` with query "site access possession
-Employer late access"; `get_related_documents` with document
+employer late access"; `get_related_documents` with document
 types "Site Diary", "Correspondence"
 **Look for:** Documents recording actual access dates vs planned
 access dates
 
-**Signal:** PC not retrieved — entitlement event list unconfirmed
-**Action:** `search_chunks` with query "particular conditions
-clause 8 EOT entitlement event extension time"; `get_document`
-on PC document ID if known
-**Look for:** The entitlement event list in the PC EOT clause
+**Signal:** Amendment document not retrieved — entitlement event
+list unconfirmed
+**Action:** `search_chunks` with query "particular conditions time
+extension entitlement event"; `get_document` on amendment
+document ID if known
+**Look for:** The entitlement event list in the amendment document
 
 ---
 
@@ -292,22 +294,24 @@ on PC document ID if known
    contemporaneous records** — flag each; state that independent
    verification is not possible from warehouse documents.
 
-2. **Silver Book: delay event that would be an Employer Risk Event
-   under Red Book but is a Contractor risk under Silver Book** —
-   flag the book-specific risk allocation; cite the retrieved PC
-   provision.
+2. **Risk allocation differs by standard form** — always retrieve
+   and confirm the entitlement event list from the amendment document
+   before classifying any event; flag if standard form not retrieved.
 
-3. **Weather delay claimed but exceptionality cannot be confirmed
+3. **Weather delay claimed but qualifying status cannot be confirmed
    from warehouse documents** — flag; state that meteorological
    comparison data would be needed.
 
-4. **Pattern of late RFI responses or late information from
-   Engineer/Employer** — flag the pattern with specific references
-   from retrieved documents.
+4. **Pattern of late RFI responses or late information** — flag
+   the pattern with specific references from retrieved documents.
 
-5. **Particular Conditions not retrieved — entitlement event list
+5. **Amendment document not retrieved — entitlement event list
    unconfirmed** — flag; state that no delay event can be classified
    for entitlement purposes.
+
+6. **Governing standard not retrieved from Layer 2b** — flag when
+   the time extension provision could not be retrieved; state what
+   standard would need to be ingested.
 
 ---
 
@@ -316,6 +320,16 @@ on PC document ID if known
 ```
 ## Delay Identification Assessment
 
+### Evidence Declaration
+Layer 2b retrieved: [YES / NO / PARTIAL]
+Layer 2b source: [standard form name — or NOT RETRIEVED]
+Layer 2b provisions retrieved: [description — or NONE]
+Layer 2a retrieved: [YES / NO / NOT APPLICABLE]
+Layer 2a source: [policy name — or NOT RETRIEVED / NOT APPLICABLE]
+Layer 1 primary document: [name and reference — or NOT RETRIEVED]
+Layer 1 amendment document: [name — or NOT RETRIEVED / NOT APPLICABLE]
+Provisions CANNOT CONFIRM: [list — or NONE]
+
 ### Documents Retrieved (Layer 1)
 [List every document retrieved with reference numbers and dates.]
 
@@ -323,19 +337,21 @@ on PC document ID if known
 [List every document required but not found. State which steps
 are affected.]
 
-### Layer 2 Reference Retrieved
-[State whether FIDIC EOT clause and SCL Protocol were retrieved.
-If not: state analytical knowledge applied.]
+### Layer 2b Reference Retrieved
+[State whether the time extension provision and SCL Protocol were
+retrieved from Layer 2b. If not: state CANNOT CONFIRM —
+STANDARD FORM NOT IN WAREHOUSE and list which analysis steps
+are affected.]
 
 ### Entitlement Event List Confirmed
-Source: [PC reference / CANNOT CONFIRM — PC not retrieved]
-Amendments to standard FIDIC list: [list or NONE FOUND / CANNOT CONFIRM]
+Source: [amendment document reference / CANNOT CONFIRM — not retrieved]
+Amendments to standard form list: [list or NONE FOUND / CANNOT CONFIRM]
 
 ### Delay Event Register
 
 | # | Event description | Period | Duration | Contemporaneous evidence | Classification | Entitlement | Source |
 |---|---|---|---|---|---|---|---|
-| 1 | [description] | [dates] | [days] | [EVIDENCED / NOT VERIFIED] | [ER/Neutral/CR/CANNOT CLASSIFY] | [EOT+Cost / EOT only / Nil / CANNOT CONFIRM] | [docs] |
+| 1 | [description] | [dates] | [days] | [EVIDENCED / NOT VERIFIED] | [ER/Neutral/CR/CANNOT CLASSIFY] | [Time+Cost / Time only / Nil / CANNOT CONFIRM] | [docs] |
 
 ### Findings by Delay Event
 
@@ -346,8 +362,8 @@ Contemporaneous evidence: [EVIDENCED — source documents /
 NOT INDEPENDENTLY VERIFIED — records not in warehouse]
 Classification: [EMPLOYER RISK EVENT / NEUTRAL EVENT /
 CONTRACTOR RISK EVENT / CANNOT CLASSIFY]
-Classification basis: [retrieved PC provision / CANNOT CONFIRM — PC not retrieved]
-Entitlement: [EOT + Cost / EOT only / No entitlement / CANNOT CONFIRM]
+Classification basis: [retrieved amendment provision / CANNOT CONFIRM]
+Entitlement: [Time + Cost / Time only / No entitlement / CANNOT CONFIRM]
 Critical path impact: [from critical_path_analysis findings /
 CANNOT ASSESS — programme not available]
 Finding: [from retrieved documents only]
@@ -369,32 +385,28 @@ Summary: [two to three sentences — facts from retrieved documents only]
 ## Analytical framework
 *Reference only — do not classify any delay event without first
 confirming the applicable entitlement event list from the retrieved
-Particular Conditions.*
+amendment document.*
 
-**FIDIC delay event categories — analytical reference:**
-FIDIC distinguishes between events that entitle the Contractor to
-EOT and Cost (Employer Risk Events), events that entitle EOT only
-(Neutral Events), and events that are at the Contractor's risk.
-The specific events in each category differ by book — the Red Book
-has the broadest Employer Risk Event list; the Silver Book has the
-narrowest. Both editions contain the same structural categories
-but differ in drafting and numbering. The actual list for any
-project is in the retrieved Particular Conditions. Retrieve from
-Layer 2 for the standard text and from Layer 1 for the project-
-specific version.
+**Delay event categories — analytical reference:**
+Standard forms of contract distinguish between events that entitle
+the Contractor to a time extension and cost, events that entitle
+time only, and events that are at the Contractor's risk. The
+specific events in each category differ by standard form — some
+forms have a broader employer risk event list; others are more
+restrictive. Both the standard form and the amendment document
+must be retrieved before any event can be classified. Retrieve
+from Layer 2b for the standard text and from Layer 1 for the
+project-specific version.
 
 **SCL Protocol delay classification — analytical reference:**
-The SCL Protocol uses the terms "excusable" (EOT entitlement)
-and "compensable" (EOT + Cost entitlement). A delay that is
-excusable but not compensable entitles the Contractor to time
-but not money. These map onto the FIDIC Neutral Event and Employer
-Risk Event categories but use different terminology. Apply the
-FIDIC terminology from the retrieved contract — not the SCL terms.
+The SCL Protocol uses the terms "excusable" (time entitlement)
+and "compensable" (time and cost entitlement). These map onto
+the neutral event and employer risk event categories in many
+standard forms. Apply the terminology from the retrieved contract
+— not the SCL terms — when classifying delay events.
 
 **Concurrent delay — analytical reference:**
-Where Employer-caused and Contractor-caused delays overlap on the
-critical path in the same period, the concurrent delay principles
-apply. Under the SCL Protocol, the Contractor retains time
-entitlement for the concurrent period but cost entitlement is
-less certain. The concurrent period is determined from the
-retrieved programme records — not from the claim submission.
+Where employer-caused and contractor-caused delays overlap on the
+critical path in the same period, concurrent delay principles apply.
+The concurrent period is determined from the retrieved programme
+records — not from the claim submission.
