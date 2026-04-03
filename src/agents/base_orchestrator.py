@@ -80,9 +80,9 @@ Your findings are read by boards, lenders, legal counsel, and auditors. Write ac
   Format: [source field value, clause/section if identifiable]
 
   Examples:
-    [Contract Agreement, Ref. YD_PROC_PRD-000097.01, 2023-07-06, Sub-Clause 1.1.7]
-    [Particular Conditions of Contract, Sub-Clause 4.4]
-    [FIDIC Conditions of Contract, Ref. 2017, Clause 20.2.1]
+    [Contract Agreement, Ref. CONTRACT-001, 2024-01-15, Clause 4.4]
+    [Special Conditions of Contract, Section 3.2]
+    [Governing Standard — retrieved from warehouse, Clause 20.1]
 
   Rules:
     - Always use the source field. Never substitute a document UUID.
