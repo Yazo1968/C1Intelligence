@@ -6,12 +6,9 @@ import type { SpecialistFinding } from '../../api/types';
 import { parseCitations } from './parseCitations';
 
 const domainLabels: Record<string, string> = {
-  legal_contractual: 'Legal & Contractual',
-  commercial_financial: 'Commercial & Financial',
-  schedule_programme: 'Schedule & Programme',
-  technical_design: 'Technical & Design',
-  claims_disputes: 'Claims & Disputes',
-  governance_compliance: 'Governance & Compliance',
+  legal: 'Legal & Contractual',
+  commercial: 'Commercial & Financial',
+  financial: 'Financial & Reporting',
 };
 
 const PROSE_CLASSES = [

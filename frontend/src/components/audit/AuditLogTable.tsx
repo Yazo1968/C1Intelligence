@@ -9,10 +9,7 @@ import type { QueryLogEntry } from '../../api/types';
 const domainLabels: Record<string, string> = {
   legal_contractual: 'Legal',
   commercial_financial: 'Commercial',
-  schedule_programme: 'Schedule',
-  technical_design: 'Technical',
-  claims_disputes: 'Claims',
-  governance_compliance: 'Governance',
+  financial_reporting: 'Financial',
 };
 
 export function AuditLogTable({ entries, loading }: { entries: QueryLogEntry[]; loading: boolean }) {

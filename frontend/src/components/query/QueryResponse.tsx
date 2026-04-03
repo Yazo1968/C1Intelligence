@@ -7,10 +7,7 @@ import type { QueryResponseSchema } from '../../api/types';
 const domainLabels: Record<string, string> = {
   legal_contractual: 'Legal & Contractual',
   commercial_financial: 'Commercial & Financial',
-  schedule_programme: 'Schedule & Programme',
-  technical_design: 'Technical & Design',
-  claims_disputes: 'Claims & Disputes',
-  governance_compliance: 'Governance & Compliance',
+  financial_reporting: 'Financial & Reporting',
 };
 
 export function QueryResponse({ response }: { response: QueryResponseSchema }) {
