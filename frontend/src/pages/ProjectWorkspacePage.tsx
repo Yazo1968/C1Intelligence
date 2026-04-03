@@ -162,6 +162,11 @@ export function ProjectWorkspacePage() {
     }
   };
 
+  const getDocLabel = (docId: string) => {
+    const doc = documents.find((d) => d.id === docId);
+    return doc ? doc.filename : docId.slice(0, 8) + '...';
+  };
+
   if (!projectId) return null;
 
   return (
@@ -234,9 +239,9 @@ export function ProjectWorkspacePage() {
                     key={c.id}
                     contradiction={{
                       field_name: c.field_name,
-                      document_a_reference: c.document_a_id,
+                      document_a_reference: getDocLabel(c.document_a_id),
                       value_a: '',
-                      document_b_reference: c.document_b_id,
+                      document_b_reference: getDocLabel(c.document_b_id),
                       value_b: '',
                       description: c.description ?? '',
                     }}
