@@ -16,14 +16,16 @@ from src.api.auth import AuthenticatedUser
 from src.api.errors import error_response
 from src.api.schemas import (
     ContradictionResponse,
+    DomainRecommendationSchema,
     QueryAcceptedResponse,
     QueryLogEntry,
     QueryResponseSchema,
     QueryStatusResponse,
+    Round0AssessmentResponse,
     SubmitQueryRequest,
 )
 from src.agents.models import AgentError, QueryRequest
-from src.agents.orchestrator import process_query
+from src.agents.orchestrator import assess_query, process_query
 
 logger = get_logger(__name__)
 
@@ -195,6 +197,61 @@ async def submit_query(
         query_id=uuid.UUID(query_id),
         status="PROCESSING",
         message="Query received. Analysis has started.",
+    )
+
+
+@router.post("/query/assess", response_model=Round0AssessmentResponse)
+async def assess_query_endpoint(
+    project_id: uuid.UUID,
+    body: SubmitQueryRequest,
+    user_id: AuthenticatedUser,
+) -> Round0AssessmentResponse:
+    """
+    Fast Round 0 assessment. Returns domain relevance classification
+    and a headline brief in under 10 seconds.
+    Synchronous — no background task, no polling required.
+    """
+    supabase = get_supabase_client()
+
+    # Verify project access
+    try:
+        supabase.table("projects").select("id").eq(
+            "id", str(project_id)
+        ).eq("owner_id", str(user_id)).single().execute()
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found or access denied.",
+        )
+
+    request = QueryRequest(
+        project_id=project_id,
+        user_id=user_id,
+        query_text=body.query_text,
+        risk_mode=body.risk_mode,
+    )
+
+    try:
+        result = assess_query(request)
+    except Exception as exc:
+        logger.error("assess_query_failed", error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Assessment failed.",
+        )
+
+    return Round0AssessmentResponse(
+        executive_brief=result.executive_brief,
+        documents_retrieved=result.documents_retrieved,
+        domain_recommendations=[
+            DomainRecommendationSchema(
+                domain=r.domain,
+                relevance=r.relevance,
+                reason=r.reason,
+            )
+            for r in result.domain_recommendations
+        ],
+        default_domains=result.default_domains,
     )
 
 

@@ -6,6 +6,7 @@ Pydantic models for the query orchestration pipeline.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass, field as dataclass_field
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -26,6 +27,23 @@ class QueryRequest(BaseModel):
     user_id: uuid.UUID
     query_text: str
     risk_mode: bool = False
+
+
+@dataclass
+class DomainRecommendation:
+    """Domain relevance assessment from the Round 0 classifier."""
+    domain: str
+    relevance: str    # "PRIMARY" | "RELEVANT" | "NOT_APPLICABLE"
+    reason: str       # one sentence
+
+
+@dataclass
+class Round0Assessment:
+    """Output of the fast Round 0 assessment endpoint."""
+    executive_brief: str
+    documents_retrieved: list[str]
+    domain_recommendations: list[DomainRecommendation]
+    default_domains: list[str]   # PRIMARY domains pre-selected
 
 
 class RetrievedChunk(BaseModel):

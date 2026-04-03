@@ -308,6 +308,125 @@ def process_query(request: QueryRequest) -> QueryResponse:
     )
 
 
+def assess_query(request: QueryRequest) -> "Round0Assessment":
+    """
+    Fast Round 0 assessment: retrieval + single Claude API call.
+    Returns domain relevance classification and headline brief.
+    Synchronous — designed to return in under 10 seconds.
+    """
+    from src.agents.models import DomainRecommendation, Round0Assessment
+
+    gemini_client = get_gemini_client()
+    anthropic_client = get_anthropic_client()
+    supabase_client = get_supabase_client()
+
+    # Step 1: Retrieve chunks
+    retrieval = retrieve_chunks(
+        supabase_client, gemini_client, request.query_text, request.project_id
+    )
+
+    # Step 2: Collect retrieved document names for display
+    seen: set[str] = set()
+    documents_retrieved: list[str] = []
+    for chunk in retrieval.chunks:
+        label = chunk.document_type_name or chunk.filename or str(chunk.document_id)
+        if label and label not in seen:
+            seen.add(label)
+            documents_retrieved.append(label)
+
+    # Step 3: Build context from retrieved chunks (truncated for speed)
+    chunk_context = "\n\n".join(
+        f"[{chunk.document_type_name or chunk.filename or 'Document'}]\n{chunk.text[:300]}"
+        for chunk in retrieval.chunks[:8]
+    )
+
+    if not chunk_context:
+        chunk_context = "No documents retrieved for this query."
+
+    # Step 4: Single Claude API call — domain assessment + brief
+    prompt = f"""You are assessing a construction project query for document relevance.
+
+Query: {request.query_text}
+
+Retrieved document excerpts:
+{chunk_context}
+
+The three active analysis domains are:
+1. legal_contractual — contracts, notices, entitlement, time bars, securities
+2. commercial_financial — payment, variations, BOQ, retention, final account
+3. financial_reporting — EVM, budget vs actual, cost performance, cash flow
+
+For each domain, classify as:
+- PRIMARY: the query is directly about this domain
+- RELEVANT: this domain provides supporting context
+- NOT_APPLICABLE: this domain is not relevant to this query
+
+Respond in this exact JSON format with no other text:
+{{{{
+  "executive_brief": "Two sentences maximum. What the documents show about this query.",
+  "domains": [
+    {{{{"domain": "legal_contractual", "relevance": "PRIMARY|RELEVANT|NOT_APPLICABLE", "reason": "One sentence."}}}},
+    {{{{"domain": "commercial_financial", "relevance": "PRIMARY|RELEVANT|NOT_APPLICABLE", "reason": "One sentence."}}}},
+    {{{{"domain": "financial_reporting", "relevance": "PRIMARY|RELEVANT|NOT_APPLICABLE", "reason": "One sentence."}}}}
+  ]
+}}}}"""
+
+    try:
+        response = anthropic_client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=400,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.content[0].text.strip()
+        # Strip markdown fences if present
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+        import json as _json
+        data = _json.loads(raw)
+    except Exception as exc:
+        logger.warning("assess_query_claude_failed", error=str(exc))
+        data = {
+            "executive_brief": "Assessment could not be completed. Proceeding with full analysis.",
+            "domains": [
+                {"domain": "legal_contractual", "relevance": "RELEVANT", "reason": "Unable to assess — run full analysis."},
+                {"domain": "commercial_financial", "relevance": "RELEVANT", "reason": "Unable to assess — run full analysis."},
+                {"domain": "financial_reporting", "relevance": "RELEVANT", "reason": "Unable to assess — run full analysis."},
+            ]
+        }
+
+    recommendations = [
+        DomainRecommendation(
+            domain=d["domain"],
+            relevance=d.get("relevance", "RELEVANT"),
+            reason=d.get("reason", ""),
+        )
+        for d in data.get("domains", [])
+    ]
+
+    default_domains = [
+        r.domain for r in recommendations if r.relevance == "PRIMARY"
+    ]
+    if not default_domains:
+        default_domains = [r.domain for r in recommendations
+                           if r.relevance != "NOT_APPLICABLE"]
+
+    logger.info(
+        "assess_query_complete",
+        project_id=str(request.project_id),
+        default_domains=default_domains,
+    )
+
+    return Round0Assessment(
+        executive_brief=data.get("executive_brief", ""),
+        documents_retrieved=documents_retrieved,
+        domain_recommendations=recommendations,
+        default_domains=default_domains,
+    )
+
+
 def determine_confidence(
     findings: list[SpecialistFindings],
     contradictions: list[ContradictionFlag],

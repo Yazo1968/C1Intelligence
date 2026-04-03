@@ -103,6 +103,19 @@ class QueryResponseSchema(BaseModel):
     audit_log_id: uuid.UUID | None
 
 
+class DomainRecommendationSchema(BaseModel):
+    domain: str
+    relevance: str
+    reason: str
+
+
+class Round0AssessmentResponse(BaseModel):
+    executive_brief: str
+    documents_retrieved: list[str]
+    domain_recommendations: list[DomainRecommendationSchema]
+    default_domains: list[str]
+
+
 # ---------------------------------------------------------------------------
 # Query Log
 # ---------------------------------------------------------------------------
