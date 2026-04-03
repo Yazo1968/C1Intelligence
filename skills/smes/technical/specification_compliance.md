@@ -1,22 +1,26 @@
 # Specification Compliance
 
-**Skill type:** Contract-type-agnostic for the assessment framework
-The method for assessing specification compliance — retrieve the
-specification requirement, retrieve the test or inspection record,
-compare — applies regardless of FIDIC book or edition. The
-contractual consequences of non-compliance and the party responsible
-for rectification are contract-type-specific and must be confirmed
-from the retrieved Particular Conditions.
+**Skill type:** Mixed
+- Contract-type-agnostic: the method for assessing specification
+  compliance — retrieve the specification requirement, retrieve the
+  test or inspection record, compare — applies regardless of standard
+  form or version
+- Contract-type-specific: the contractual consequences of non-
+  compliance and the party responsible for rectification must be
+  confirmed from the retrieved governing standard in Layer 2b and
+  the amendment document
 **Layer dependency:**
 - Layer 1 — project documents: project specification (technical
   sections); material approval submittals; material test certificates;
   inspection and test plans (ITP); inspection request forms; test
-  reports; NCR records; as-built records; Particular Conditions
-  (defects clause, testing clause)
-- Layer 2 — reference standards: FIDIC Clause 7 (Plant, Materials
-  and Workmanship) and Clause 11 (Defects After Taking Over) for
-  the confirmed book and edition; referenced testing standards
-  (BS, ASTM, ISO, EN) if available in Layer 2
+  reports; NCR records; as-built records; amendment document
+  (quality, testing, and defects clauses); Contract Data or
+  equivalent (defects liability period)
+- Layer 2b — reference standards: quality, testing, and defects
+  provisions for the confirmed standard form; referenced testing
+  standards (BS, ASTM, ISO, EN, or others) if ingested in Layer 2b
+- Layer 2a — internal standards: quality management procedures,
+  material approval processes (if applicable)
 **Domain:** Technical & Construction SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
@@ -39,9 +43,8 @@ specific element can be confirmed from the retrieved documents.
 Read the invoking orchestrator findings.
 
 From the invoking orchestrator extract:
-- Confirmed FIDIC book and edition
-- Any Particular Conditions amendments to the testing or defects
-  clauses
+- Confirmed standard form and version
+- Any amendment document provisions on testing or defects
 
 ### Layer 1 documents to retrieve (project-specific)
 
@@ -53,7 +56,7 @@ Call `search_chunks` and `get_related_documents` to retrieve:
 - The inspection and test plan (ITP) for the work stage
 - The inspection request form and inspection record
 - The NCR (if a non-conformance has been raised)
-- The Particular Conditions — testing clause and defects clause
+- The amendment document — testing and defects clauses
 
 **If the project specification is not retrieved:**
 State CANNOT CONFIRM the applicable specification requirement.
@@ -68,19 +71,30 @@ may have occurred but the records are not in the warehouse.
 and the element it covers. The specification section and the test
 certificate must both be present to perform a compliance assessment.
 
-### Layer 2 documents to retrieve (reference standards)
+### Layer 2b documents to retrieve (reference standards)
 
-Call `search_chunks` to retrieve from Layer 2:
-- FIDIC Clause 7 for the confirmed book and edition — materials,
-  plant, and workmanship obligations
-- FIDIC Clause 11 — defects after Taking Over
-- Referenced testing standards (BS, ASTM, ISO) if ingested in
-  Layer 2 and referenced in the retrieved specification
+Call `search_chunks` with `layer_type = '2b'` to retrieve:
+- Quality, testing, and materials obligations for the confirmed
+  standard form (search by subject matter: "quality workmanship
+  materials testing obligation rejection")
+- Defects provisions for the confirmed standard form (search
+  by subject matter: "defects liability rectification defects
+  period")
+- Referenced testing standards (BS, ASTM, ISO, EN) if ingested
+  in Layer 2b and referenced in the retrieved specification
+  (search by standard name and number)
 
-**Purpose:** To establish the FIDIC framework for testing and
-defects obligations, and to access the referenced testing standards
-where available. The project specification governs compliance
+**Purpose:** To establish the standard form quality and defects
+framework, and to access the referenced testing standards where
+available. The project specification governs compliance
 requirements — the testing standards provide the methodology.
+
+**If the governing standard form is not retrieved from Layer 2b:**
+State CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE for the
+quality and defects provisions. Confidence cap: AMBER. The
+compliance assessment against the specification proceeds
+regardless — Layer 2b is needed only for the contractual
+consequence assessment.
 
 ---
 
@@ -94,8 +108,8 @@ From the retrieved project specification:
 - State the requirement exactly as it appears in the retrieved
   specification: the material standard, the test standard, the
   acceptance criteria, and any method of measurement
-- Identify the testing standard referenced (BS, ASTM, ISO, EN,
-  etc.) and the edition year if stated
+- Identify the testing standard referenced and the edition year
+  if stated
 
 **Do not state any specification requirement without the retrieved
 specification document as the source.** If the specification has
@@ -105,9 +119,9 @@ not been retrieved: state CANNOT CONFIRM the applicable requirement.
 *Contract-type-agnostic*
 
 From the retrieved documents, identify:
-- The test certificate(s) for the element under assessment —
-  state the document reference, date, test type, test standard
-  applied, result, and pass/fail determination
+- The test certificate(s) for the element — state the document
+  reference, date, test type, test standard applied, result, and
+  pass/fail determination
 - The inspection record for the work stage
 - The ITP hold point status for this element
 
@@ -122,7 +136,7 @@ governs.
 Compare the test result in the retrieved certificate against the
 acceptance criteria in the retrieved specification.
 
-**State both values and both source documents.** Do not calculate
+**State both values and both source documents.** Do not assess
 whether the result passes or fails without both retrieved documents.
 
 If the test standard in the certificate differs from the standard
@@ -169,24 +183,26 @@ From the retrieved NCR log and individual NCRs:
 - What is the NCR status: open, under rectification, closed?
 - Does the NCR description confirm a specification non-conformance?
 
-If NCRs are present: state the NCR reference, description, and
-status from the retrieved document. Do not characterise an NCR as
-closed without a retrieved close-out record.
+State the NCR reference, description, and status from the retrieved
+document. Do not characterise an NCR as closed without a retrieved
+close-out record.
 
-### Step 7 — Assess rectification obligation
+### Step 7 — Assess the rectification obligation
 *Contract-type-specific*
 
-From the retrieved Particular Conditions and confirmed FIDIC clause:
-- Who is obliged to rectify a non-conformance: the Contractor
-  (workmanship/materials obligation under Clause 7) or the Employer
-  (design deficiency)?
-- Is the rectification obligation within the DNP or has the DNP
-  expired?
+From the retrieved amendment document and Layer 2b provisions:
+- Who is obliged to rectify a non-conformance: the contractor
+  (workmanship or materials failure) or the employer (design
+  deficiency)?
+- Is the rectification obligation within the defects liability
+  period or has the period expired?
 - Has a formal instruction to rectify been issued?
 
-**The rectification obligation and the DNP period to apply are
-from the retrieved Particular Conditions and Contract Data.**
-Do not apply any standard form period without retrieved confirmation.
+**The rectification obligation and the defects liability period
+to apply are from the retrieved amendment document and Contract
+Data.** Do not apply any standard form period without retrieved
+confirmation. If Layer 2b not retrieved: state CANNOT CONFIRM —
+STANDARD FORM NOT IN WAREHOUSE.
 
 ---
 
@@ -199,7 +215,7 @@ result meets the requirement → COMPLIANT — state both values
 and sources
 Test result retrieved AND specification requirement retrieved AND
 result does not meet the requirement → NON-COMPLIANT — flag;
-state both values and sources; state the non-conformance clearly
+state both values and sources
 Test conducted to different standard than specified →
 TEST STANDARD MISMATCH — flag; compliance cannot be confirmed
 from the retrieved test certificate
@@ -219,11 +235,11 @@ MATERIAL SUBSTITUTION — flag
 
 **ITP hold point:**
 
-Hold point observed and recorded in retrieved ITP/inspection record
-→ HOLD POINT OBSERVED
+Hold point observed and recorded in retrieved ITP or inspection
+record → HOLD POINT OBSERVED
 Hold point not observed before work proceeded (evidenced from
-retrieved site diary or diary entry) → HOLD POINT NOT OBSERVED —
-flag
+retrieved site diary or inspection record) → HOLD POINT NOT
+OBSERVED — flag
 Hold point status not determinable from retrieved documents →
 CANNOT CONFIRM HOLD POINT STATUS
 
@@ -265,6 +281,17 @@ plan hold point witness"
 non-conformance [element description]"
 **Look for:** The NCR log and any individual NCRs for the element
 
+**Signal:** Layer 2b quality or defects provisions not retrieved
+**Action:** `search_chunks` with `layer_type = '2b'` and query
+"[standard form name] quality workmanship materials testing
+defects liability rectification"
+**Look for:** Standard form quality and defects provisions
+
+**Signal:** Referenced testing standard not in Layer 2b
+**Action:** `search_chunks` with `layer_type = '2b'` and query
+"[standard name e.g. BS, ASTM, ISO] [number] [subject]"
+**Look for:** The referenced testing standard if ingested
+
 ---
 
 ## Always flag — regardless of query
@@ -285,9 +312,14 @@ non-conformance [element description]"
    state the forensic implication (work may need to be exposed
    for inspection to confirm compliance).
 
-5. **Open NCR at Taking-Over or still open in the warehouse** —
+5. **Open NCR at handover or still open in the warehouse** —
    flag; state the NCR reference and the forensic implication for
    the defects liability position.
+
+6. **Governing standard not in Layer 2b** — flag; state that the
+   rectification obligation and defects liability framework cannot
+   be confirmed from the warehouse and that confidence is capped
+   at AMBER for the contractual consequence assessment.
 
 ---
 
@@ -296,6 +328,18 @@ non-conformance [element description]"
 ```
 ## Specification Compliance Assessment
 
+### Evidence Declaration
+Layer 2b retrieved: [YES / NO / PARTIAL]
+Layer 2b source: [standard form name — or NOT RETRIEVED]
+Layer 2b provisions retrieved: [quality/workmanship/testing,
+defects liability — or NONE]
+Layer 2a retrieved: [YES / NO / NOT APPLICABLE]
+Layer 2a source: [policy name — or NOT RETRIEVED / NOT APPLICABLE]
+Layer 1 primary document: [project specification reference —
+or NOT RETRIEVED]
+Layer 1 amendment document: [name — or NOT RETRIEVED]
+Provisions CANNOT CONFIRM: [list — or NONE]
+
 ### Documents Retrieved (Layer 1)
 [List every document retrieved with reference numbers and dates.]
 
@@ -303,9 +347,13 @@ non-conformance [element description]"
 [List every document required but not found. State which steps
 are affected.]
 
-### Layer 2 Reference Retrieved
-[State whether FIDIC Clause 7 and 11 were retrieved. If not:
-state analytical knowledge applied.]
+### Layer 2b Reference Retrieved
+[State whether quality/workmanship/testing and defects liability
+provisions were retrieved from Layer 2b. State whether any
+referenced testing standards were retrieved. If not: state
+CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE and list affected
+analysis steps. Confidence cap: AMBER for contractual consequence
+assessment.]
 
 ### Specification Compliance Register
 
@@ -344,9 +392,11 @@ Status: [OPEN / CLOSED — date / CANNOT CONFIRM CLOSE-OUT]
 Source: [document reference]
 
 ### Rectification Position
-Rectification obligation: [CONTRACTOR — clause reference / EMPLOYER /
-CANNOT CONFIRM — PC not retrieved]
-DNP status: [ACTIVE / EXPIRED / CANNOT CONFIRM]
+Rectification obligation: [CONTRACTOR — source document /
+EMPLOYER / CANNOT CONFIRM — amendment document not retrieved /
+CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE]
+Defects liability period status: [ACTIVE / EXPIRED /
+CANNOT CONFIRM — dates not confirmed]
 Instruction to rectify issued: [YES — reference / NOT FOUND]
 
 ### FLAGS
@@ -360,26 +410,37 @@ Summary: [two to three sentences — facts from retrieved documents only]
 ---
 
 ## Analytical framework
-*Reference only — do not apply any specification standard or testing
-requirement from this section without first confirming it from the
-retrieved project specification.*
+*Reference only — do not apply any specification standard, testing
+requirement, or rectification obligation from this section without
+first confirming it from the retrieved project specification and
+Layer 2b.*
 
-**FIDIC Clause 7 — analytical reference:**
-FIDIC Clause 7 (all books, both editions) requires that plant,
-materials, and workmanship shall be of the kind described in the
-contract and shall be fit for their intended purpose. Testing
-requirements are as specified in the contract. The Contractor
-must provide samples for testing as required. The Engineer
-(Red/Yellow) or Employer's Representative (Silver) may reject
-materials or workmanship that do not comply. Retrieve the
-specific clause from Layer 2 and check the PC for amendments.
+**Quality and workmanship obligations — analytical reference:**
+Standard forms consistently require that plant, materials, and
+workmanship comply with the contract. The contract administrator
+may reject materials or workmanship that do not comply. Testing
+requirements are as specified in the project specification. The
+contractor must provide samples, test certificates, and
+certification as required. The specific testing and rejection
+mechanisms are in the standard form and the amendment document —
+retrieve before applying.
 
 **Specification hierarchy — analytical reference:**
-The project specification governs compliance requirements. Shop
-drawings and submittals must comply with the specification — a
-shop drawing approval does not override a specification requirement
-unless the Engineer expressly approves a deviation via a formal
-instruction or variation. An RFI response that appears to relax
-a specification requirement without a formal variation instruction
-creates ambiguity — flag where this pattern is identified in
-retrieved documents.
+The project specification governs compliance requirements.
+Shop drawings and submittals must comply with the specification —
+a shop drawing approval does not override a specification
+requirement unless the contract administrator expressly approves
+a deviation via a formal instruction or variation. An RFI response
+that appears to relax a specification requirement without a formal
+variation instruction creates ambiguity — flag where this pattern
+is identified in retrieved documents and cross-reference the
+rfi_and_submittal_review findings.
+
+**Testing standards — analytical reference:**
+Test certificates must reference the same testing standard as the
+specification. If the specification requires testing to a specific
+standard (e.g. a particular BS, ASTM, ISO, or EN standard and
+edition) and the test certificate references a different standard,
+the test result cannot be used to confirm specification compliance.
+This is a common quality documentation failure — flag when
+identified from retrieved documents.
