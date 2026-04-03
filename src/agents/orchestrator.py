@@ -275,9 +275,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
     # ------------------------------------------------------------------
     all_citations = _collect_all_citations(all_findings)
 
-    # TODO Phase 2 — round_number per finding not yet stored.
-    # Requires DB migration to add round_number column to query_log.
-    # DB Architect micro-session required before this can be completed.
+    round_number_to_log: int | None = max((f.round_number for f in all_findings), default=None)
     audit_log_id = write_audit_log(
         supabase_client=supabase_client,
         project_id=request.project_id,
@@ -288,6 +286,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
         domains_engaged=domains_engaged,
         document_ids=document_ids,
         citations=all_citations,
+        round_number=round_number_to_log,
     )
 
     # ------------------------------------------------------------------
@@ -692,6 +691,7 @@ def _grey_response(
         domains_engaged=domains_engaged,
         document_ids=document_ids,
         citations=[],
+        round_number=None,
     )
 
     logger.info(
