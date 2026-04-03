@@ -289,7 +289,7 @@ that do not interact with the intelligence layer)
 |---|---|---|
 | `CLAUDE.md` | v0.3 — FIDIC/GCC identity | Rewritten v1.0 ✅ this session |
 | `README.md` | v0.3 — FIDIC/GCC references | Updated v1.0 ✅ this session |
-| `src/agents/prompts.py` | FIDIC hardcoded | Phase 1 |
+| `src/agents/prompts.py` | FIDIC hardcoded | Phase 1 ✅ 69966661 |
 | `skills/c1-skill-authoring/` | Wrong — FIDIC-specific | Phase 2 ✅ this session |
 | `docs/SKILLS_STANDARDS.md` | 509 lines, FIDIC-specific | Phase 3 ✅ this session |
 | All 20 skill files | FIDIC-specific | Phase 4 |

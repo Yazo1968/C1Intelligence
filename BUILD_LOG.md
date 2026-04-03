@@ -814,3 +814,25 @@ Archived: C1_INTELLIGENCE_GROUNDING_PLAN.md, C1_PHASE2_PLAN.md,
 C1_REMAINING_WORK.md.
 
 Next session: Phase 1 — src/agents/prompts.py form-agnostic rewrite.
+
+---
+
+## Session — Phase 1: Form-Agnostic System Prompts — ✅ Complete
+
+**Date:** 2026-04-03
+**Commit:** 69966661f922c4ecf839a12d334a3864bd29a8e8
+
+src/agents/prompts.py rewritten — all hardcoded FIDIC clause numbers,
+edition cross-references (1999/2017), GCC market framing, and FIDIC AWARENESS
+blocks removed from all specialist prompts. Replaced with three-layer retrieval
+protocol (Layer 2b → Layer 1 → Layer 2a) and CANNOT CONFIRM rules for when
+retrieval fails. Evidence Declaration block mandated in _SPECIALIST_RULES Rule 7.
+DOMAIN_FINANCIAL_REPORTING specialist prompt added (was absent in previous file).
+CONTRADICTION_SYSTEM_PROMPT updated to universal platform identity.
+Domain constants (lines 1–33) preserved unchanged.
+
+QG PASS: 9 residual FIDIC/GCC patterns absent, 4 required patterns present,
+verified via GitHub API on committed file.
+
+Next session: Phase 2 — rebuild skills/c1-skill-authoring/ (5 files,
+three-layer warehouse, form-agnostic). Prerequisite: Phase 1 ✅
