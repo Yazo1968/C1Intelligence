@@ -1,25 +1,28 @@
 # Design Liability
 
-**Skill type:** Contract-type-specific
-Design responsibility allocation differs fundamentally across the
-three FIDIC books. Under the Red Book, design is the Employer's
-responsibility. Under the Yellow and Silver Books, design is the
-Contractor's responsibility. The scope of the Contractor's design
-obligation — and the standard of care that applies — must be
-confirmed from the retrieved Particular Conditions, which may
-modify the standard form allocation.
+**Skill type:** Mixed
+- Contract-type-specific: design responsibility allocation and the
+  standard of care differ fundamentally between standard forms —
+  some place design with the employer, others with the contractor,
+  others split it; the allocation must be retrieved from the
+  governing standard in Layer 2b and confirmed from the amendment
+  document before any liability position is stated
+- Contract-type-agnostic: the framework for assessing defect
+  causation (design vs workmanship), the review of design submittals,
+  and the assessment of the design brief for deficiency apply
+  regardless of which standard form governs
 **Layer dependency:**
-- Layer 1 — project documents: Particular Conditions (design
-  responsibility clause); Employer's Requirements (Yellow/Silver);
-  Contractor's design submittals; design change notices; RFI
-  responses that affected design; defect records attributable to
-  design; correspondence on design responsibility; governing law
-  clause
-- Layer 2 — reference standards: FIDIC Clause 4 and Clause 5
-  (design by Contractor) for the confirmed book and edition;
-  applicable decennial liability law (UAE Civil Code Art. 880,
-  Saudi Building Code, Qatar Civil Code) where governing law
-  confirmed
+- Layer 1 — project documents: amendment document (design
+  responsibility clause, standard of care provisions); Employer's
+  Requirements or equivalent design brief (where contractor designs);
+  Contractor's design submittals and calculations; design change
+  notices; RFI responses that affected design requirements; defect
+  records and technical investigation reports; governing law clause
+- Layer 2b — reference standards: design responsibility provisions
+  for the confirmed standard form; standard of care provisions;
+  applicable law (if ingested)
+- Layer 2a — internal standards: design authority policies, design
+  review procedures (if applicable)
 **Domain:** Technical & Construction SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
@@ -29,10 +32,11 @@ modify the standard form allocation.
 
 Apply when a query concerns which party bears design responsibility,
 whether a defect is attributable to design or workmanship, whether
-the Employer's Requirements are deficient, whether a Contractor
-design obligation has been fulfilled, or whether decennial liability
-is engaged. Apply when assessing the liability basis for any defect
-claim where design involvement is asserted.
+the design brief or Employer's Requirements are deficient, whether
+a contractor design obligation has been fulfilled, or whether
+statutory or long-stop liability for structural defects is engaged.
+Apply when assessing the liability basis for any defect claim where
+design involvement is asserted.
 
 ---
 
@@ -43,54 +47,74 @@ claim where design involvement is asserted.
 Read the invoking orchestrator findings first.
 
 From the invoking orchestrator extract:
-- Confirmed FIDIC book and edition
+- Confirmed standard form and version
 - Governing law as confirmed from retrieved contract documents
-- Particular Conditions amendments to the design responsibility
-  clause
+- Amendment document provisions on design responsibility
 
-**Book type is critical for this skill.** The entire design
-liability framework is different between Red Book (Employer designs)
-and Yellow/Silver Book (Contractor designs). If book type is
-UNCONFIRMED: state CANNOT ASSESS design liability allocation.
+**Design responsibility allocation is contract-form-specific.**
+The governing standard establishes the default allocation; the
+amendment document may modify it. If neither has been retrieved:
+state CANNOT ASSESS design liability allocation — do not apply
+any assumed position.
+
+**If the standard form type is not confirmed from retrieved
+documents:** State CANNOT CONFIRM design responsibility allocation.
+Do not proceed with a design liability assessment on an assumed
+standard form.
 
 ### Layer 1 documents to retrieve (project-specific)
 
 Call `search_chunks` and `get_related_documents` to retrieve:
-- The Particular Conditions — design responsibility clause,
-  Clause 4 amendments, Clause 5 (Yellow/Silver) or equivalent
-- The Employer's Requirements (Yellow/Silver) — the design brief
-  that defines the Contractor's design obligation
-- The Contractor's design submittals and design calculations
-  (if in the warehouse)
-- Design change notices and any correspondence modifying the
-  design scope
-- Defect or NCR records where design is cited as the cause
-- RFI responses from the Engineer that may have modified design
-  requirements
+- The amendment document — design responsibility clause, standard
+  of care provisions, and any clause addressing errors in the
+  design brief
+- The Employer's Requirements or equivalent design brief — where
+  the contractor bears design responsibility, this document defines
+  the scope and performance standard of the design obligation
+- The Contractor's design submittals and calculations (if in the
+  warehouse)
+- Design change notices and correspondence modifying design scope
+- Defect records and technical investigation reports where design
+  is cited as a cause
+- RFI responses from the contract administrator that modified
+  design requirements
 - The governing law clause
 
-**If the Particular Conditions are not retrieved:**
-State CANNOT CONFIRM design responsibility allocation. Do not apply
-book-type default without PC confirmation — the PC may transfer
-or modify design responsibility.
+**If the amendment document is not retrieved:**
+State CANNOT CONFIRM design responsibility allocation and
+CANNOT CONFIRM the applicable standard of care. Confidence cap:
+GREY. The amendment document may transfer, limit, or modify the
+standard form default — applying the standard form default without
+amendment document confirmation is not permitted.
 
-**If the Employer's Requirements are not retrieved (Yellow/Silver):**
-State CANNOT CONFIRM the scope of the Contractor's design
-obligation. The Employer's Requirements define what the Contractor
-is required to design and to what performance standard.
+**If the Employer's Requirements or design brief are not retrieved
+(where contractor bears design responsibility):**
+State CANNOT CONFIRM the scope of the contractor's design
+obligation. This document defines what the contractor is required
+to design and to what performance standard.
 
-### Layer 2 documents to retrieve (reference standards)
+### Layer 2b documents to retrieve (reference standards)
 
-Call `search_chunks` to retrieve from Layer 2:
-- FIDIC Clause 4.1 (Contractor's General Obligations) and
-  Clause 5 (Design by Contractor — Yellow/Silver) for the
-  confirmed book and edition
-- Applicable decennial liability provision if governing law is
-  UAE, Saudi Arabia, or Qatar — retrieve from Layer 2 if available
+Call `search_chunks` with `layer_type = '2b'` to retrieve:
+- Design responsibility provisions for the confirmed standard form
+  (search by subject matter: "design responsibility contractor
+  employer obligation")
+- Standard of care provisions (search by subject matter: "standard
+  of care fitness for purpose reasonable skill care design")
+- Applicable law provisions if ingested (search by subject matter:
+  "[governing law name] construction design liability structural
+  defects")
 
-**Purpose:** To establish the standard FIDIC design responsibility
-framework for comparison against the retrieved Particular Conditions.
-The actual allocation is in the retrieved PC.
+**Purpose:** To establish the standard form design responsibility
+framework and standard of care for structural comparison against
+the retrieved amendment document. The actual allocation and
+standard to apply is in the retrieved contract documents.
+
+**If the governing standard form is not retrieved from Layer 2b:**
+State CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE for the
+design responsibility and standard of care provisions. Confidence
+cap: AMBER. State which analytical steps are affected and proceed
+only with what is confirmed from Layer 1.
 
 ---
 
@@ -99,136 +123,111 @@ The actual allocation is in the retrieved PC.
 ### Step 1 — Confirm design responsibility allocation
 *Contract-type-specific*
 
-From the confirmed book type and the retrieved Particular Conditions:
+From the retrieved Layer 2b standard form provisions and the
+retrieved amendment document:
 
-**Red Book:**
-Design is the Employer's responsibility. The Contractor's obligation
-is to construct in accordance with the design provided by the
-Employer (through the Engineer). The Contractor bears no design
-liability for work constructed in accordance with the Employer's
-design unless the Contractor has expressly undertaken design
-responsibility for specific elements in the Particular Conditions.
+Identify the standard form's default allocation: does the governing
+standard place design responsibility with the employer, the
+contractor, or split it between them? Extract this from the Layer 2b
+retrieval.
 
-**Yellow Book:**
-The Contractor is responsible for design of the whole of the Works
-unless the Particular Conditions carve out specific elements.
-Confirm the scope of the Contractor's design obligation from the
-retrieved Particular Conditions and Employer's Requirements.
+Identify amendments: does the retrieved amendment document modify
+the standard form allocation? Apply the amendment document position,
+not the standard form default, where an amendment is confirmed.
 
-**Silver Book:**
-The Contractor bears full design and build responsibility. The
-Contractor satisfies itself as to the Employer's Requirements and
-takes full responsibility for the design. The standard of care
-under the Silver Book standard form is fitness for purpose —
-confirm whether the retrieved Particular Conditions modify this.
-
-**In all cases:** Extract the actual design responsibility terms
-from the retrieved Particular Conditions. Do not apply book-type
-defaults without confirmation.
+State the confirmed allocation and its source. If Layer 2b standard
+form not retrieved: state CANNOT CONFIRM — STANDARD FORM NOT IN
+WAREHOUSE. If amendment document not retrieved: state CANNOT CONFIRM
+— AMENDMENT POSITION UNKNOWN.
 
 ### Step 2 — Confirm the standard of care
 *Contract-type-specific*
 
-From the retrieved Particular Conditions:
-- Does the Contractor's design obligation carry a fitness for
-  purpose standard or a reasonable skill and care standard?
-- Has the standard form standard of care been modified?
+From the retrieved Layer 2b standard form and the retrieved
+amendment document: what standard of care applies to the
+contractor's design obligation — fitness for purpose, reasonable
+skill and care, or another standard? Has the standard form
+standard been modified by the amendment document?
 
-Under standard FIDIC Yellow Book (both editions), the Contractor's
-design obligation is to exercise the degree of skill, care, and
-diligence to be expected of a qualified engineer. Under the Silver
-Book, the standard is effectively fitness for purpose — the
-Contractor is responsible if the Works do not achieve the
-performance requirements in the Employer's Requirements.
+**The standard of care to apply is the one confirmed from the
+retrieved documents.** If the amendment document has not been
+retrieved: CANNOT CONFIRM — confidence cap GREY. If Layer 2b not
+retrieved: CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE —
+confidence cap AMBER.
 
-**The standard of care to apply is the one in the retrieved
-Particular Conditions.** If the PC has not been retrieved: state
-CANNOT CONFIRM the applicable standard of care.
+### Step 3 — Assess the design brief (where contractor designs)
+*Applies where contractor bears design responsibility*
+*Not applicable where employer bears full design responsibility*
 
-### Step 3 — Assess the Employer's Requirements for deficiency
-*Contract-type-specific — Yellow and Silver Book only*
-*Not applicable to Red Book*
-
-From the retrieved Employer's Requirements:
+From the retrieved design brief or Employer's Requirements:
 - Are the requirements clear, complete, and internally consistent?
-- Do they contain any errors or ambiguities that a Contractor
-  exercising reasonable skill and care at tender stage could not
-  have identified?
+- Do they contain errors or ambiguities that an experienced
+  contractor exercising professional skill could not have
+  identified at tender stage?
 
-Under FIDIC Yellow Book Clause 1.9, if the Contractor suffers
-delay or cost due to an error in the Employer's Requirements that
-an experienced contractor could not have discovered at tender stage,
-the Contractor is entitled to EOT and Cost. This is a Yellow
-Book-specific provision — confirm its existence and any amendment
-in the retrieved Particular Conditions.
+Check whether the retrieved amendment document contains a
+provision addressing contractor entitlement where errors in the
+design brief cause delay or cost. Extract from retrieved documents;
+do not apply any standard form default on this point without
+retrieved confirmation.
 
-**Do not assess Employer's Requirements deficiency without the
-retrieved document.** If the Employer's Requirements have not been
-retrieved: state CANNOT ASSESS.
+**Do not assess design brief deficiency without the retrieved
+document.** If the design brief has not been retrieved: state
+CANNOT ASSESS.
 
 ### Step 4 — Assess design submittals and approval status
-*Contract-type-specific — Yellow and Silver Book only*
-*Not applicable to Red Book*
+*Applies where contractor bears design responsibility*
 
 From the retrieved design submittals and submittal register:
-- Were the Contractor's design submittals reviewed and approved
-  by the Engineer or Employer's Representative?
+- Were the contractor's design submittals reviewed and approved
+  by the contract administrator?
 - Were any submittals rejected and resubmitted?
-- Is the design approval status for the elements in question
-  confirmed from retrieved documents?
+- Is the approval status for the elements in question confirmed
+  from retrieved documents?
 
-**If a defect is attributed to a design that was reviewed and
-approved by the Engineer without objection:** note the approval
-from the retrieved documents. The forensic significance of Engineer
-approval depends on whether it transfers responsibility — confirm
-from the retrieved Particular Conditions.
+If a defect is attributed to a design that was reviewed and
+approved without objection: note the approval from the retrieved
+documents. Whether approval transfers or shares responsibility
+depends on the retrieved amendment document — state what the
+amendment document says; do not assume.
 
 ### Step 5 — Assess defects attributable to design
 *Contract-type-agnostic for the assessment framework;
 contract-type-specific for the liability allocation*
 
-From the retrieved defect records, NCR log, and any technical
-reports:
+From the retrieved defect records, NCR log, and technical
+investigation reports:
 - Is the defect described in the retrieved documents?
 - Is the cause attributed to design, workmanship, materials, or
   a combination?
-- Is the causal attribution in the retrieved documents or is it
-  asserted in a claim without supporting technical evidence?
+- Is the causal attribution in a retrieved technical document or
+  is it asserted in a claim without supporting evidence?
 
 **Do not characterise a defect as design-caused or workmanship-
 caused without a retrieved document that supports the
 characterisation.** If a technical report is referenced but not
 retrieved: call tools to search.
 
-### Step 6 — Assess decennial liability engagement
-*Contract-type-agnostic (applies to all book types)*
-*Jurisdictionally specific — UAE, Saudi Arabia, Qatar only*
+### Step 6 — Assess jurisdiction-specific statutory liability
+*Applies where applicable law retrieved from Layer 2b*
 
-From the retrieved governing law clause:
-- Is the governing law UAE law, Saudi law, or Qatar law?
+From the retrieved governing law clause and Layer 2b:
+- Has applicable law been ingested in Layer 2b for the confirmed
+  governing law?
+- Does the retrieved applicable law impose statutory liability for
+  structural defects beyond the contractual defects period?
+- If yes: does the defect evidenced in the retrieved documents
+  appear to engage that liability — structural defect, within the
+  liability period from the confirmed handover date?
 
-If yes: decennial liability applies by operation of law regardless
-of which FIDIC book governs and regardless of the contractual
-defects liability period.
+**Flag statutory structural liability only where:**
+(a) Governing law confirmed from retrieved contract documents, AND
+(b) Applicable law ingested in Layer 2b and retrieved, AND
+(c) Structural defect evidenced in retrieved documents.
 
-**Decennial liability conditions (from retrieved documents and
-applicable law in Layer 2):**
-- The defect must threaten the stability of the building or
-  its structural integrity
-- The 10-year period runs from handover (Taking-Over Certificate
-  date — retrieve from Layer 1)
-- Joint and several liability on the architect/designer and
-  contractor
-- Cannot be excluded by contract
-
-**Flag decennial liability only where:**
-(a) The governing law is confirmed as UAE, Saudi, or Qatar from
-retrieved contract documents, AND
-(b) The defect described in retrieved documents appears to relate
-to structural integrity
-
-**Do not flag decennial liability without both conditions being
-confirmed from retrieved documents.**
+**If applicable law has not been ingested in Layer 2b:**
+State CANNOT CONFIRM — APPLICABLE LAW NOT IN WAREHOUSE. Do not
+characterise statutory liability from training knowledge.
 
 ---
 
@@ -236,22 +235,20 @@ confirmed from retrieved documents.**
 
 **Design responsibility:**
 
-Red Book, no PC amendment transferring design → EMPLOYER'S DESIGN
-RESPONSIBILITY — Contractor liable for workmanship, not design
-Red Book, PC amendment transferring specific design elements to
-Contractor → SPLIT RESPONSIBILITY — state the elements from the
-retrieved PC
-Yellow/Silver Book, no PC amendment limiting scope → CONTRACTOR'S
-DESIGN RESPONSIBILITY — full scope unless Employer's Requirements
-limit it
-Yellow/Silver Book, PC amendment limiting scope → PARTIAL
-CONTRACTOR DESIGN RESPONSIBILITY — state the scope from retrieved PC
-PC not retrieved → CANNOT CONFIRM design responsibility allocation
+Layer 2b standard form and amendment document both retrieved →
+state confirmed allocation and source document
+Layer 2b retrieved, amendment document not retrieved →
+CANNOT CONFIRM — AMENDMENT POSITION UNKNOWN; confidence cap GREY
+Amendment document retrieved, Layer 2b not retrieved →
+CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE; confidence cap AMBER
+Neither retrieved → CANNOT CONFIRM; confidence cap GREY
 
 **Standard of care:**
 
-Confirmed from retrieved PC → state the standard and source
-Not confirmed (PC not retrieved) → CANNOT CONFIRM standard of care
+Confirmed from retrieved documents → state the standard and source
+Amendment document not retrieved → CANNOT CONFIRM; confidence cap GREY
+Standard form not in Layer 2b → CANNOT CONFIRM — STANDARD FORM
+NOT IN WAREHOUSE; confidence cap AMBER
 
 **Defect causation:**
 
@@ -259,35 +256,39 @@ Design cause confirmed in retrieved technical documents →
 DESIGN DEFECT — state the document and the finding
 Workmanship cause confirmed in retrieved documents →
 WORKMANSHIP DEFECT — state the document
-Mixed or unclear from retrieved documents →
-CAUSATION NOT DETERMINED FROM RETRIEVED DOCUMENTS — flag
-Defect asserted in claim but not evidenced in retrieved records →
-NOT INDEPENDENTLY CONFIRMED FROM RETRIEVED DOCUMENTS
+Mixed or unclear → CAUSATION NOT DETERMINED FROM RETRIEVED DOCUMENTS
+Defect asserted but not evidenced → NOT INDEPENDENTLY CONFIRMED
+FROM RETRIEVED DOCUMENTS
 
-**Decennial liability:**
+**Statutory structural liability:**
 
-Structural defect evidenced in retrieved documents AND governing
-law confirmed as UAE/Saudi/Qatar → DECENNIAL LIABILITY POTENTIALLY
-ENGAGED — flag; state the basis from retrieved documents
-Defect not structural or governing law not confirmed →
-DECENNIAL LIABILITY NOT ENGAGED or CANNOT ASSESS
+Structural defect evidenced AND governing law confirmed AND
+applicable law retrieved from Layer 2b →
+STATUTORY STRUCTURAL LIABILITY POTENTIALLY ENGAGED — flag; state
+the basis from retrieved documents
+Governing law confirmed but applicable law not in Layer 2b →
+CANNOT CONFIRM — APPLICABLE LAW NOT IN WAREHOUSE
 
 ---
 
 ## When to call tools
 
-**Signal:** Particular Conditions design clause not retrieved
+**Signal:** Amendment document design responsibility clause not
+retrieved
 **Action:** `search_chunks` with query "design responsibility
-Contractor Employer particular conditions clause 4 5";
-`get_document` on PC document ID
+contractor employer amendment particular conditions clause";
+`get_document` on amendment document ID
 **Look for:** The design responsibility clause and any standard
 of care amendment
 
-**Signal:** Employer's Requirements not retrieved (Yellow/Silver)
+**Signal:** Design brief or Employer's Requirements not retrieved
+(where contractor designs)
 **Action:** `get_related_documents` with document type "Employer's
-Requirements"; `search_chunks` with query "employer requirements
-performance specification design brief"
-**Look for:** The Employer's Requirements document
+Requirements", "Design Brief", "Performance Specification";
+`search_chunks` with query "employer requirements performance
+specification design brief scope"
+**Look for:** The design brief defining the contractor's design
+obligation
 
 **Signal:** Technical report attributing defect cause referenced
 but not retrieved
@@ -297,45 +298,50 @@ with document type "Technical Report", "Investigation Report"
 **Look for:** The technical report establishing design or
 workmanship causation
 
-**Signal:** Design submittal approval status not confirmed
-**Action:** `get_related_documents` with document type "Submittal
-Register", "Design Submittal"; `search_chunks` with query
-"design approved submittal [element description]"
-**Look for:** The submittal register and approval status for
-the element in question
+**Signal:** Layer 2b design responsibility provisions not retrieved
+**Action:** `search_chunks` with `layer_type = '2b'` and query
+"design responsibility contractor employer standard of care
+fitness for purpose"
+**Look for:** Standard form design responsibility and standard
+of care provisions
 
-**Signal:** Layer 2 FIDIC Clause 5 or decennial liability
-provision not retrieved
-**Action:** `search_chunks` with query "[FIDIC book] [edition]
-clause 5 design Contractor"; `search_chunks` with query
-"UAE Civil Code article 880 decennial liability"
-**Look for:** Standard FIDIC design clause and applicable
-decennial liability provision
+**Signal:** Applicable law for statutory structural liability not
+retrieved
+**Action:** `search_chunks` with `layer_type = '2b'` and query
+"[governing law name] structural defects statutory liability
+construction long stop"
+**Look for:** Applicable law provisions on statutory structural
+liability
 
 ---
 
 ## Always flag — regardless of query
 
-1. **Book type-based design responsibility** — always state
-   which party bears design responsibility and the source document.
-   If UNCONFIRMED: flag that design liability cannot be assessed.
+1. **Design responsibility not confirmed from retrieved documents**
+   — flag; state that design liability cannot be assessed and what
+   is missing from the warehouse.
 
-2. **Standard of care not confirmed from retrieved PC** — flag;
-   state that the applicable standard (fitness for purpose vs
-   reasonable skill and care) cannot be confirmed.
+2. **Governing standard not in Layer 2b** — flag; state that the
+   design responsibility framework and standard of care cannot be
+   confirmed from the warehouse and that confidence is capped at AMBER.
 
-3. **Defect cause not established from retrieved documents** —
-   flag any defect where causation is asserted in the claim but
-   not supported by a retrieved technical document.
+3. **Standard of care not confirmed from retrieved documents** —
+   flag; state that whether fitness for purpose or reasonable skill
+   and care applies cannot be confirmed.
 
-4. **Employer's Requirements deficiency (Yellow/Silver)** — flag
-   any error or ambiguity in the retrieved Employer's Requirements
-   that may engage Clause 1.9 entitlement.
+4. **Defect cause not established from retrieved documents** —
+   flag any defect where causation is asserted in a claim but not
+   supported by a retrieved technical document.
 
-5. **Decennial liability** — flag where structural defect and
-   UAE/Saudi/Qatar governing law are both confirmed from retrieved
-   documents; state the 10-year period and Taking-Over Certificate
-   date.
+5. **Design brief deficiency where contractor bears design
+   responsibility** — flag any error or ambiguity in the retrieved
+   design brief that may engage an entitlement provision in the
+   retrieved amendment document.
+
+6. **Statutory structural liability** — flag where structural defect
+   evidenced AND governing law confirmed AND applicable law retrieved
+   from Layer 2b; state the liability period and handover date from
+   retrieved documents.
 
 ---
 
@@ -344,6 +350,19 @@ decennial liability provision
 ```
 ## Design Liability Assessment
 
+### Evidence Declaration
+Layer 2b retrieved: [YES / NO / PARTIAL]
+Layer 2b source: [standard form name — or NOT RETRIEVED]
+Layer 2b provisions retrieved: [design responsibility, standard of
+care, applicable law — or NONE]
+Layer 2a retrieved: [YES / NO / NOT APPLICABLE]
+Layer 2a source: [policy name — or NOT RETRIEVED / NOT APPLICABLE]
+Layer 1 primary document: [amendment document name and reference —
+or NOT RETRIEVED]
+Layer 1 design brief: [Employer's Requirements or equivalent —
+or NOT RETRIEVED / NOT APPLICABLE]
+Provisions CANNOT CONFIRM: [list — or NONE]
+
 ### Documents Retrieved (Layer 1)
 [List every document retrieved with reference numbers and dates.]
 
@@ -351,27 +370,38 @@ decennial liability provision
 [List every document required but not found. State which steps
 are affected.]
 
-### Layer 2 Reference Retrieved
-[State whether FIDIC Clause 4/5 and decennial liability provisions
-were retrieved. If not: state analytical knowledge applied.]
+### Layer 2b Reference Retrieved
+[State whether design responsibility provisions, standard of care
+provisions, and applicable law were retrieved from Layer 2b.
+If not: state CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE
+and list which analysis steps are affected. Confidence cap: AMBER.]
 
 ### Design Responsibility Allocation
-FIDIC book: [from orchestrator findings]
-Design responsibility: [EMPLOYER / CONTRACTOR — full scope /
-CONTRACTOR — limited to [scope from PC] / SPLIT / CANNOT CONFIRM]
-Source: [PC reference and clause]
-Standard of care: [FITNESS FOR PURPOSE / REASONABLE SKILL AND CARE /
-AMENDED — describe / CANNOT CONFIRM]
-Source: [PC reference]
+Standard form retrieved: [YES — standard form name / NOT IN WAREHOUSE]
+Standard form default: [EMPLOYER DESIGN / CONTRACTOR DESIGN /
+SPLIT — describe / CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE]
+Amendment document retrieved: [YES — reference / NOT RETRIEVED]
+Amendment to design responsibility: [UNAMENDED / AMENDED — describe /
+CANNOT CONFIRM — amendment document not retrieved]
+Confirmed allocation: [EMPLOYER / CONTRACTOR — full scope /
+CONTRACTOR — limited to [scope from amendment] /
+SPLIT — describe / CANNOT CONFIRM]
+Source: [document reference]
+Standard of care: [confirmed standard and source /
+CANNOT CONFIRM — amendment document not retrieved /
+CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE]
+Confidence cap: [GREEN / AMBER — Layer 2b not retrieved /
+GREY — amendment document not retrieved]
 
-### Employer's Requirements Assessment (Yellow/Silver only)
-Retrieved: [YES — reference / NOT FOUND / NOT APPLICABLE — Red Book]
-Deficiency identified: [YES — describe and source / NONE IDENTIFIED /
-CANNOT ASSESS — not retrieved]
-Clause 1.9 engagement: [POTENTIALLY ENGAGED / NOT ENGAGED /
-CANNOT ASSESS / NOT APPLICABLE — Red Book]
+### Design Brief Assessment (where contractor designs)
+Design brief retrieved: [YES — reference / NOT FOUND /
+NOT APPLICABLE — employer designs]
+Deficiency identified: [YES — describe and source /
+NONE IDENTIFIED / CANNOT ASSESS — not retrieved]
+Amendment document entitlement provision: [CONFIRMED — describe /
+NOT FOUND / NOT APPLICABLE]
 
-### Design Submittal Status (Yellow/Silver only)
+### Design Submittal Status (where contractor designs)
 [For each relevant design element:]
 Element: [description]
 Submittal reference: [from retrieved register / NOT FOUND]
@@ -381,20 +411,24 @@ Source: [document reference]
 ### Defect Assessment
 [For each defect in scope:]
 **[Defect description]**
-Evidenced in retrieved documents: [YES — source / NOT INDEPENDENTLY CONFIRMED]
+Evidenced in retrieved documents: [YES — source /
+NOT INDEPENDENTLY CONFIRMED]
 Cause attributed in retrieved documents: [DESIGN / WORKMANSHIP /
 MIXED / NOT DETERMINED FROM RETRIEVED DOCUMENTS]
 Source of causation: [document reference / NOT FOUND]
-Liability allocation: [EMPLOYER — Employer's design / CONTRACTOR —
-Contractor's design / SHARED / CANNOT DETERMINE]
+Liability allocation: [EMPLOYER / CONTRACTOR / SHARED /
+CANNOT DETERMINE]
 
-### Decennial Liability
+### Statutory Structural Liability
 Governing law confirmed: [YES — law and source / CANNOT CONFIRM]
-Structural defect evidenced: [YES — describe and source / NOT EVIDENCED /
-NOT ASSESSABLE]
-Taking-Over Certificate date: [from retrieved TOC / NOT FOUND]
-Assessment: [DECENNIAL LIABILITY POTENTIALLY ENGAGED / NOT ENGAGED /
-CANNOT ASSESS]
+Applicable law in Layer 2b: [YES — provisions retrieved /
+CANNOT CONFIRM — APPLICABLE LAW NOT IN WAREHOUSE]
+Structural defect evidenced: [YES — describe and source /
+NOT EVIDENCED / NOT ASSESSABLE]
+Handover date: [from retrieved completion certificate / NOT FOUND]
+Assessment: [STATUTORY STRUCTURAL LIABILITY POTENTIALLY ENGAGED /
+NOT ENGAGED / CANNOT ASSESS]
+Source: [Layer 2b applicable law reference]
 
 ### FLAGS
 [Each flag with one-sentence forensic implication]
@@ -407,35 +441,40 @@ Summary: [two to three sentences — facts from retrieved documents only]
 ---
 
 ## Analytical framework
-*Reference only — do not apply any design liability position or
-standard of care from this section without first confirming the
-applicable terms from retrieved project documents.*
+*Reference only — do not apply any design responsibility position,
+standard of care, or statutory liability conclusion from this section
+without first confirming the applicable terms from retrieved project
+documents and Layer 2b.*
 
-**FIDIC design responsibility — analytical reference:**
-Red Book: Contractor constructs per Employer's design. No design
-liability unless PC transfers specific elements. Yellow Book:
-Contractor designs and constructs per Employer's Requirements.
-Standard is reasonable skill and care unless PC amends. Silver Book:
-Contractor takes full responsibility for design to meet the
-Employer's Requirements — effectively fitness for purpose. The PC
-may modify any of these positions — retrieve from Layer 1 first.
+**Design responsibility allocation — analytical reference:**
+Standard forms differ fundamentally in how they allocate design
+responsibility. Employer-design forms require the contractor to
+construct in accordance with a design provided by the employer.
+Contractor-design forms (design-and-build) require the contractor
+to design to meet the employer's requirements or performance
+specification. Hybrid forms assign specific design elements to the
+contractor. In all cases, the amendment document may modify the
+standard form default — the actual allocation must be retrieved
+from the contract documents, not assumed from the standard form type.
 
-**Decennial liability — analytical reference:**
-UAE Civil Code Art. 880, Saudi Building Code Implementing
-Regulations, and Qatar Civil Code all impose 10-year joint liability
-on contractors and architects for structural defects. This runs
-in parallel with the FIDIC DNP and cannot be excluded. It applies
-to structural defects only — defects that threaten stability.
-The 10-year period runs from the date of handover (Taking-Over
-Certificate). Confirm the governing law and the Taking-Over
-Certificate date from Layer 1 before applying this framework.
+**Standard of care — analytical reference:**
+Design obligations typically carry either a fitness for purpose
+standard (the design must achieve the required outcome regardless
+of how the designer performed) or a reasonable skill and care
+standard (the designer must perform to professional standards).
+The distinction is significant: fitness for purpose is an absolute
+standard; reasonable skill and care requires assessment of
+professional conduct. The applicable standard depends on the
+governing standard form and any amendment to it. Retrieve before
+applying.
 
-**Yellow Book Clause 1.9 — analytical reference:**
-If the Contractor suffers delay or cost due to an error in the
-Employer's Requirements that an experienced contractor could not
-reasonably have discovered at tender stage, the Contractor is
-entitled to EOT and Cost. This is a Yellow Book-specific provision.
-The Contractor bears the risk of errors discoverable at tender.
-The threshold is what an experienced contractor would have
-identified — a professional standard assessed from the retrieved
-Employer's Requirements.
+**Statutory structural liability — analytical reference:**
+Many legal systems impose statutory long-stop liability on
+contractors and designers for structural defects, operating in
+parallel with the contractual defects liability period. The scope
+(typically structural defects that threaten stability), duration
+(varies by jurisdiction and legislation), and parties liable vary
+by applicable law. This liability typically cannot be excluded by
+contract. The governing law must be confirmed from the retrieved
+contract documents, and the applicable law provision must be
+retrieved from Layer 2b before this framework is applied.
