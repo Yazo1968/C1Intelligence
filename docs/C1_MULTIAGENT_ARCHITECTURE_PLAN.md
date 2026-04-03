@@ -398,6 +398,10 @@ All existing 6 FIDIC reference documents tagged as `2b`,
 - Professional report format (executive summary, 6 domains declared,
   FLAGS, footnote citations)
 - Async query pipeline (query_jobs, Supabase persistence)
+- Round 0 assessment endpoint (`/query/assess`) — synchronous, fast domain triage
+- Round 0 frontend card — domain selection before full analysis
+- Domain filter on full query — caller can specify which domains to run
+- Prompt caching on all Tier 1 orchestrator and Tier 2 SME calls
 - Markdown rendering with remark-gfm
 - 22 SME skill files across 4 domains: Legal (5), Claims (5),
   Schedule & Programme (6), Technical & Construction (6) — all
@@ -596,13 +600,10 @@ parameters (NULL = no filter). Migration file:
 
 ---
 
-### Phase F — Round 0 Routing and Prompt Caching
+### Phase F — Round 0 Routing and Prompt Caching ✅ COMPLETE
 
-**Prerequisite:** Phase A complete
-**Source:** C1_QUERY_IMPROVEMENT_PLAN.md Tasks 3.1–3.3 and 4.1
-
-These tasks are defined in detail in C1_QUERY_IMPROVEMENT_PLAN.md
-and are not repeated here. Execute after Phase A is stable.
+Tasks 3.1–3.3 and 4.1 from C1_QUERY_IMPROVEMENT_PLAN.md v1.3.
+Commits: `0a9886f` (3.1), `9373fd4` (3.2), `7c3faf1` (3.3 + 4.1)
 
 ---
 
@@ -654,8 +655,8 @@ embeddings gemini-embedding-001 3072 dims + pgvector sequential scan
 - `docs/C1_QUERY_IMPROVEMENT_PLAN.md` — v1.1, Phases 3+4 still active
 - `docs/C1_MULTIAGENT_ARCHITECTURE_PLAN.md` — this document
 
-**Supabase state at plan creation:**
-- 12 tables, 11 migrations applied (001–011)
+**Supabase state (current):**
+- 12 tables, 13 migrations applied (001–013)
 - 4 RPC functions returning full document metadata + citation_fields
 - 176 document types with citation_fields set
 - 6 FIDIC reference books, 1,917 chunks (all Layer 2)
