@@ -1,6 +1,6 @@
 # C1 Intelligence — Remaining Work Plan
 
-**Date:** April 2026
+**Date:** 2026-04-03
 **Status:** Both active workstreams complete. This document captures all
 remaining items, their priority, prerequisites, and the exact work required.
 
@@ -12,7 +12,7 @@ Both governing workstreams are fully executed:
 - `C1_QUERY_IMPROVEMENT_PLAN.md` v1.3 — all four phases complete
 - `C1_MULTIAGENT_ARCHITECTURE_PLAN.md` v1.0 — all six phases complete
 
-What remains falls into four categories:
+What remains falls into three categories:
 1. Small deferred tasks — actionable now, no prerequisites missing
 2. External dependency items — blocked on Supabase platform upgrade
 3. Phase 2 product features — larger scope, require separate planning
@@ -24,40 +24,6 @@ What remains falls into four categories:
 
 These were deferred during the build for stated reasons. All conditions
 are now met. Recommended execution order: 1 → 2 → 3 → 4.
-
----
-
-### Item 1 — `round_number` column in `query_log`
-
-**Priority:** HIGH
-**Agent:** DB Architect + Agent Orchestrator
-**Effort:** Small — one migration, one TODO comment removed
-**Condition met:** "DB Architect micro-session after skills complete" — skills are complete
-
-**The problem:**
-The `query_log` table does not record which orchestrator round produced
-each specialist finding. There is a TODO comment in `orchestrator.py`
-noting this gap. The `SpecialistFindings` model has a `round_number`
-field that is populated at runtime but never persisted.
-
-**What to build:**
-
-*DB Architect — migration 014:*
-```sql
-ALTER TABLE query_log
-ADD COLUMN round_number INTEGER;
-```
-
-*Agent Orchestrator — `orchestrator.py`:*
-Remove the TODO comment. Update `write_audit_log` call to pass
-`round_number` from the findings if the audit log schema supports it,
-or log it as part of the `specialist_findings` JSON stored in
-`query_jobs.response`.
-
-**Files:** `supabase/migrations/014_query_log_round_number.sql`,
-`src/agents/orchestrator.py`
-
-**Commit protocol:** One commit after QG PASS.
 
 ---
 
@@ -97,64 +63,6 @@ GET /projects/{project_id}/documents/{document_id}/download
 
 **Commit protocol:** Backend and frontend each committed separately after
 individual QG PASS.
-
----
-
-### Item 3 — Duplicate `## Executive Summary` header
-
-**Priority:** LOW
-**Agent:** Agent Orchestrator
-**Effort:** Trivial — one line change
-**Condition met:** Identified as cosmetic LOW issue during Phase A validation
-
-**The problem:**
-`build_response_text` in `orchestrator.py` emits `## Executive Summary`
-as a section header, then calls `_generate_executive_summary()` which
-returns text that begins with `## EXECUTIVE SUMMARY`. The result is
-a double header in the rendered output.
-
-**What to build:**
-
-In `orchestrator.py`, in `build_response_text`, find the executive
-summary section and remove the manually added `## Executive Summary`
-header. The generated summary from `_generate_executive_summary()`
-already provides its own header.
-
-Alternatively: instruct `_generate_executive_summary()` not to include
-a header in its output (update the system prompt for that Claude call).
-
-**Files:** `src/agents/orchestrator.py`
-
-**Commit protocol:** One commit.
-
----
-
-### Item 4 — SKILLS_STANDARDS.md Section 7 internal numbering
-
-**Priority:** LOW
-**Agent:** Strategic Partner (document edit)
-**Effort:** Trivial — markdown edit
-**Condition met:** Identified as cosmetic LOW during SKILLS_STANDARDS v1.3 update
-
-**The problem:**
-Section 7 of `SKILLS_STANDARDS.md` (Claims & Disputes Domain: Specific
-Standards) has its internal sub-sections numbered 6.1–6.5 because the
-section was renumbered from 6 to 7 but the internal sub-section numbers
-were not updated.
-
-**What to build:**
-In `docs/SKILLS_STANDARDS.md`, find Section 7 and update:
-- `### 6.1 Professional Framework` → `### 7.1 Professional Framework`
-- `### 6.2 Professional Claim Assessment Workflow` → `### 7.2`
-- `### 6.3 Accepted Delay Analysis Methodologies` → `### 7.3`
-- `### 6.4 Required Document Types for Claims Assessment` → `### 7.4`
-- `### 6.5 Output Format for Claims Findings` → `### 7.5`
-
-Also bump version from 1.3 to 1.4 and update the Document Control table.
-
-**Files:** `docs/SKILLS_STANDARDS.md`
-
-**Commit protocol:** One commit.
 
 ---
 
@@ -304,10 +212,7 @@ affected function to add the search path constraint.
 
 | # | Item | Category | Priority | Effort | Prerequisite |
 |---|---|---|---|---|---|
-| 1 | `round_number` in `query_log` | Actionable now | HIGH | Small | None |
 | 2 | Document download endpoint | Actionable now | HIGH | Medium | None |
-| 3 | Duplicate Executive Summary header | Actionable now | LOW | Trivial | None |
-| 4 | SKILLS_STANDARDS.md Section 7 numbering | Actionable now | LOW | Trivial | None |
 | 5 | HNSW/IVFFlat vector index | External dependency | — | Small | pgvector upgrade |
 | 6 | Party ID resolution | Phase 2 | — | Medium-large | Parties API |
 | 7 | Cross-specialist contradiction detection | Phase 2 | — | Medium | — |

@@ -603,6 +603,30 @@ saving on cache hits. Cache lifetime: 5 minutes.
 
 ---
 
+## Session — Item 1, 3, 4 from C1_REMAINING_WORK.md — ✅ Complete
+
+**Date:** 2026-04-03
+**Active agents:** DB Architect (migration SQL file), Agent Orchestrator (Python + markdown), Quality Guardian
+**Quality Guardian:** PASS on all three items individually + independent verification by session coordinator
+
+**Item 1 — `round_number` column in `query_log`:**
+- `supabase/migrations/014_query_log_round_number.sql` — created and committed
+- Migration 014 applied to live Supabase project `bkkujtvhdbroieffhfok` by session coordinator
+- `src/agents/audit.py` — `round_number: int | None = None` added as final parameter to `write_audit_log`; `"round_number": round_number` added to row dict
+- `src/agents/orchestrator.py` — three-line TODO comment removed; `round_number_to_log` computed in `process_query` and passed to both `write_audit_log` call sites; `_grey_response` passes `round_number=None`
+- Commit: feat: Migration 014 — round_number column in query_log
+
+**Item 3 — Duplicate Executive Summary header:**
+- `src/agents/orchestrator.py` — removed `sections.append("## Executive Summary")` and trailing empty string from `build_response_text`. The generated summary from `_generate_executive_summary()` provides its own header. `_grey_response` header untouched (correct — plain text, not generated).
+- Commit: fix: remove duplicate Executive Summary header in build_response_text
+
+**Item 4 — SKILLS_STANDARDS.md Section 7 internal numbering:**
+- `docs/SKILLS_STANDARDS.md` — sub-sections 6.1–6.5 within Section 7 renamed to 7.1–7.5. Version bumped from 1.3 to 1.4. Document Control table updated.
+- Commit: docs: SKILLS_STANDARDS.md v1.4 — fix Section 7 internal numbering
+
+**Database state after this session:** 14 migrations applied (001–014).
+**C1_REMAINING_WORK.md after this session:** Items 1, 3, 4 removed. Item 2 (document download endpoint) is the next HIGH priority actionable item.
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |
