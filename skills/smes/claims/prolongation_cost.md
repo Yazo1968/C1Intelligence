@@ -1,8 +1,20 @@
 # Prolongation Cost
 
-**Skill type:** Contract-type-specific (recoverable heads of claim,
-cost plus profit entitlement, and Engineer/Employer's Representative
-authority differ by book and edition)
+**Skill type:** Contract-type-specific
+Cost entitlement, recoverable heads, and whether Profit is recoverable
+depend on which FIDIC sub-clause the entitlement event falls under.
+This differs by book and edition. The definition of "Cost" in the
+retrieved contract may exclude specific categories. All of these must
+be extracted from the retrieved Particular Conditions — not assumed
+from the standard form.
+**Layer dependency:**
+- Layer 1 — project documents: prolongation cost claim submission;
+  Particular Conditions (cost recovery clause, definition of Cost);
+  Contract Data; site records (payroll, plant hire, establishment
+  invoices); payment certificates; Engineer's determination or response
+- Layer 2 — reference standards: FIDIC cost recovery sub-clause for
+  the confirmed book and edition; the definition of "Cost" in the
+  General Conditions
 **Domain:** Claims & Disputes SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
@@ -10,393 +22,403 @@ authority differ by book and edition)
 
 ## When to apply this skill
 
-Apply this skill when retrieved chunks contain a prolongation cost
-claim, a time-related cost submission, a query about the cost
-consequences of a delay, or a request to assess whether prolongation
-costs are recoverable and properly supported. Also apply when an EOT
-has been awarded or claimed and a corresponding cost claim is expected
-but has not been found in the warehouse.
+Apply when retrieved chunks contain a prolongation cost claim, a
+time-related cost submission, or a query about the cost consequences
+of a delay. Apply when an EOT has been claimed or awarded and a
+corresponding cost claim is expected but has not been found.
 
 ---
 
 ## Before you begin
 
-**Step 1 — Establish the governing contract type and entitlement basis.**
-Read the Legal orchestrator findings and the EOT quantification
-findings if available. Extract:
-- FIDIC book and edition
-- The delay event type: Employer Risk Event (EOT + Cost), Neutral
-  Event (EOT only — no cost), or Contractor Risk Event (no entitlement)
-- Whether the Particular Conditions amend the cost recovery provisions
-  for the relevant clause
+### Foundational requirements
 
-Cost entitlement is conditional on the event type. A prolongation
-cost claim for a Neutral Event has no contractual basis. Do not
-assess quantum before confirming entitlement.
+Read the invoking orchestrator findings, notice_compliance findings,
+and eot_quantification findings.
 
-**Step 2 — Extract the applicable cost recovery clause from the
-Particular Conditions.**
-The cost recovery clause varies by the entitlement event. Extract
-the clause from the project's Particular Conditions — do not apply
-General Conditions defaults. Key clauses to identify:
-- The clause under which the EOT was claimed (this determines whether
-  Cost, or Cost plus Profit, is recoverable)
-- Any amendment to the definition of "Cost" in the Particular
-  Conditions — GCC Particular Conditions sometimes exclude specific
-  categories of cost from the definition
+From the invoking orchestrator and eot_quantification extract:
+- Confirmed FIDIC book and edition
+- The delay event type as established from retrieved documents:
+  Employer Risk Event (EOT + Cost entitlement), Neutral Event
+  (EOT only — no cost entitlement), or Contractor Risk Event
+  (no entitlement)
+- The EOT period claimed and any EOT period confirmed or awarded
 
-**Step 3 — Establish the prolongation period.**
-The prolongation period is the period of EOT for which the cost
-claim is made. Extract from the EOT findings:
-- The EOT period claimed
-- The EOT period awarded or agreed (if any)
-- Whether the prolongation cost claim matches the EOT period or
-  differs — a mismatch must be flagged
+**Cost entitlement is conditional on the event type established from
+retrieved documents.** If the event type has not been confirmed from
+retrieved Particular Conditions: state CANNOT CONFIRM cost entitlement
+basis. Do not assess quantum.
 
-**Step 4 — Identify the cost methodology used.**
-Actual cost (supported by site records) is the preferred and most
-defensible methodology. Pre-agreed rates (where the contract
-provides them) are also acceptable. Global claim is a last resort
-only. Identify which methodology has been applied before assessing
-the quantum.
+If the event is a Neutral Event from retrieved documents: state NO
+COST ENTITLEMENT under the applicable clause as retrieved. Do not
+proceed with quantum assessment.
+
+From notice_compliance:
+- Time bar status — if POTENTIALLY TIME-BARRED: flag at the start
+
+**If book type is UNCONFIRMED:** State CANNOT ASSESS cost entitlement.
+The recoverable heads and the definition of Cost differ by book.
+
+### Layer 1 documents to retrieve (project-specific)
+
+Call `search_chunks` and `get_related_documents` to retrieve:
+- The prolongation cost claim submission
+- The Particular Conditions — specifically the cost recovery clause
+  and the definition of "Cost"
+- The Contract Data — for any prescribed cost parameters
+- Site records covering the prolongation period:
+  - Payroll records and staff deployment schedules
+  - Plant hire records and plant returns
+  - Site establishment invoices (accommodation, utilities, welfare)
+- Payment certificates for the prolongation period
+- The Engineer's determination or response to the cost claim
+
+**If the Particular Conditions are not retrieved:**
+State CANNOT CONFIRM the cost recovery clause, the definition of Cost,
+or whether Profit is recoverable. Do not assess any head of claim.
+
+**If no contemporaneous site records are retrieved:**
+State that the cost claim has not been independently verified from
+warehouse records. Flag this for every head of claim affected.
+
+**For each document retrieved:** State its reference number and the
+period it covers.
+
+### Layer 2 documents to retrieve (reference standards)
+
+After confirming book type and the cost entitlement clause, call
+`search_chunks` to retrieve from Layer 2:
+- The specific cost recovery sub-clause for the confirmed book and
+  edition (the clause under which the EOT event falls)
+- The definition of "Cost" in the FIDIC General Conditions for the
+  confirmed book and edition
+
+**Purpose:** To establish what the standard FIDIC clause provides
+so that any Particular Conditions amendment can be assessed against
+it. The cost recovery terms to apply are those in the retrieved
+Particular Conditions — not the Layer 2 standard text.
 
 ---
 
 ## Analysis workflow
 
-**Step 1 — Retrieve all prolongation cost documents.**
-Call `get_related_documents` with document_type "Prolongation Cost
-Claim". Call `search_chunks` with query "prolongation cost time-related
-preliminaries site overhead staff costs". Compile all cost claim
-documents.
+### Step 1 — Confirm the cost recovery clause and definition of Cost
+*Contract-type-specific*
 
-**Step 2 — Assess each head of claim.**
-Prolongation cost claims typically comprise the following heads.
-Assess each separately — recoverable heads differ by contract type
-and entitlement clause:
+From the retrieved Particular Conditions:
+- Identify the sub-clause under which the entitlement event falls
+  (as established in eot_quantification findings)
+- Confirm whether that sub-clause provides for Cost only, or
+  Cost plus Profit — extract from the retrieved PC
+- Retrieve the definition of "Cost" from the retrieved Particular
+  Conditions or General Conditions — confirm whether financing
+  charges are included or excluded
 
-*Time-related site overheads:* Staff salaries and on-costs for
-personnel retained on site during the prolongation period. Requires:
-payroll records, staff deployment schedules, evidence that staff
-were actually retained (not demobilised) during the period.
+**The definition of Cost and the recoverable heads are the version
+in the retrieved Particular Conditions.** Do not apply the General
+Conditions definition without confirming it has not been amended.
+If the Particular Conditions have not been retrieved: state CANNOT
+CONFIRM the definition of Cost or whether Profit is recoverable.
 
-*Site establishment costs:* Accommodation, temporary facilities,
-utilities, welfare facilities retained during the prolongation
-period. Requires: invoices, hire agreements, utility bills for
-the specific period.
+### Step 2 — Confirm the prolongation period
+*Contract-type-agnostic*
 
-*Plant and equipment:* Time-related costs for plant retained on
-site during the prolongation period. Requires: plant hire records,
-ownership cost calculations where Contractor-owned, evidence of
-retention on site. Idle plant rates differ from working rates —
-check whether the claim applies the correct rate.
+The prolongation period is the period of EOT for which the cost claim
+is made. From retrieved documents:
+- What period does the cost claim cover?
+- What is the EOT period claimed (from eot_quantification findings)?
+- What is the EOT period awarded or agreed (if any, from retrieved
+  determination)?
 
-*Finance charges:* Interest on capital employed or financing costs
-incurred as a result of delayed payment caused by the prolongation.
-Only recoverable where included in the definition of "Cost" under
-the applicable FIDIC edition and not excluded by Particular
-Conditions. Check the definition of "Cost" in the contract.
+Compare the cost claim period against the established EOT period.
 
-*Head office overhead contribution:* The contribution to Contractor's
-head office overheads attributable to the prolonged period. Often
-calculated using the Hudson formula, Emden formula, or Eichleay
-formula. These formulaic approaches are used where actual head
-office overhead records are not available — they are less preferred
-than actual cost evidence. Identify which formula is used and
-whether the inputs are supported by audited accounts.
+**If the cost claim covers a longer period than the established EOT:**
+Flag — the excess period has no established time entitlement
+foundation. Do not assess quantum for the excess period.
 
-*Profit:* Recoverable only where the entitlement clause provides
-for Cost plus Profit — not all clauses do. Verify from the
-applicable clause extracted from the Particular Conditions.
+**If the EOT period has not been confirmed from retrieved documents:**
+State CANNOT CONFIRM whether the prolongation cost period is within
+the established entitlement period.
 
-**Step 3 — Cross-check against contemporaneous records.**
-For each head of claim, verify that the claimed costs are
-evidenced by contemporaneous records covering the specific
-prolongation period. Compare:
-- Claimed staff costs vs. payroll records and site resource schedules
-- Claimed plant costs vs. plant hire records
-- Claimed establishment costs vs. invoices and delivery records
+### Step 3 — Assess each head of claim
+*Contract-type-agnostic for the assessment framework;
+contract-type-specific for recoverability*
 
-Flag any head of claim where the supporting records cover a
-different period, a different scope, or are absent.
+For each head of claim, assess two questions:
+(a) Is it recoverable under the confirmed cost recovery clause?
+(b) Is it evidenced by retrieved documents?
 
-**Step 4 — Assess the prolongation period alignment.**
-Compare the prolongation cost period claimed against the EOT period
-established in eot_quantification findings. Flag any mismatch:
-- Cost claimed for a longer period than the EOT — not supportable
-  without separate entitlement for the excess period
-- Cost claimed for a shorter period than the EOT — may indicate
-  partial claim only, note this
-- Cost claimed for a period that includes concurrent Contractor
-  delay — the recoverable period may be reduced; see decision
-  framework
+**Assess only the heads of claim that appear in the retrieved claim
+submission.** Do not introduce heads of claim that are not in the
+retrieved documents.
 
-**Step 5 — Assess the global claim position.**
-If the claim is presented as a global claim (total cost minus
-contract sum without individual causation links), assess whether
-the global claim threshold has been satisfied:
-- Is it truly impossible to link individual cost items to
-  individual causation events?
-- Is the aggregate quantum supported by records?
-- Has the Contractor demonstrated that the global loss resulted
-  from Employer default?
+**Time-related site overheads (staff costs):**
+Recoverability: from the definition of Cost in retrieved PC.
+Evidence: retrieve payroll records and staff deployment schedules
+for the prolongation period. If not retrieved: state CANNOT VERIFY
+from warehouse documents. Do not assess quantum without records.
 
-Flag a global claim where individual causation links could
-reasonably have been established. Global claims face significant
-credibility challenges in GCC arbitration.
+**Site establishment costs:**
+Recoverability: from definition of Cost in retrieved PC.
+Evidence: retrieve invoices and hire agreements for the prolongation
+period. If not retrieved: state CANNOT VERIFY.
 
-**Step 6 — Assess the Engineer's or Employer's Representative's
-response.**
-Retrieve any determination or response to the prolongation cost
-claim. Compare awarded costs against claimed costs. Identify
-reasons for reduction or rejection.
+**Plant and equipment:**
+Recoverability: from definition of Cost in retrieved PC.
+Evidence: retrieve plant hire records and plant returns for the period.
+Note: idle plant rates differ from working plant rates — identify
+which rate is applied in the claim and whether it is consistent with
+the retrieved records.
+
+**Finance charges:**
+Recoverability: from the definition of Cost in the retrieved
+Particular Conditions or General Conditions. Finance charges are
+only recoverable if expressly included in the definition — confirm
+from retrieved documents. Do not apply any position on finance
+charge recoverability without retrieved confirmation.
+
+**Head office overhead:**
+Recoverability: from definition of Cost in retrieved PC — confirm
+whether overhead is expressly included or excluded.
+Evidence and methodology: identify from the retrieved claim document
+whether actual costs or a formula (Hudson, Emden, or Eichleay) is
+used. For actual costs: retrieve audited accounts or overhead records.
+For formula: retrieve the inputs used (annual turnover, contract sum,
+contract period). If formula inputs are not supported by retrieved
+audited accounts: state that the inputs cannot be verified from
+warehouse documents.
+
+**Profit:**
+Recoverability: only if the retrieved cost recovery clause expressly
+provides for Cost plus Profit. If the retrieved clause provides for
+Cost only: state NOT RECOVERABLE under the retrieved clause. Do not
+assess Profit quantum if the clause does not support it.
+
+### Step 4 — Cross-check records against the claimed period
+*Contract-type-agnostic*
+
+For each head of claim, verify that the retrieved records cover the
+specific prolongation period claimed. If the retrieved records cover
+a different period, different scope, or are absent for the claimed
+period: state this specifically. Do not accept a period that is not
+confirmed from retrieved records.
+
+### Step 5 — Assess concurrent delay adjustment
+*Contract-type-agnostic*
+
+From eot_quantification findings, identify whether any concurrent
+Contractor-caused delay was identified during the prolongation period.
+
+If concurrent delay was identified: state the affected period and
+note that the recoverable cost period may be reduced for that period.
+Do not calculate a reduced quantum — state the concurrent delay period
+and its potential effect on cost entitlement from the retrieved
+eot_quantification analysis.
+
+### Step 6 — Assess the Engineer's or Employer's Representative's response
+*Contract-type-specific*
+
+From the retrieved determination or response:
+- What amount was awarded (if any)?
+- What reasons were given for reduction or rejection?
+
+If not retrieved after searching: state CANNOT ASSESS the contract
+administrator's position on cost.
 
 ---
 
 ## Classification and decision rules
 
-**Entitlement confirmation:**
+**Cost entitlement confirmed:**
 
-Delay event is Employer Risk Event AND cost recovery clause
-confirmed from Particular Conditions:
-→ Proceed with quantum assessment
-
-Delay event is Neutral Event:
-→ **NO COST ENTITLEMENT** — EOT only
-→ Flag and do not assess quantum further unless the claim
-  separately establishes a cost entitlement basis
-
-Delay event is Contractor Risk Event:
-→ **NO ENTITLEMENT** — flag and cease quantum assessment
-
-Entitlement clause not confirmed from Particular Conditions:
-→ Flag: cost recovery basis cannot be confirmed — assessment
-  is conditional
+Event type confirmed as Employer Risk Event from retrieved PC AND
+cost recovery clause confirmed from retrieved PC → PROCEED with
+quantum assessment
+Event type confirmed as Neutral Event from retrieved PC →
+NO COST ENTITLEMENT — flag; do not assess quantum
+Event type not confirmed (PC not retrieved) →
+CANNOT CONFIRM COST ENTITLEMENT — flag
 
 **Profit recoverability:**
 
-Applicable clause provides for "Cost plus Profit":
-→ Profit head of claim is recoverable in principle — assess quantum
+Retrieved clause provides Cost plus Profit →
+PROFIT RECOVERABLE IN PRINCIPLE — assess quantum
+Retrieved clause provides Cost only →
+PROFIT NOT RECOVERABLE under retrieved clause — flag if claimed
+Clause not retrieved → CANNOT CONFIRM Profit recoverability
 
-Applicable clause provides for "Cost" only:
-→ Profit is not recoverable under this clause
-→ Flag if profit is included in the claim
+**Head of claim evidence:**
 
-**Head office overhead formula:**
+Head evidenced by retrieved records covering the prolongation period
+→ SUPPORTED — state quantum and source documents
+Head partially evidenced (records cover part of the period) →
+PARTIALLY SUPPORTED — state what is evidenced and what is not
+Head not evidenced by any retrieved records →
+CANNOT VERIFY FROM WAREHOUSE DOCUMENTS — flag; state what is missing
 
-Actual head office overhead records provided:
-→ Preferred — assess against audited accounts
+**Formula methodology:**
 
-Hudson, Emden, or Eichleay formula used without actual records:
-→ Acceptable as secondary methodology — flag the limitation
-→ Verify formula inputs are supported (contract sum, contract
-  period, annual turnover from audited accounts)
-
-**Concurrent delay cost period:**
-
-Concurrent Contractor-caused delay identified during the
-prolongation period:
-→ The recoverable cost period may be reduced for the concurrent
-  period — flag and state the affected period
-→ Do not resolve the quantum — state both positions
+Formula inputs supported by retrieved audited accounts →
+VERIFIABLE — assess inputs against retrieved accounts
+Formula inputs not supported by retrieved audited accounts →
+INPUTS NOT VERIFIED FROM WAREHOUSE DOCUMENTS — flag
 
 ---
 
 ## When to call tools
 
-**Signal:** Staff costs claimed but no payroll records or resource
-schedule retrieved.
-**Action:** Call `search_chunks` with query "resource schedule
-staff deployment site personnel [prolongation period dates]".
-Call `get_related_documents` with document_type "Progress Report"
-for the prolongation period.
-**Look for:** Any document recording actual staff presence on site
-during the prolongation period.
+**Signal:** Payroll records not retrieved for the prolongation period
+**Action:** `search_chunks` with query "payroll resource schedule
+staff site [prolongation period dates]"; `get_related_documents`
+with document type "Progress Report" for the period
+**Look for:** Staff presence records for the prolongation period
 
-**Signal:** Plant costs claimed but no hire records retrieved.
-**Action:** Call `search_chunks` with query "plant hire equipment
-[prolongation period dates]".
-**Look for:** Hire agreements, plant returns, or site records
-showing plant on site during the period.
+**Signal:** Plant hire records not retrieved
+**Action:** `search_chunks` with query "plant hire equipment
+[prolongation period dates]"
+**Look for:** Hire agreements, plant returns, or site records showing
+plant retained during the period
 
-**Signal:** Finance charges claimed but the definition of "Cost"
-in the contract has not been retrieved.
-**Action:** Call `search_chunks` with query "definition cost
-financing charges interest" and call `get_document` on the
-contract agreement or General Conditions document.
-**Look for:** The definition of "Cost" and whether financing
-charges are expressly included or excluded.
+**Signal:** Definition of Cost not found in retrieved PC
+**Action:** `get_document` on the Particular Conditions document ID;
+`search_chunks` with query "definition cost financing charges overhead"
+**Look for:** The definition of Cost in the PC or General Conditions
 
-**Signal:** Head office overhead claimed using a formula but
-no audited accounts retrieved.
-**Action:** Call `search_chunks` with query "audited accounts
-annual turnover overhead".
-**Look for:** Audited financial statements supporting the
-formula inputs. If absent, flag the gap.
+**Signal:** Head office overhead formula used but no audited accounts
+retrieved
+**Action:** `search_chunks` with query "audited accounts annual
+turnover overhead"
+**Look for:** Audited financial statements supporting the formula inputs
+
+**Signal:** Layer 2 cost recovery clause not retrieved
+**Action:** `search_chunks` with query "[FIDIC book] [edition]
+clause [number] cost profit [subject]"
+**Look for:** Standard FIDIC text for the cost recovery clause
 
 ---
 
 ## Always flag — regardless of query
 
-**Flag 1 — Cost claim for Neutral Event or Contractor Risk Event.**
-If the entitlement basis established in EOT findings shows a
-Neutral Event or Contractor Risk Event, flag immediately that
-no cost entitlement exists under the applicable clause. State
-the clause and the event classification.
+1. **Cost claim for Neutral Event or Contractor Risk Event** — state
+   the event classification from retrieved documents and that no cost
+   entitlement exists under the applicable clause as retrieved.
 
-**Flag 2 — Prolongation period exceeds awarded or agreed EOT.**
-If the cost claim covers a longer period than the EOT awarded
-or agreed, flag the excess. The cost claim for the excess period
-has no established time entitlement foundation.
+2. **Prolongation period exceeds established EOT period** — state
+   the excess period and that no time entitlement foundation has been
+   established for it.
 
-**Flag 3 — Profit claimed where clause provides Cost only.**
-If the entitlement clause does not include Profit and the claim
-includes a profit head, flag this as non-recoverable under the
-applicable clause.
+3. **Profit claimed where retrieved clause provides Cost only** —
+   state the clause reference and the Cost-only limitation from
+   retrieved documents.
 
-**Flag 4 — No contemporaneous cost records for any head of claim.**
-If the claim is not supported by any contemporaneous records
-for a material head, flag this as a credibility and evidential
-risk. A prolongation cost claim built entirely on retrospective
-schedules without site records is forensically weak.
+4. **No contemporaneous records for any head of claim** — state the
+   absence and its evidential impact.
 
-**Flag 5 — Global claim presented where individual links are
-possible.**
-If the claim is structured as a global claim but the documents
-in the warehouse would permit individual causation links to be
-established, flag this as a methodological weakness. State
-which documents support individual linkage.
+5. **Formula inputs not verified from retrieved audited accounts** —
+   state which inputs cannot be confirmed and that the formula result
+   cannot be verified.
 
 ---
 
 ## Output format
+
 ```
 ## Prolongation Cost Assessment
 
+### Documents Retrieved (Layer 1)
+[List every document retrieved with reference numbers and dates.]
+
+### Documents Not Retrieved
+[List every document required but not found. State which steps
+are affected.]
+
+### Layer 2 Reference Retrieved
+[State whether the cost recovery clause and definition of Cost were
+retrieved from Layer 2. If not: state analytical knowledge applied.]
+
 ### Entitlement Basis
-- FIDIC book and edition: [extracted]
-- Delay event type: [Employer Risk / Neutral / Contractor Risk]
-- Applicable cost recovery clause: [clause from Particular Conditions]
-- Profit recoverable: [YES / NO — cite clause]
-- Finance charges within Cost definition: [YES / NO / CANNOT CONFIRM]
-- Particular Conditions amendments to cost provisions: [list or NONE FOUND]
+Event type: [Employer Risk Event / Neutral Event / Contractor Risk Event /
+CANNOT CONFIRM — PC not retrieved]
+Cost recovery clause: [from retrieved PC / CANNOT CONFIRM]
+Profit recoverable: [YES — clause reference / NO — Cost only / CANNOT CONFIRM]
+Finance charges in Cost definition: [YES / NO / CANNOT CONFIRM]
+Source: [PC document reference]
 
 ### Prolongation Period
-- EOT claimed: [days and period]
-- EOT awarded/agreed: [days and period or NOT ESTABLISHED]
-- Cost claim period: [dates]
-- Alignment: [CONSISTENT / MISMATCH — detail]
+EOT claimed: [days and period from eot_quantification]
+EOT established or awarded: [days and period / NOT CONFIRMED]
+Cost claim period: [dates from retrieved claim]
+Alignment: [CONSISTENT / MISMATCH — describe excess / CANNOT CONFIRM]
 
 ### Heads of Claim Assessment
 
-| Head | Amount claimed | Records present | Period covered | Assessment |
-|---|---|---|---|---|
-| Site staff | [amount] | [YES/PARTIAL/NO] | [dates] | [SUPPORTABLE/ISSUES/NOT SUPPORTABLE] |
-| Site establishment | [amount] | [YES/PARTIAL/NO] | [dates] | [assessment] |
-| Plant and equipment | [amount] | [YES/PARTIAL/NO] | [dates] | [assessment] |
-| Finance charges | [amount] | [YES/PARTIAL/NO] | [dates] | [assessment] |
-| Head office overhead | [amount] | [YES/PARTIAL/NO] | [dates] | [assessment] |
-| Profit | [amount] | [YES/PARTIAL/NO] | [dates] | [assessment] |
-| **Total** | [total] | | | |
+| Head | Amount claimed | Records retrieved | Period covered by records | Recoverability | Assessment |
+|---|---|---|---|---|---|
+| Site staff | [amount] | [YES/PARTIAL/NO] | [dates or N/A] | [from retrieved PC] | [SUPPORTED/PARTIAL/CANNOT VERIFY] |
+| Site establishment | [amount] | [YES/PARTIAL/NO] | [dates or N/A] | [from retrieved PC] | [assessment] |
+| Plant and equipment | [amount] | [YES/PARTIAL/NO] | [dates or N/A] | [from retrieved PC] | [assessment] |
+| Finance charges | [amount] | [YES/PARTIAL/NO] | [dates or N/A] | [from retrieved PC] | [assessment] |
+| Head office overhead | [amount] | [YES/PARTIAL/NO] | [dates or N/A] | [from retrieved PC] | [assessment] |
+| Profit | [amount] | [YES/PARTIAL/NO] | [dates or N/A] | [from retrieved PC] | [assessment] |
+| Total | [total] | | | | |
 
 ### Findings by Head of Claim
-
-**[Head of claim]**
+[For each head:]
+**[Head name]**
 Amount claimed: [amount]
-Entitlement basis: [clause]
-Methodology: [actual cost / formula / global]
-Records: [description of supporting documents]
-Period covered by records: [dates]
-Assessment: [SUPPORTABLE / PARTIALLY SUPPORTABLE / NOT SUPPORTABLE /
-CANNOT ASSESS]
-Finding: [specific conclusion with source attribution]
+Recoverability: [from retrieved clause / CANNOT CONFIRM]
+Methodology: [actual cost / formula — name / not stated in retrieved documents]
+Records retrieved: [description — period and document references]
+Assessment: [SUPPORTED / PARTIALLY SUPPORTED / CANNOT VERIFY FROM WAREHOUSE]
+Finding: [from retrieved documents only]
 
 ### Concurrent Delay Adjustment
-[Period affected and cost impact, or NOT APPLICABLE]
+[From eot_quantification findings — period and potential cost impact,
+or NOT IDENTIFIED / NOT APPLICABLE]
 
-### Engineer's / Employer's Representative's Position
-Amount awarded: [amount or NOT FOUND]
-Reasons for reduction: [summary or NOT FOUND]
-Source document: [reference]
+### Contract Administrator Position
+Amount awarded: [from retrieved determination / NOT FOUND IN WAREHOUSE]
+Reasons: [from retrieved determination / NOT FOUND]
+Source: [document reference]
 
 ### FLAGS
-[Each flag with one-sentence implication]
+[Each flag with one-sentence forensic implication]
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / RED / GREY]
-Summary: [two to three sentences]
+Summary: [two to three sentences — facts from retrieved documents only]
 ```
 
 ---
 
-## Domain knowledge and standards
+## Analytical framework
+*Reference only — do not apply any recoverability position, formula,
+or cost definition from this section without first confirming it from
+retrieved project documents.*
 
-### Cost recoverability by clause — contract-type-specific
+**FIDIC Cost definition — analytical reference:**
+The FIDIC General Conditions define "Cost" to include all expenditure
+reasonably incurred including overhead but generally excluding profit.
+Financing charges are included in the 2017 editions and may be
+included in 1999 editions depending on the precise definition wording.
+GCC Particular Conditions frequently amend the definition — Abu Dhabi
+government projects sometimes exclude or cap overhead recovery; Saudi
+Arabia government contracts may exclude financing charges. The
+definition in the retrieved Particular Conditions governs.
 
-The heads of claim recoverable depend on the clause under which
-the EOT event falls. The key distinction is whether the clause
-provides for Cost only, or Cost plus Profit. This must always
-be extracted from the Particular Conditions — do not apply
-General Conditions defaults.
+**Head office overhead formula — analytical reference:**
+Hudson formula uses the overhead percentage from the contract.
+Emden formula uses actual audited accounts — more defensible where
+accounts are available. Eichleay formula is US-developed and faces
+challenge in GCC proceedings. Identify which formula is used from
+the retrieved claim documents and verify inputs against retrieved
+financial records. A formula applied with unverified inputs cannot
+be assessed.
 
-Under all three FIDIC books: "Cost" is defined in the contract.
-The definition in the General Conditions typically includes
-all expenditure reasonably incurred by the Contractor, including
-overheads but excluding profit. Financing charges are expressly
-included in the 2017 editions and included in the 1999 editions
-where the definition encompasses "all expenditure". Verify
-the definition in the project's contract documents.
-
-**Silver Book specific:** The Silver Book allocates most risk
-to the Contractor. Employer Risk Events are narrower. Cost
-recovery under the Silver Book requires careful verification
-against the Particular Conditions — many Silver Book projects
-in the GCC have Particular Conditions that further restrict
-the already narrow Employer Risk Event list.
-
-### Head office overhead formulae
-
-**Hudson formula:** (Head office overhead percentage from the
-contract / 100) x (Contract sum / Contract period) x Delay period.
-Inputs: the percentage must come from the contract documents
-or the Contractor's priced bill — not assumed.
-
-**Emden formula:** (Head office overhead + Profit from audited
-accounts / Total turnover from audited accounts) x (Contract
-sum / Contract period) x Delay period.
-More defensible than Hudson where actual accounts are available.
-
-**Eichleay formula:** US-developed, less commonly accepted in
-GCC proceedings. Flag if used — it may face challenge before
-ICC, DIAC, and ADCCAC tribunals.
-
-All formula inputs must be verified against source documents.
-A formula applied with assumed or unverified inputs is
-challengeable on its face.
-
-### GCC-specific practice
-
-UAE: Abu Dhabi government projects frequently have Particular
-Conditions that exclude or cap head office overhead recovery.
-Extract the definition of Cost and any overhead limitation from
-the Particular Conditions — do not assume the General Conditions
-definition applies.
-
-Saudi Arabia: government contracts often limit the categories
-of recoverable cost and may exclude financing charges entirely.
-Always verify against the Particular Conditions.
-
-Qatar: on major infrastructure projects, cost substantiation
-requirements are high — the Engineer or Employer's Representative
-will typically require audited records, not formulaic calculations.
-A claim submitted without audited support will face rejection
-on evidential grounds regardless of entitlement.
-
-Finance charges: in all GCC jurisdictions, the recoverability
-of finance charges as part of "Cost" rather than as a separate
-interest claim is significant because interest claims face
-restrictions under Islamic finance principles in Saudi Arabia
-and, to a lesser extent, in the UAE and Qatar. A claim for
-finance charges within the definition of Cost is generally
-more enforceable than a standalone interest claim in GCC
-proceedings.
+**Silver Book cost entitlement — analytical reference:**
+The Silver Book allocates most risk to the Contractor. Employer Risk
+Events are narrower than in the Red or Yellow Book. Cost recovery
+under the Silver Book requires careful verification against the
+retrieved Particular Conditions — the standard form Employer Risk
+Event list is already narrow and GCC Silver Book Particular Conditions
+frequently restrict it further.

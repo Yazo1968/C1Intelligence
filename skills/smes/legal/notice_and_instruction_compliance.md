@@ -1,395 +1,440 @@
-# Notice and Instruction Compliance — Legal & Contractual Specialist
+# Notice and Instruction Compliance
+
+**Skill type:** Mixed
+- Contract-type-specific: notice requirements, time bar periods, and
+  routing differ by FIDIC book and edition; Particular Conditions
+  amendments to notice provisions are project-specific
+- Contract-type-agnostic: the requirement to verify form, timing,
+  routing, and content compliance applies regardless of book type
+**Layer dependency:**
+- Layer 1 — project documents: the specific notice or instruction
+  under assessment; Particular Conditions (Clause 1.3 and notice
+  clause amendments); Contract Data (notice periods, addresses);
+  contemporaneous records establishing awareness date
+- Layer 2 — reference standards: FIDIC Clause 1.3 (notices) and the
+  relevant notice clause (Clause 20.1 for 1999 / Clause 20.2.1 for
+  2017) for the confirmed book and edition
+**Domain:** Legal & Contractual SME
+**Invoked by:** Legal orchestrator
+
+---
 
 ## When to apply this skill
 
-Apply this skill when a query concerns whether a notice or instruction was validly
-issued — including Notice of Claim, Notice of Delay, Engineer's Instruction, variation
-instruction, notice of suspension, termination notice, or any other contractual
-communication whose validity depends on form, timing, or routing. Also apply when
-assessing whether a time bar has been triggered, whether an instruction was within
-the issuing party's authority, or whether a communication constitutes a valid notice
-under the contract.
+Apply when a query concerns whether a notice or instruction was validly
+issued — including Notice of Claim, Notice of Delay, Engineer's
+Instruction, variation instruction, suspension notice, termination
+notice, or any contractual communication whose validity depends on
+form, timing, or routing. Apply when assessing whether a time bar has
+been triggered or whether a communication constitutes a valid notice.
 
 ---
 
 ## Before you begin
 
-This is a Round 1 skill. There are no upstream specialist findings to read.
+### Foundational requirements
+Read contract_assembly and engineer_identification findings first.
 
-The following must be established from prior skill outputs before this skill runs:
-
-From contract_assembly.md:
-- FIDIC book type and edition
-- Particular Conditions Clause 1.3 amendments (notice form and method requirements)
+From contract_assembly extract:
+- Confirmed FIDIC book and edition — required before any notice
+  clause reference can be applied
+- Particular Conditions amendments to Clause 1.3 and to the notice
+  clause (Clause 20.1 / 20.2.1 or equivalent)
 - Governing law and jurisdiction
 
-From engineer_identification.md:
+From engineer_identification extract:
 - Identity of the Engineer or Employer's Representative
-- Notice recipient for Contractor claims
-- Split-role pattern (if any) and which entity receives which category of notice
-- Engineer independence status
+- Notice routing — which entity receives which category of notice
+- Split-role pattern (if any)
 
-If either prior skill output is unavailable, retrieve the Particular Conditions and
-Engineer appointment documents from the warehouse before proceeding.
+**If book type is UNCONFIRMED:** State CANNOT ASSESS notice clause
+requirements. The applicable notice clause number, time period, and
+formal requirements depend on the confirmed book type and edition.
+
+### Layer 1 documents to retrieve (project-specific)
+
+**Critical — retrieve before any notice assessment begins:**
+- The Particular Conditions (Clause 1.3 and the notice clause)
+- The Contract Data / Appendix to Tender (notice addresses, prescribed
+  periods, prescribed methods)
+- The notice or instruction under assessment (full document)
+- Contemporaneous records for the period around the event (site
+  diaries, progress reports, correspondence, RFIs) — required to
+  assess the awareness date independently of the notice
+
+**If the Particular Conditions are not retrieved:**
+State CANNOT CONFIRM the notice period, the required delivery method,
+or the prescribed form. Do not apply any period or requirement as the
+applicable standard. Every time bar calculation requires the notice
+period to be extracted from the retrieved Particular Conditions.
+
+**If the Contract Data is not retrieved:**
+State CANNOT CONFIRM the prescribed notice addresses or periods stated
+in the Contract Data.
+
+**If the notice document itself is not retrieved:**
+State CANNOT ASSESS notice compliance. Do not assess a notice that
+has not been retrieved.
+
+### Layer 2 documents to retrieve (reference standards)
+
+After confirming book type, call `search_chunks` to retrieve from
+Layer 2:
+- FIDIC Clause 1.3 (notices) for the confirmed book and edition
+- FIDIC Clause 20.1 (1999) or Clause 20.2.1 (2017) for the confirmed
+  book and edition
+
+**Purpose:** To establish the standard FIDIC notice requirements so
+that the Particular Conditions amendment position can be assessed.
+The notice period and formal requirements to apply are those in the
+Particular Conditions, not the Layer 2 standard form defaults. Layer
+2 provides the baseline for comparison only.
 
 ---
 
 ## Analysis workflow
 
-**Step 1 — Establish the applicable notice requirements**
+### Step 1 — Establish the applicable notice requirements for this project
+*Contract-type-specific*
 
-From the Particular Conditions and Contract Data, identify the notice requirements
-that govern this project. FIDIC Clause 1.3 sets the baseline — all notices must be
-in writing. The 2017 editions significantly tightened these requirements.
+From the retrieved Particular Conditions and Contract Data:
 
-FIDIC 1999 Clause 1.3 — notices must be:
-- In writing
-- Delivered by hand, sent by mail, or transmitted by agreed system
-- Sent to the address stated in the Appendix to Tender
+**(a) Notice period:**
+Extract the notice period for Contractor claims from the Particular
+Conditions amendment to the notice clause (Clause 20.1 / 20.2.1 or
+the equivalent as amended). This is the period within which the
+Contractor must give notice after becoming aware of the event.
 
-FIDIC 2017 Clause 1.3 — notices must satisfy five formal requirements:
-- In writing
-- Signed by the issuing party's representative (original signature or electronic
-  from the assigned address)
-- Identified as a Notice (capital N — the defined term)
-- Delivered by one of the specified methods (hand delivery with receipt, recorded
-  postal service, agreed electronic transmission system)
-- Sent to the address stated in the Contract Data
+**The period to use is the period stated in the retrieved Particular
+Conditions.** If no amendment is found AND the Particular Conditions
+have been fully retrieved: note that no amendment was found and the
+General Conditions period appears to apply — citing the Particular
+Conditions as the source of that finding. If the Particular Conditions
+have not been retrieved: state CANNOT CONFIRM the notice period.
+Do not state any period.
 
-Note: The 2017 edition uses approximately 80 instances of the defined term "Notice"
-throughout the General Conditions. A communication that does not satisfy all five
-requirements is not a Notice under 2017 FIDIC, regardless of its content.
+**(b) Formal requirements:**
+Extract the formal requirements for valid notices from the retrieved
+Particular Conditions amendment to Clause 1.3 and any notice-specific
+clause. The requirements to apply are those in the retrieved project
+documents.
 
-Check the Particular Conditions for any amendments to Clause 1.3. GCC Particular
-Conditions sometimes specify additional requirements (specific email addresses,
-copy recipients, prescribed forms) or restrict accepted delivery methods.
+**(c) Notice addresses and delivery methods:**
+Extract from the retrieved Contract Data. Do not assume any address
+or delivery method.
 
-**Step 2 — Identify the notice or instruction under assessment**
+**(d) Notice recipient:**
+From engineer_identification findings:
+- Red Book / Yellow Book: notices go to the Engineer (or the entity
+  confirmed as the Engineer from retrieved documents)
+- Silver Book: notices go to the Employer's Representative (no Engineer)
 
-From the retrieved documents, identify the specific communication being assessed:
-- Document type (Notice of Claim, Engineer's Instruction, variation instruction, etc.)
+### Step 2 — Identify the notice or instruction under assessment
+*Contract-type-agnostic*
+
+From the retrieved document, identify:
+- Document reference and date
 - Issuing party
-- Date of issue
-- Method of delivery
-- Recipient named on the document
-- Content summary
+- Stated delivery method and recipient
+- Content: what event or matter does the notice address?
+- FIDIC clause cited as the basis (if stated)
 
-If multiple notices are being assessed (e.g. a series of notices relating to one
-claim), assess each separately and note whether they form a compliant sequence.
+If multiple notices are being assessed, assess each separately.
 
-**Step 3 — Assess form compliance**
+### Step 3 — Establish the awareness date
+*Contract-type-agnostic*
 
-Check the notice or instruction against the applicable Clause 1.3 requirements
-established in Step 1.
+The time bar runs from the date the party became aware, or should
+reasonably have become aware, of the event. This is not necessarily
+the date stated in the notice.
 
-For each requirement, classify: COMPLIANT / NON-COMPLIANT / CANNOT ASSESS
+From retrieved contemporaneous records (site diaries, progress reports,
+correspondence, RFIs, meeting minutes) — identify any document that
+records the same event at a date earlier than the notice.
 
-Under 1999: in writing ✓/✗ — delivered by accepted method ✓/✗ — sent to correct
-address ✓/✗
+**If an earlier awareness date is evidenced in a retrieved document:
+use that date for the time bar calculation — not the date stated in
+the notice. State the evidence and its source.**
 
-Under 2017: in writing ✓/✗ — signed ✓/✗ — identified as a Notice ✓/✗ — correct
-delivery method ✓/✗ — correct address ✓/✗
+**If no contemporaneous records have been retrieved:** State CANNOT
+CONFIRM the awareness date from the warehouse documents. Note that
+the awareness date stated in the notice has not been independently
+verified from contemporaneous records. This is a gap in the analysis,
+not a confirmation of the stated date.
 
-A notice that fails any one of the 2017 requirements is formally non-compliant,
-even if its content is otherwise correct. Flag each failure specifically — do not
-issue a general non-compliance finding without identifying which requirement failed.
+### Step 4 — Calculate the time bar position
+*Contract-type-specific*
 
-**Step 4 — Assess routing compliance**
+Days elapsed = notice date minus awareness date (as established in
+Step 3).
 
-The notice must have been sent to the correct recipient. Using the engineer
-identification findings:
+Compare against the notice period extracted from the Particular
+Conditions in Step 1.
 
-For Contractor notices under Red and Yellow Books: the notice must be addressed to
-the Engineer (or the specific entity holding the relevant function if a split-role
-pattern exists).
+**This calculation requires both:**
+- A confirmed awareness date from retrieved documents
+- A confirmed notice period from the retrieved Particular Conditions
 
-For Contractor notices under Silver Book: the notice must be addressed to the
-Employer or Employer's Representative as identified in the Contract Data.
+**If either is unconfirmed:** State CANNOT CALCULATE time bar position.
+Describe what is missing. Do not estimate or approximate.
 
-For Engineer's Instructions: the instruction must come from the Engineer (or a
-properly delegated assistant). An instruction from the Supervision Consultant that
-was not delegated the authority to issue Clause 3 instructions is not a valid
-Engineer's Instruction.
+### Step 5 — Assess form and content compliance
+*Contract-type-specific (formal requirements differ by edition)*
 
-If the notice was sent to the wrong entity, classify as ROUTING NON-COMPLIANT and
-flag the correct recipient. Note that routing errors in split-role GCC projects are
-a primary source of time bar arguments — an Employer may argue that a notice sent
-to the SC rather than the PMC was not validly issued.
+For the retrieved notice, assess each formal requirement extracted
+from the retrieved Particular Conditions and Contract Data in Step 1.
 
-**Step 5 — Assess timing compliance for Contractor notices**
+**Do not apply formal requirements from the standard FIDIC text
+without first confirming they have not been amended by the Particular
+Conditions.** Where a requirement has been confirmed from retrieved
+documents, assess compliance against that requirement and cite the
+source. Where a requirement cannot be confirmed from retrieved
+documents: state CANNOT CONFIRM whether this requirement applies.
 
-For any Contractor notice that triggers or relates to a claim for additional time
-or cost, assess time bar compliance.
+Common requirements to assess from retrieved documents:
+- Written form (confirm from the retrieved document itself)
+- Signature (confirm from the retrieved document)
+- Identification as a Notice (relevant to 2017 editions — confirm
+  whether this formal requirement is present in the retrieved PC)
+- Delivery method (compare against Contract Data)
+- Recipient (compare against engineer_identification findings)
+- Identification of the event (confirm from the notice content)
+- FIDIC clause reference (confirm from the notice content)
 
-Identify the awareness date: the date on which the Contractor first became aware
-(or should have been aware as an experienced contractor) of the event giving rise
-to the claim. This is the trigger for the 28-day time bar. Sources for the awareness
-date: site daily reports, progress reports, RFI responses, correspondence, meeting
-minutes. Use the earliest date evidenced in the documents.
+### Step 6 — Assess continuing notice obligations (FIDIC 2017 only)
+*Contract-type-specific — 2017 editions only*
+*Not applicable to 1999 editions*
 
-Calculate days elapsed between awareness date and notice date.
+Under FIDIC 2017, where a claim event is continuing, the Contractor
+must submit updated particulars at intervals. The interval is stated
+in the Contract Data — extract from Layer 1. Do not apply any interval
+from the standard form without confirming from the retrieved Contract
+Data.
 
-Apply the applicable clause:
-- FIDIC 1999 Cl. 20.1: notice required within 28 days of awareness
-- FIDIC 2017 Cl. 20.2.1: notice required within 28 days of awareness (same period;
-  additionally requires identification of the contractual basis within 84 days or
-  the Notice lapses)
+**If Contract Data not retrieved:** State CANNOT CONFIRM the required
+update interval. Assess whether updated particulars are present in
+the warehouse without specifying whether they meet a frequency
+requirement.
 
-Classify:
-- 0–28 days elapsed: COMPLIANT
-- 29+ days elapsed: POTENTIALLY TIME-BARRED
-- Awareness date not determinable from documents: CANNOT ASSESS — flag documents
-  that would establish the awareness date and call tools to find them
+### Step 7 — Assess Employer claims (FIDIC 2017 only)
+*Contract-type-specific — 2017 editions only*
+*Not applicable to 1999 editions*
 
-Note Qatar-specific flag: Qatar Civil Code Article 418 limits contractual shortening
-of prescription periods. In Qatar-seated disputes, a POTENTIALLY TIME-BARRED finding
-must include a note that the enforceability of the time bar is subject to Article 418
-and requires legal opinion.
-
-**Step 6 — Assess instruction validity (Engineer's Instructions)**
-
-For Engineer's Instructions, assess:
-- Was the instruction issued by the Engineer or a properly delegated assistant?
-  (Use engineer_identification.md findings)
-- Was the instruction in writing per Clause 1.3?
-- Did the instruction fall within the Engineer's Clause 3 authority or was it a
-  variation instruction under Clause 13.1?
-- If the instruction requires the Contractor to execute work that constitutes a
-  variation, was it accompanied by or followed by a formal variation order, or did
-  the Contractor issue a notice of entitlement?
-
-A verbal instruction that was not confirmed in writing is not a valid Engineer's
-Instruction under FIDIC. If the Contractor acted on a verbal instruction without
-written confirmation, flag the risk that the instruction may be unenforceable and
-that any resulting claim may face entitlement challenges.
-
-**Step 7 — Compile and structure findings**
-
-Compile all findings in the output format below. Time bar findings must be passed
-forward explicitly to the Claims specialist — they are foundational to the claims
-assessment and must not be re-assessed by Claims from scratch.
+Under FIDIC 2017, Employer claims are subject to the same notice
+requirements as Contractor claims. If the Employer has made deductions,
+set-offs, or claims: assess whether a corresponding notice was issued
+by the Employer using the same framework as Steps 1–5.
 
 ---
 
 ## Classification and decision rules
 
-**Form compliance:**
-- All applicable Clause 1.3 requirements met: FORM COMPLIANT
-- One or more requirements not met: FORM NON-COMPLIANT — list each failed requirement
-- Requirements cannot be assessed from documents: CANNOT ASSESS FORM
+**Time bar:**
 
-**Routing compliance:**
-- Notice addressed to correct entity per engineer_identification.md findings: ROUTING
-  COMPLIANT
-- Notice addressed to wrong entity: ROUTING NON-COMPLIANT — state correct recipient
-- Split-role ambiguity makes routing assessment uncertain: ROUTING UNCERTAIN — flag
-  ambiguity and both possible correct recipients
+Both awareness date confirmed AND notice period confirmed from PC →
+calculate days elapsed and classify:
+- Days elapsed within the notice period: WITHIN TIME
+- Days elapsed exceed the notice period: POTENTIALLY TIME-BARRED —
+  flag immediately; state awareness date source, notice date, days
+  elapsed, notice period source
 
-**Time bar — Contractor notices:**
-- Notice within 28 days of confirmed awareness date: COMPLIANT
-- Notice more than 28 days after confirmed awareness date: POTENTIALLY TIME-BARRED
-- Awareness date established from documents but notice date not found: NON-COMPLIANT
-  (notice not found — treat as not given)
-- Neither awareness date nor notice date determinable: CANNOT ASSESS — call tools
-- Qatar-seated dispute: append enforceability caveat per Article 418 to any
-  POTENTIALLY TIME-BARRED finding
+Awareness date NOT confirmed from retrieved records AND notice period
+confirmed → AWARENESS DATE NOT INDEPENDENTLY VERIFIED — calculate
+from the date stated in the notice but flag that the calculation is
+based on an unverified awareness date; note the risk of an earlier date
 
-**Overall notice validity:**
-- Form compliant + routing compliant + time compliant: VALID
-- Any one element non-compliant: DEFECTIVE — state which element(s) failed
-- Time bar triggered: POTENTIALLY TIME-BARRED — regardless of form and routing
-  compliance; entitlement may be lost even if notice was otherwise correct
+Notice period NOT confirmed (PC not retrieved) → CANNOT CALCULATE
+TIME BAR — flag; state what is missing
 
-**Engineer's Instructions:**
-- Issued by authorised entity in writing within Clause 3 authority: VALID INSTRUCTION
-- Issued by entity without confirmed delegation: AUTHORITY UNCERTAIN
-- Verbal only, not confirmed in writing: NOT A VALID INSTRUCTION
-- Instruction constitutes a variation but no variation order issued: flag VARIATION
-  NOTICE REQUIRED — Contractor should have issued notice of entitlement
+Both unconfirmed → CANNOT ASSESS time bar position
+
+**Form and content:**
+
+All requirements confirmed from retrieved documents and met →
+COMPLIANT — cite source for each requirement assessed
+
+One or more requirements not met → DEFECTIVE — state each defect
+specifically; cite the requirement source; state whether the defect
+is curable or fatal
+
+Requirements cannot be confirmed (PC or Contract Data not retrieved) →
+CANNOT CONFIRM compliance with [specific requirement] — state what
+is missing
+
+No notice found for a claim present in the warehouse →
+NO NOTICE FOUND — flag; call tools to search further; do not
+conclude absence without exhausting search
+
+**Recipient routing:**
+
+Notice addressed to confirmed contract administrator → CORRECT ROUTING
+Notice addressed to incorrect party per confirmed book type →
+DEFECTIVE — WRONG RECIPIENT — state correct recipient and source
+Recipient cannot be confirmed (engineer_identification findings
+incomplete) → CANNOT CONFIRM routing compliance
 
 ---
 
 ## When to call tools
 
-**Signal:** Notice references an awareness date or triggering event but no
-contemporaneous documents (daily reports, progress reports, correspondence) have
-been retrieved to confirm the actual awareness date
-**Tool:** `search_chunks` querying for the event description and date range
-**Look for:** Site daily reports, progress reports, RFI logs, meeting minutes from
-the period — any document that evidences when the Contractor first recorded the event
+**Signal:** A claim is present in the warehouse but no corresponding
+notice has been retrieved
+**Action:** `search_chunks` with query "[event description] notice
+claim"; `get_related_documents` with document type "Notice of Claim"
+and "Notice of Delay"
+**Look for:** A notice document predating the claim and referencing
+the same event
 
-**Signal:** Notice was sent to a named individual rather than an entity — need to
-confirm whether that individual held a valid delegation
-**Tool:** `get_related_documents` filtered to Delegation Notice, Engineer's
-Instruction
-**Look for:** Written delegation confirming that individual's authority to receive
-notices on behalf of the Engineer
+**Signal:** The notice states an awareness date but no contemporaneous
+records for that period have been retrieved
+**Action:** `search_chunks` with query "[event description]
+[approximate date range]"; `get_related_documents` with document
+types "Site Diary", "Daily Report", "Progress Report" for the
+relevant period
+**Look for:** Any document recording the same event at an earlier date
 
-**Signal:** A notice references a prior notice or a series of notices but only one
-notice is in the retrieved chunks
-**Tool:** `search_chunks` querying for the claim reference number or event
-description
-**Look for:** The complete notice sequence; assess each notice in the sequence
-separately
+**Signal:** The Particular Conditions have not been retrieved and the
+notice period cannot be confirmed
+**Action:** `search_chunks` with query "particular conditions notice
+claim period days clause 20"; `get_document` on the Particular
+Conditions document ID if known
+**Look for:** The notice clause and any period stated in the PC
 
-**Signal:** The Particular Conditions reference a prescribed notice form or a
-specific correspondence management system (e.g. Aconex, Procore) but no documents
-from that system have been retrieved
-**Tool:** `search_chunks` querying for the system name and document type
-**Look for:** Whether notices were issued through the prescribed system; a notice
-issued outside a contractually mandated system may be non-compliant
+**Signal:** Layer 2 FIDIC notice clause has not been retrieved
+**Action:** `search_chunks` with query "[FIDIC book] [edition year]
+clause 20 notice claim time bar"
+**Look for:** Standard FIDIC Clause 20.1 (1999) or 20.2.1 (2017)
+text for the confirmed book
 
 ---
 
 ## Always flag — regardless of query
 
-1. **Time bar status on any Contractor notice that relates to a claim** — always
-   assess and state the time bar position, even if the query is about something else.
-   A missed time bar is the single most consequential procedural finding in
-   construction disputes. It must be surfaced whenever a notice is assessed.
+1. **POTENTIALLY TIME-BARRED notice** — always flag when days elapsed
+   exceed the confirmed notice period; state the consequence in one
+   sentence: the right to the claim may be extinguished subject to the
+   governing law position on strict enforcement.
 
-2. **2017 edition formal Notice requirements** — on any 2017 edition project, always
-   check all five Clause 1.3 requirements. A substantively correct notice that fails
-   the defined-term or delivery-method requirement is non-compliant under 2017 FIDIC.
+2. **Notice period not confirmed from Particular Conditions** — always
+   flag when the notice period cannot be extracted from retrieved PC;
+   state that no time bar calculation can be made.
 
-3. **Routing errors in split-role projects** — whenever a split-role pattern has been
-   identified by engineer_identification.md, always check that each notice was sent
-   to the entity holding the relevant function. Do not assume routing is correct
-   because the notice reached someone.
+3. **Awareness date not independently verified** — always flag when
+   no contemporaneous record has been retrieved that independently
+   confirms the awareness date stated in the notice.
 
-4. **Verbal instructions not confirmed in writing** — whenever correspondence or
-   site records reference a verbal instruction, always flag it. Verbal instructions
-   are not valid under FIDIC and create risk for both parties.
+4. **No notice found for a claim present in the warehouse** — always
+   flag after tools search returns nothing; state the claim reference
+   and the absence.
 
-5. **Qatar Article 418 enforceability caveat** — whenever a POTENTIALLY TIME-BARRED
-   finding is reached on a project with Qatar as governing law or Qatar as arbitration
-   seat, always append the Article 418 caveat. Do not omit this — it materially
-   affects the forensic significance of the time bar finding.
+5. **Silver Book: notice addressed to an Engineer** — always flag; the
+   Silver Book has no Engineer; state correct recipient.
+
+6. **FIDIC 2017: Employer deductions without corresponding Employer
+   notice** — always flag when Employer deductions exist in the
+   warehouse and no Employer notice under Clause 20.2.1 has been found.
 
 ---
 
 ## Output format
+
 ```
 ## Notice and Instruction Compliance Assessment
 
-### Applicable Notice Requirements
-FIDIC edition: [1999 / 2017]
-Clause 1.3 baseline: [1999 standard / 2017 five-requirement standard]
-Particular Conditions amendments to Clause 1.3: [list or "None"]
-Prescribed system (if any): [system name or "None specified"]
+### Documents Retrieved (Layer 1)
+[List every document retrieved, with reference numbers and dates.]
 
-### Notice / Instruction Assessed
-[For each notice or instruction — repeat block as needed:]
+### Documents Not Retrieved
+[List every document required for this analysis not found in the
+warehouse. State which analysis steps are affected.]
 
-**[Document reference and type]**
-Issuing party: [party name]
-Date of issue: [date]
-Delivery method: [method]
-Recipient named: [entity]
-Content summary: [one sentence]
+### Layer 2 Reference Retrieved
+[State whether FIDIC Clause 1.3 and the relevant notice clause were
+retrieved from Layer 2. If not: state analytical knowledge applied.]
 
+### Applicable Notice Requirements (this project)
+Notice period: [value from retrieved PC and Contract Data / CANNOT CONFIRM — PC not retrieved]
+Source: [Particular Conditions reference and clause / NOT RETRIEVED]
+Delivery method required: [from retrieved Contract Data / CANNOT CONFIRM]
+Notice recipient: [from engineer_identification findings / CANNOT CONFIRM]
+Edition-specific formal requirements: [from retrieved PC / CANNOT CONFIRM]
+
+### Notice Register
+
+| # | Ref | Notice date | Awareness date | Source of awareness date | Days elapsed | Period | Classification |
+|---|---|---|---|---|---|---|---|
+| 1 | [ref] | [date] | [date / UNVERIFIED] | [doc or UNVERIFIED] | [N or CANNOT CALC] | [from PC / NOT CONFIRMED] | [classification] |
+
+### Findings by Notice
+
+**[Notice reference]**
+Classification: [COMPLIANT / DEFECTIVE / POTENTIALLY TIME-BARRED /
+AWARENESS DATE NOT INDEPENDENTLY VERIFIED / CANNOT CALCULATE TIME BAR /
+NO NOTICE FOUND / CANNOT ASSESS]
+Notice date: [date — source document]
+Awareness date: [date — source document, or STATED IN NOTICE ONLY —
+NOT INDEPENDENTLY VERIFIED]
+Days elapsed: [number, or CANNOT CALCULATE — reason]
+Applicable notice period: [from retrieved PC / CANNOT CONFIRM]
 Form compliance:
-| Requirement | Status | Notes |
-|---|---|---|
-| In writing | [COMPLIANT / NON-COMPLIANT] | |
-| Signed (2017 only) | [COMPLIANT / NON-COMPLIANT / N/A] | |
-| Identified as Notice (2017 only) | [COMPLIANT / NON-COMPLIANT / N/A] | |
-| Correct delivery method | [COMPLIANT / NON-COMPLIANT] | |
-| Correct address | [COMPLIANT / NON-COMPLIANT] | |
-Form classification: [FORM COMPLIANT / FORM NON-COMPLIANT]
+  - Written: [YES / NO — from retrieved document]
+  - Delivery method: [method used vs required from Contract Data / CANNOT CONFIRM REQUIREMENT]
+  - Recipient: [named recipient vs confirmed administrator / CORRECT / WRONG / CANNOT CONFIRM]
+  - Event identified: [YES / NO — from notice content]
+  - FIDIC clause cited: [YES — clause / NO]
+Continuing notices (2017 only): [ASSESSED / NOT APPLICABLE]
+Source documents: [list]
+Finding: [from retrieved documents only]
 
-Routing compliance:
-Correct recipient: [entity per engineer_identification.md]
-Recipient on document: [entity]
-Routing classification: [ROUTING COMPLIANT / ROUTING NON-COMPLIANT / ROUTING
-UNCERTAIN]
+### Employer Claims (FIDIC 2017 only)
+[Assessment or NOT APPLICABLE for 1999 editions]
 
-Time bar (Contractor claim notices only):
-Awareness date: [date or "not determinable"]
-Source of awareness date: [document reference]
-Notice date: [date]
-Days elapsed: [number or "cannot calculate"]
-Applicable clause: [FIDIC 1999 Cl. 20.1 / FIDIC 2017 Cl. 20.2.1]
-Time bar classification: [COMPLIANT / POTENTIALLY TIME-BARRED / CANNOT ASSESS]
-Qatar enforceability caveat: [YES — Article 418 applies / NO]
-
-Instruction validity (Engineer's Instructions only):
-Issuing entity authority: [VALID / AUTHORITY UNCERTAIN / NOT DELEGATED]
-Written confirmation: [YES / NO — verbal only]
-Within Clause 3 authority: [YES / NO — constitutes variation]
-Instruction classification: [VALID INSTRUCTION / AUTHORITY UNCERTAIN /
-NOT A VALID INSTRUCTION]
-
-**Overall classification: [VALID / DEFECTIVE / POTENTIALLY TIME-BARRED /
-CANNOT ASSESS]**
-
-### Findings for Downstream Specialists
-[For each assessed notice relating to a claim:]
-Claim reference: [reference]
-Time bar status: [COMPLIANT / POTENTIALLY TIME-BARRED / CANNOT ASSESS]
-Days elapsed: [number]
-Applicable clause: [clause reference]
-Form status: [COMPLIANT / DEFECTIVE]
-Routing status: [COMPLIANT / NON-COMPLIANT / UNCERTAIN]
-Qatar caveat: [YES / NO]
+### FLAGS
+[Each flag with one-sentence forensic implication]
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / RED / GREY]
-Summary: [two to three sentences stating the overall notice compliance position,
-the most significant finding, and any time bar exposure identified]
+Summary: [two to three sentences — facts from retrieved documents only]
 ```
 
 ---
 
-## Domain knowledge and standards
+## Analytical framework
+*Reference only — do not apply any period, threshold, or requirement
+from this section without first confirming it from retrieved project
+documents.*
 
-### FIDIC Clause 1.3 — Communications
+**FIDIC notice provisions — structural summary (analytical reference):**
+FIDIC 1999 Clause 1.3 requires notices to be in writing and delivered
+by the specified method to the specified address. The 2017 edition
+significantly strengthened the formal requirements — notices must
+satisfy five conditions including being identified as a "Notice"
+(the defined term) and signed by the issuing party's representative.
+The key difference between 1999 and 2017 is the formality level —
+2017 is more prescriptive. Retrieve the applicable clause from
+Layer 2 to confirm what the standard says, then check the Particular
+Conditions for any amendment.
 
-The 2017 editions introduced the defined term "Notice" (capital N) with five formal
-requirements. This was a deliberate response to disputes about whether informal
-communications constituted notices. The practical effect in GCC disputes: under 2017
-FIDIC, an email from an engineer's individual email address that was not the assigned
-address, or a letter that was not expressly identified as a Notice, may be argued
-non-compliant even if the content was entirely correct.
+**Time bar — analytical reference:**
+The 28-day period stated in the FIDIC General Conditions is the
+standard form default. GCC Particular Conditions routinely amend
+this — sometimes shorter (14 or 21 days), sometimes extended.
+Some GCC government Employer forms use 7-day periods. The period
+to apply is always the period in the retrieved Particular Conditions,
+not the General Conditions default. Never apply any default without
+retrieved Particular Conditions confirmation.
 
-Under 1999 FIDIC the notice requirements are less formal. Courts and tribunals in the
-GCC have generally taken a substance-over-form approach to 1999 notices — a
-communication that clearly conveys the required information and was received by the
-correct party has generally been treated as a valid notice even if technical delivery
-requirements were not met. The 2017 formal requirements shift this balance toward form.
+**Awareness date — analytical reference:**
+The time bar runs from the date the claimant became aware or should
+reasonably have become aware of the event. The objective test
+("should have been aware") means site records and contemporaneous
+correspondence can evidence an earlier awareness date than what
+the notice states. Retrieve contemporaneous records to verify.
 
-### FIDIC Clause 20.1 / 20.2.1 — The 28-Day Time Bar
-
-The 28-day Notice of Claim time bar is one of the most consequential provisions in
-FIDIC contracts. Key principles confirmed by GCC tribunals and DIFC Court decisions:
-
-- The time bar is strictly enforced in UAE (FIVE v Reem; Panther v Modern Executive)
-- Implied good faith obligations do not override a missed time bar in UAE
-- The awareness date is determined objectively — when an experienced contractor should
-  have been aware, not merely when the contractor says it became aware
-- Site daily reports and progress reports are primary evidence for the awareness date
-- A continuing event (e.g. ongoing delay) requires periodic notices under 1999 Clause
-  20.1 — a single notice at the start does not cover the entire duration
-- Under 2017 Clause 20.2.1, a notice that does not identify the contractual basis
-  within 84 days lapses — the 84-day requirement is a second time gate after the
-  28-day notice gate
-
-### GCC-Specific Notice Patterns
-
-**Aconex and document management systems:** Many large GCC projects use Aconex or
-similar systems as the contractually mandated correspondence management platform.
-Where the Particular Conditions or a project protocol specify that notices must be
-issued through such a system, a notice issued outside the system (e.g. by email or
-letter) may be argued non-compliant. Always check whether a prescribed system is
-specified and whether the notice was issued through it.
-
-**Bilingual notices:** Saudi government projects typically require notices in Arabic.
-UAE projects may have bilingual requirements with Arabic prevailing. A notice issued
-only in English on a project requiring Arabic may be argued non-compliant. When the
-governing language is not English, flag any notice issued solely in English.
-
-**Notice to Proceed / Commencement Date notices:** These are Employer or Engineer
-obligations, not Contractor obligations, but their timing establishes the
-Commencement Date from which the Time for Completion runs. Always check that a formal
-Notice to Proceed was issued and that the Commencement Date is confirmed — it is the
-anchor for every time-related calculation on the project.
+**GCC jurisdictional context — analytical reference:**
+UAE onshore courts have applied the good faith doctrine (UAE Civil
+Code Art. 246) in limited cases to soften strict time bar enforcement.
+DIFC Court follows English common law — strict enforcement applies.
+Saudi Arabia and Qatar: strict enforcement is the norm. These are
+contextual frameworks for flagging jurisdictional risk — the actual
+governing law must be confirmed from the retrieved contract documents.

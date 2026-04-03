@@ -1,7 +1,20 @@
 # EOT Quantification
 
-**Skill type:** Contract-type-specific (EOT clause, entitlement events,
-and Engineer/Employer's Representative authority differ by book and edition)
+**Skill type:** Contract-type-specific
+The EOT clause, the list of qualifying entitlement events, and the
+Engineer/Employer's Representative authority all differ by FIDIC book
+and edition. The Particular Conditions frequently amend the entitlement
+event list. No entitlement classification can be made without first
+retrieving the applicable clause from the Particular Conditions.
+**Layer dependency:**
+- Layer 1 — project documents: EOT claim submission; delay analysis
+  report; baseline programme; as-built programme or progress records;
+  Particular Conditions (EOT clause); Contract Data (Time for
+  Completion, programme submission requirements); Engineer's
+  determination or response; contemporaneous site records
+- Layer 2 — reference standards: FIDIC EOT clause (8.4 for 1999 /
+  8.5 for 2017) for the confirmed book; SCL Protocol 2nd Edition
+  2017 (delay methodology framework)
 **Domain:** Claims & Disputes SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
@@ -9,419 +22,471 @@ and Engineer/Employer's Representative authority differ by book and edition)
 
 ## When to apply this skill
 
-Apply this skill when retrieved chunks contain an EOT claim submission,
-a delay analysis report, a notice of delay referencing a programme impact,
-a query about entitlement to additional time, or a request to assess
-whether a claimed extension is supported. Also apply when a Taking-Over
-Certificate shows a completion date that differs materially from the
+Apply when retrieved chunks contain an EOT claim submission, a delay
+analysis report, a Notice of Delay referencing a programme impact, or
+a query about entitlement to additional time. Apply when a Taking-Over
+Certificate shows a completion date materially later than the
 contractual completion date and no EOT record has been found.
 
 ---
 
 ## Before you begin
 
-**Step 1 — Establish the governing contract type.**
-Read the Legal orchestrator findings. Extract:
-- FIDIC book: Red / Yellow / Silver
-- FIDIC edition: 1999 or 2017
-- Time for Completion: extract from the contract documents — do not
-  assume any period
-- Contractual completion date: extract from the contract or the
-  programme — this is the baseline against which delay is measured
-- Any Particular Conditions amendments to the EOT clause
+### Foundational requirements
 
-If Legal orchestrator findings are not available, call `search_chunks`
-with query "time for completion contractual completion date programme"
-before proceeding.
+Read the invoking orchestrator findings and notice_compliance findings.
 
-**Step 2 — Extract the EOT clause from the Particular Conditions.**
-The EOT entitlement events are listed in the General Conditions but
-are frequently amended by Particular Conditions — events added,
-removed, or qualified. Extract the actual list of entitlement events
-from the project's Particular Conditions. Do not apply the General
-Conditions list without first confirming it has not been amended.
+From the invoking orchestrator extract:
+- Confirmed FIDIC book and edition
+- Time for Completion as confirmed from retrieved Contract Data —
+  if not confirmed: state CANNOT ESTABLISH the baseline for delay
+  assessment
+- Particular Conditions amendments to the EOT clause and to the
+  entitlement event list
 
-**Step 3 — Establish the notice position from notice_compliance skill.**
-EOT entitlement is procedurally gated by notice compliance. If the
-Claims SME has already assessed notice compliance for the relevant
-claim, read those findings before beginning the EOT analysis. A
-time-barred notice extinguishes the EOT entitlement regardless of
-the merits of the delay analysis.
+From notice_compliance findings:
+- Notice classification for this claim
+- If POTENTIALLY TIME-BARRED: flag at the start of this assessment
+  and note throughout that the entitlement analysis is conditional
+  on the notice position being resolved
 
-**Step 4 — Identify the delay analysis methodology used.**
-This must be identified from the documents — do not assume. The
-methodology determines what evidence is required and what the
-output means. See Domain Knowledge section for the accepted
-methodologies and their data requirements.
+**If book type is UNCONFIRMED:** State CANNOT ASSESS EOT entitlement.
+The qualifying events and EOT clause differ by book — analysis without
+confirmed book type is not possible.
+
+### Layer 1 documents to retrieve (project-specific)
+
+Call `search_chunks` and `get_related_documents` to retrieve:
+- The EOT claim submission
+- The delay analysis report (if a separate document)
+- The Particular Conditions — specifically the EOT clause and
+  entitlement event list
+- The Contract Data — Time for Completion, programme submission
+  requirements
+- The baseline programme — the programme accepted by the Engineer
+  (Red/Yellow) or approved by the Employer's Representative (Silver)
+- The as-built programme or monthly progress reports covering the
+  delay period
+- Site diaries and contemporaneous records for the claimed delay events
+- The Engineer's determination or Employer's Representative response
+  (if any)
+
+**If the Particular Conditions are not retrieved:**
+State CANNOT CONFIRM the EOT clause or the qualifying event list.
+Do not classify any event as an Employer Risk Event, Neutral Event,
+or Contractor Risk Event. Entitlement classification requires the
+retrieved Particular Conditions.
+
+**If the baseline programme is not retrieved:**
+State CANNOT VERIFY the delay analysis. A delay analysis without
+a baseline programme cannot be independently assessed. Flag this
+immediately.
+
+**If no EOT claim document is retrieved:**
+State CANNOT ASSESS — no EOT claim found in the warehouse.
+
+### Layer 2 documents to retrieve (reference standards)
+
+After confirming book type, call `search_chunks` to retrieve from
+Layer 2:
+- FIDIC Clause 8.4 (1999) or Clause 8.5 (2017) for the confirmed
+  book — the EOT clause and qualifying event list
+- SCL Protocol 2nd Edition 2017 guidance on delay methodology
+  (for methodology assessment in Step 5)
+
+**Purpose:** The Layer 2 EOT clause establishes the standard form
+qualifying events. The Particular Conditions (Layer 1) then amend
+that list — events may be added, removed, or qualified. The
+entitlement event list to apply is always the Layer 1 Particular
+Conditions version. Layer 2 provides the comparison baseline only.
 
 ---
 
 ## Analysis workflow
 
-**Step 1 — Retrieve all EOT claim documents.**
-Call `get_related_documents` with document_type "EOT Claim".
-Call `get_related_documents` with document_type "Delay Analysis Report".
+### Step 1 — Retrieve and identify all EOT claim documents
+*Contract-type-agnostic*
+
+Call `get_related_documents` with document type "EOT Claim".
+Call `get_related_documents` with document type "Delay Analysis Report".
 Call `search_chunks` with query "extension of time critical path
 delay programme impact".
-Compile a complete list of claim submissions and supporting analyses.
+Compile a complete list of retrieved claim and analysis documents.
 
-**Step 2 — Map claimed delay events to entitlement clauses.**
-For each delay event in the claim:
-- Identify the FIDIC clause cited as the entitlement basis
-- Verify that clause is present and unamended in the project's
-  Particular Conditions (Step 2 of Pre-Flight Check)
-- Classify the event: Employer Risk Event / Neutral Event /
-  Contractor Risk Event
-- Note that entitlement differs by event type — see decision framework
+### Step 2 — Confirm the EOT clause and entitlement event list
+*Contract-type-specific*
 
-**Step 3 — Assess the baseline programme.**
-The delay analysis requires a valid baseline programme. Retrieve the
-baseline programme document. Assess:
+From the retrieved Particular Conditions confirm:
+- Which sub-clause governs EOT (the PC version, as amended)
+- The list of qualifying entitlement events as stated in the
+  retrieved Particular Conditions
+
+**Do not apply the General Conditions event list without confirming
+from the retrieved Particular Conditions that it has not been
+amended.** If the Particular Conditions have not been retrieved:
+state CANNOT CONFIRM the entitlement event list. Do not classify
+any event as qualifying or non-qualifying.
+
+For each delay event in the claim: identify which entitlement event
+in the retrieved PC it corresponds to (if any). If no corresponding
+event is found in the retrieved PC: flag as ENTITLEMENT BASIS NOT
+CONFIRMED FROM RETRIEVED DOCUMENTS.
+
+### Step 3 — Assess the baseline programme
+*Contract-type-agnostic*
+
+From the retrieved programme document:
 - Is it the programme accepted by the Engineer (Red/Yellow) or
-  approved by the Employer's Representative (Silver)?
-- Does it show the contractual completion date?
-- Is it a CPM network — does it show the critical path?
-- Was it submitted within the period required by the contract?
-  Extract the programme submission requirement from the Particular
-  Conditions — do not apply the standard form default.
+  approved by the Employer's Representative (Silver)? State the
+  source document and date.
+- Does it show the contractual completion date as confirmed from
+  the retrieved Contract Data?
+- Is it a CPM (Critical Path Method) network — does it show the
+  critical path?
+- Was it submitted within the required period? Extract the programme
+  submission requirement from the retrieved Contract Data or
+  Particular Conditions — do not apply any default period.
 
-If no baseline programme is in the warehouse, flag this immediately.
-A delay analysis without a baseline programme cannot be verified.
+**If the baseline programme has not been retrieved:**
+State CANNOT VERIFY the delay analysis. Flag this as a critical gap.
+Call tools to search before proceeding. If still not found after
+searching: state that the methodology assessment cannot proceed
+and flag the absence.
 
-**Step 4 — Assess as-built records.**
-The as-built programme or contemporaneous progress records are
-required to verify actual performance. Retrieve:
-- As-built programme (if submitted)
-- Monthly progress reports for the delay period
-- Site diaries for key delay events
-Assess whether the delay events are evidenced in contemporaneous
-records or only in the retrospective claim submission.
+**If the programme was not accepted or approved:**
+State this from the retrieved documents. A programme that was not
+formally accepted may not constitute a valid baseline — flag and
+state what was retrieved.
 
-**Step 5 — Assess the delay analysis methodology.**
-Identify the methodology used (see Domain Knowledge). For each
-methodology, apply the specific assessment criteria below. Flag
-any methodology that is unsupported by the available records.
+### Step 4 — Assess as-built records
+*Contract-type-agnostic*
 
-**Step 6 — Assess concurrent delay.**
-Concurrent delay is the simultaneous occurrence of Employer-caused
-and Contractor-caused delay events affecting the critical path. It
-must always be considered when the as-built programme shows multiple
-overlapping delay events. Assess:
-- Has the claim addressed concurrent delay?
-- If concurrent delay is present, what is its effect on the
-  entitlement? — see decision framework
-- Has the Contractor demonstrated that its own concurrent delay
-  did not cause or contribute to the claimed completion delay?
+From the retrieved progress reports, site diaries, and as-built
+programme (if available), assess:
+- Are the claimed delay events evidenced in contemporaneous records?
+- Do the contemporaneous records correspond to the delay periods
+  stated in the claim?
 
-**Step 7 — Assess float.**
-Float is a buffer in the programme between an activity's early
-completion and its latest permissible completion. Assess:
-- Does the delay analysis correctly treat float as a shared resource
-  (absent express contractual stipulation to the contrary)?
-- Has the Contractor claimed an EOT for a period consumed by float
-  rather than a true critical path delay?
-- Does the Particular Conditions contain an express float ownership
-  clause? If so, apply it — extract from documents.
+**Do not characterise a delay event as established unless it is
+evidenced in retrieved contemporaneous records.** If the delay
+events are described only in the claim submission and not in any
+contemporaneous record: state this and flag the evidential gap.
 
-**Step 8 — Assess the claimed EOT quantum.**
-The claimed number of days must be supported by the delay analysis.
-Compare: the delay event duration, the critical path impact
-demonstrated, and the EOT days claimed. Flag any gap between the
-demonstrated impact and the claimed quantum.
+### Step 5 — Assess the delay analysis methodology
+*Contract-type-agnostic*
 
-**Step 9 — Assess the Engineer's or Employer's Representative's
-response.**
-Retrieve any Engineer's determination or Employer's Representative
-response to the EOT claim. Compare the awarded EOT (if any) against
-the claimed EOT. Identify the reasons for any reduction or rejection
-stated in the determination.
+Identify the methodology used from the retrieved analysis document.
+Do not assume a methodology — identify it from what the retrieved
+documents describe.
+
+For the identified methodology, assess from the retrieved documents:
+- What data does the methodology require?
+- Is that data present in the warehouse?
+- Does the methodology produce a result that can be independently
+  verified from retrieved records?
+
+**Assessment by methodology type — apply only to the methodology
+identified from retrieved documents:**
+
+Time Impact Analysis (TIA): requires programme updates at regular
+intervals and fragnets for each delay event. From retrieved documents:
+verify the fragnet represents the actual event; verify the programme
+update used is current at the time of the event; verify the critical
+path impact is calculated from the insertion point forward.
+
+Windows Analysis: requires programme updates across defined time
+windows. From retrieved documents: verify window boundaries are
+logical; verify concurrent delay is addressed within each window.
+
+Collapsed As-Built: requires as-built programme and defined delay
+events. From retrieved documents: verify the as-built programme is
+based on contemporaneous records; verify the delay events removed
+are correctly characterised.
+
+As-Planned vs As-Built: requires baseline programme and as-built
+records. Flag if used on a project with multiple concurrent delay
+events — this methodology cannot isolate causation in that context.
+State this limitation.
+
+Impacted As-Planned: requires baseline programme only — does not
+use as-built records. Flag this methodology on any complex project.
+State that it does not account for actual performance and faces
+challenge in arbitration proceedings.
+
+**If the methodology cannot be identified from retrieved documents:**
+State CANNOT IDENTIFY METHODOLOGY — the delay analysis document
+describes an approach that cannot be categorised from the retrieved
+content.
+
+### Step 6 — Assess concurrent delay
+*Contract-type-agnostic*
+
+From the retrieved records, assess whether any Contractor-caused
+delay events overlap with the claimed Employer-caused delay events
+on the critical path during the same period.
+
+**Only assess concurrent delay that is evidenced in retrieved
+documents.** Do not introduce concurrent delay scenarios that are
+not supported by retrieved records.
+
+If concurrent delay is evidenced: state the period affected and
+the overlapping events from retrieved documents. State that under
+the SCL Protocol (retrieved from Layer 2), concurrent delay
+affects cost entitlement — time entitlement is retained. Do not
+resolve the entitlement question — state both positions.
+
+If the claim does not address concurrent delay but the retrieved
+records indicate it: flag this as a gap in the claim.
+
+### Step 7 — Assess float
+*Contract-type-agnostic*
+
+From the retrieved programme:
+- Does the baseline programme show float on the activities affected
+  by the claimed delay events?
+- Has the claim correctly treated float as a shared resource (absent
+  express contractual stipulation)?
+- Does the retrieved Particular Conditions contain an express float
+  ownership clause? If so: extract from retrieved documents and apply.
+
+**Do not apply any float position without retrieving the Particular
+Conditions float clause (if any).** If no express float clause is
+found in the retrieved PC AND the PC has been fully retrieved: note
+that no express provision was found and the shared resource principle
+appears to apply — citing the PC as source.
+
+### Step 8 — Assess the claimed EOT quantum
+*Contract-type-agnostic*
+
+Compare the claimed EOT days against the delay demonstrated in the
+retrieved analysis documents.
+
+**State only what the retrieved analysis shows.** If the analysis
+does not demonstrate the full claimed quantum: state the gap between
+demonstrated impact and claimed days. Do not calculate an alternative
+quantum — flag the difference and state what additional evidence would
+be needed to verify the full claim.
+
+### Step 9 — Assess the Engineer's or Employer's Representative's response
+*Contract-type-specific*
+
+From the retrieved determination or response:
+- What position has the contract administrator taken on the EOT
+  claim?
+- What was awarded (if any)?
+- What reasons were given for reduction or rejection?
+
+If no determination has been retrieved after searching:
+State CANNOT ASSESS the contract administrator's position on EOT.
 
 ---
 
 ## Classification and decision rules
 
-**Entitlement by event type:**
+**Entitlement event:**
 
-Employer Risk Event (e.g., late access, Employer instruction,
-Employer-supplied materials failure, exceptionally adverse weather
-where included, unforeseeable physical conditions under Red/Yellow):
-→ **EOT + Cost** entitlement (both editions, all books where the
-  event is listed — verify in Particular Conditions)
-
-Neutral Event (e.g., exceptionally adverse climatic conditions
-where listed as neutral, certain force majeure events):
-→ **EOT only** — no cost entitlement (verify in Particular Conditions)
-
-Contractor Risk Event:
-→ **No entitlement** — Contractor bears the delay
-
-**Concurrent delay:**
-
-Employer-caused concurrent delay with Contractor-caused concurrent
-delay on the critical path:
-→ Under SCL Protocol 2nd Ed. 2017 (the GCC standard): Contractor
-  retains time entitlement but cost entitlement may be reduced or
-  extinguished for the concurrent period
-→ Flag concurrent delay and state which events are concurrent and
-  what period is affected
-→ Do not resolve the entitlement question — state both positions
-  and the documents that support each
+Event corresponds to a qualifying event in the retrieved PC →
+IN SCOPE — proceed with proof and methodology assessment
+Event does not correspond to any qualifying event in retrieved PC →
+OUT OF SCOPE under the retrieved PC — flag; state the specific
+provision that excludes it
+Particular Conditions not retrieved → CANNOT CLASSIFY the event
 
 **Critical path impact:**
 
-Delay event demonstrated to affect critical path activities:
-→ EOT entitlement assessment proceeds
-
-Delay event affecting non-critical activities only (float absorbed):
-→ No EOT entitlement for that event unless float is exhausted
-→ Flag: state which activities were affected and that float
-  absorption does not generate EOT entitlement
-
-Critical path not demonstrated in the claim:
-→ Classify as **CRITICAL PATH NOT ESTABLISHED**
-→ Flag: EOT quantum cannot be verified without critical path
-  analysis
+Impact on critical path demonstrated in retrieved analysis →
+CRITICAL PATH IMPACT DEMONSTRATED — proceed with quantum assessment
+Impact on non-critical activities only → NO EOT ENTITLEMENT for
+this event unless float is exhausted — flag; state the activities
+affected
+Critical path not demonstrated in retrieved analysis →
+CRITICAL PATH NOT ESTABLISHED — flag; EOT quantum cannot be verified
 
 **Baseline programme:**
 
-Programme accepted/approved and CPM-based:
-→ Proceed with analysis
+Programme retrieved, accepted/approved, CPM-based → VALID BASELINE
+Programme retrieved but not accepted/approved → DISPUTED BASELINE —
+flag; state the evidence of non-acceptance
+Programme not retrieved → CANNOT VERIFY — flag immediately;
+delay analysis cannot be assessed without the baseline
 
-Programme not accepted/approved or not CPM-based:
-→ Flag: state the deficiency and its effect on the reliability
-  of the delay analysis
+**Methodology:**
 
-Programme absent from warehouse:
-→ Classify as **CANNOT VERIFY — BASELINE PROGRAMME MISSING**
-→ Flag immediately
+Identified from retrieved documents and data requirements met →
+state methodology and assessment
+Data requirements not met (required records absent) →
+METHODOLOGY CANNOT BE VERIFIED FROM WAREHOUSE DOCUMENTS — flag
 
 ---
 
 ## When to call tools
 
-**Signal:** The EOT claim references a delay event but no
-contemporaneous record (site diary, RFI, instruction) has been
-retrieved to support it.
-**Action:** Call `search_chunks` with query "[event description]
-[date range]" and call `get_related_documents` with document_type
-"Site Diary" for the relevant period.
-**Look for:** Any contemporaneous document that records the event
-independently of the claim submission.
+**Signal:** EOT claim references delay events but no contemporaneous
+records for those events have been retrieved
+**Action:** `search_chunks` with query "[event description] [date
+range]"; `get_related_documents` with document types "Site Diary",
+"Daily Report" for the relevant period
+**Look for:** Contemporaneous records evidencing the event independently
+of the claim submission
 
-**Signal:** The delay analysis references a programme revision
-or update but only the baseline programme has been retrieved.
-**Action:** Call `get_related_documents` with document_type
-"Revised Programme" or "Programme Update".
-**Look for:** The programme update referenced in the analysis —
-required to verify the TIA fragnet or windows analysis.
+**Signal:** Claim references a programme revision but only the
+baseline has been retrieved
+**Action:** `get_related_documents` with document types "Revised
+Programme", "Programme Update"
+**Look for:** Programme updates referenced in the analysis
 
-**Signal:** The claim references an Engineer's determination or
-Employer's Representative response that has not been retrieved.
-**Action:** Call `get_related_documents` with document_type
-"Engineer's Determination" or `search_chunks` with query
-"extension of time determination awarded".
-**Look for:** The determination document and the awarded EOT,
-if any.
+**Signal:** Engineer's determination referenced but not retrieved
+**Action:** `get_related_documents` with document type "Engineer's
+Determination"; `search_chunks` with query "extension of time
+determination awarded"
+**Look for:** The determination document and any awarded EOT
 
-**Signal:** The Particular Conditions have not been retrieved
-and the EOT clause entitlement events cannot be confirmed.
-**Action:** Call `search_chunks` with query "particular conditions
-extension time entitlement clause".
-**Look for:** Any Particular Conditions amendment to the EOT clause.
-If none found, flag that the entitlement event list could not be
-confirmed from the warehouse.
+**Signal:** Particular Conditions not retrieved — entitlement event
+list cannot be confirmed
+**Action:** `search_chunks` with query "particular conditions extension
+time entitlement clause 8"
+**Look for:** PC amendment to the EOT clause and entitlement events
+
+**Signal:** Layer 2 EOT clause not retrieved
+**Action:** `search_chunks` with query "[FIDIC book] [edition] clause
+8 extension time entitlement"
+**Look for:** Standard FIDIC EOT clause for the confirmed book and
+edition
 
 ---
 
 ## Always flag — regardless of query
 
-**Flag 1 — EOT claim present but notice time-barred.**
-If notice_compliance findings show a POTENTIALLY TIME-BARRED or
-NON-COMPLIANT notice for this claim, flag it at the top of the
-EOT assessment. State that the procedural gateway is not satisfied
-and that the entitlement analysis is conditional on the notice
-position being resolved.
+1. **Notice time bar caveat** — if notice_compliance shows POTENTIALLY
+   TIME-BARRED: state that the procedural gateway may not be satisfied
+   and entitlement analysis is conditional.
 
-**Flag 2 — Baseline programme absent or unaccepted.**
-If no accepted/approved baseline programme is in the warehouse,
-flag that the delay analysis cannot be independently verified.
-State what is missing and what cannot be assessed as a result.
+2. **Baseline programme absent or not formally accepted** — flag
+   immediately; state that the delay analysis cannot be independently
+   verified.
 
-**Flag 3 — Concurrent delay identified but not addressed in
-the claim.**
-If the as-built records or programme show concurrent Contractor
-delay during the claimed EOT period, flag this even if the claim
-does not address it. State the period affected and the overlapping
-events.
+3. **Concurrent delay evidenced in retrieved records but not addressed
+   in the claim** — flag; state the period and overlapping events.
 
-**Flag 4 — Claimed EOT exceeds demonstrated critical path impact.**
-If the claimed days exceed the delay demonstrated on the critical
-path in the analysis, flag the gap. State the demonstrated impact
-and the claimed quantum.
+4. **Claimed EOT exceeds demonstrated critical path impact** — flag
+   the gap; state the demonstrated impact and the claimed quantum.
 
-**Flag 5 — Methodology not supported by available records.**
-If the methodology used requires data that is absent from the
-warehouse (e.g., TIA requires programme updates that are missing),
-flag that the methodology cannot be verified from the available
-records.
+5. **Methodology not supported by available records** — flag; state
+   which required data is absent from the warehouse.
+
+6. **Entitlement event list not confirmed from Particular Conditions**
+   — flag; state that event classification cannot be made.
 
 ---
 
 ## Output format
+
 ```
 ## EOT Quantification Assessment
 
+### Documents Retrieved (Layer 1)
+[List every document retrieved with reference numbers and dates.]
+
+### Documents Not Retrieved
+[List every document required but not found. State which steps
+are affected.]
+
+### Layer 2 Reference Retrieved
+[State whether FIDIC EOT clause and SCL Protocol were retrieved
+from Layer 2. If not: state analytical knowledge applied.]
+
+### Notice Position
+[From notice_compliance findings — time bar caveat if applicable]
+
 ### Contract Basis
-- FIDIC book and edition: [extracted from Legal orchestrator or retrieved]
-- EOT clause: [1999 Cl. 8.4 / 2017 Cl. 8.5 — confirm from PC]
-- Time for Completion: [extracted from contract documents]
-- Contractual completion date: [extracted from contract or programme]
-- Particular Conditions amendments to EOT clause: [list or NONE FOUND]
+FIDIC book and edition: [from orchestrator findings]
+EOT clause: [sub-clause from retrieved PC / CANNOT CONFIRM — PC not retrieved]
+Time for Completion: [from retrieved Contract Data / CANNOT CONFIRM]
+Contractual completion date: [from retrieved documents / CANNOT CONFIRM]
+PC amendments to EOT clause: [list or NONE FOUND / CANNOT CONFIRM]
 
 ### Baseline Programme
-- Programme status: [ACCEPTED / APPROVED / NOT ACCEPTED / NOT FOUND]
-- CPM-based: [YES / NO / CANNOT DETERMINE]
-- Source document: [reference]
+Status: [RETRIEVED — accepted/approved / RETRIEVED — not accepted /
+NOT FOUND IN WAREHOUSE]
+CPM-based: [YES / NO / CANNOT DETERMINE]
+Source: [document reference]
+Analysis gate: [PROCEED / CANNOT VERIFY — baseline not retrieved]
 
 ### Delay Event Register
 
-| # | Event description | Clause cited | Event type | CP impact | Concurrent delay | EOT claimed | Supportable |
+| # | Event | Clause in retrieved PC | Event type | CP impact | Concurrent delay | EOT claimed | Supportable |
 |---|---|---|---|---|---|---|---|
-| 1 | [description] | [clause] | [ER/Neutral/CR] | [YES/NO/PARTIAL] | [YES/NO] | [days] | [YES/PARTIAL/NO/CANNOT ASSESS] |
+| 1 | [description] | [clause or NOT CONFIRMED] | [ER/Neutral/CR/CANNOT CLASSIFY] | [YES/NO/PARTIAL] | [YES/NO/NOT ASSESSED] | [days] | [YES/PARTIAL/NO/CANNOT ASSESS] |
 
 ### Findings by Delay Event
 
 **[Event description]**
-Entitlement clause: [clause from Particular Conditions]
-Event type: [Employer Risk / Neutral / Contractor Risk]
+Entitlement clause: [from retrieved PC / CANNOT CONFIRM]
+Event classification: [Employer Risk / Neutral / Contractor Risk /
+CANNOT CLASSIFY — PC not retrieved]
 Notice status: [from notice_compliance findings]
-Critical path impact: [demonstrated / not demonstrated / partial]
-Concurrent delay: [identified / not identified] — [detail if identified]
-Float position: [absorbed / exhausted / not applicable]
+Critical path impact: [demonstrated / not demonstrated / not assessed]
+Concurrent delay: [identified — period and events / not evidenced in
+retrieved records]
+Float position: [from retrieved programme / not assessable]
 EOT claimed: [days]
-EOT supportable: [days or CANNOT ASSESS]
-Methodology: [methodology name and assessment]
-Contemporaneous records: [PRESENT / PARTIAL / ABSENT]
+EOT supportable from retrieved documents: [days / CANNOT ASSESS — reason]
+Methodology: [identified name and assessment / CANNOT IDENTIFY]
+Contemporaneous records: [PRESENT — list / PARTIAL — gaps noted / ABSENT]
 Source documents: [list with references]
-Finding: [specific conclusion with source attribution]
+Finding: [from retrieved documents only]
 
 ### Methodology Assessment
-Methodology used: [name]
-Data requirements met: [YES / PARTIAL / NO]
-SCL Protocol compliance: [COMPLIANT / ISSUES / CANNOT ASSESS]
-Finding: [specific conclusion]
+Methodology identified: [name / CANNOT IDENTIFY]
+Data requirements: [MET / PARTIALLY MET — gaps / NOT MET]
+SCL Protocol assessment: [from retrieved Layer 2 / CANNOT ASSESS —
+SCL not retrieved]
+Finding: [from retrieved documents only]
 
-### Engineer's / Employer's Representative's Position
-EOT awarded: [days or NOT FOUND]
-Reasons for reduction/rejection: [summary or NOT FOUND]
-Source document: [reference]
+### Contract Administrator Position
+Determination retrieved: [YES / NO — NOT FOUND IN WAREHOUSE]
+EOT awarded: [days / NOT FOUND]
+Reasons for reduction/rejection: [from retrieved determination / NOT FOUND]
+Source: [document reference]
 
 ### FLAGS
-[Each flag on a separate line with one-sentence implication]
+[Each flag with one-sentence forensic implication]
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / RED / GREY]
-Summary: [two to three sentences]
+Summary: [two to three sentences — facts from retrieved documents only]
 ```
 
 ---
 
-## Domain knowledge and standards
+## Analytical framework
+*Reference only — do not apply any classification, methodology
+standard, or entitlement position from this section without first
+confirming the applicable terms from retrieved project documents.*
 
-### Contract-type-specific EOT provisions
+**FIDIC EOT clause structure — analytical reference:**
+The FIDIC EOT clause lists qualifying events that entitle the
+Contractor to an extension. The list differs between the three books
+(Red, Yellow, Silver) with the Silver Book having the narrowest list.
+The 1999 and 2017 editions renumber the clause (8.4 in 1999; 8.5
+in 2017) and adjust the drafting. The actual qualifying events for
+any project are the events in the retrieved Particular Conditions —
+retrieve from Layer 2 for the standard text and from Layer 1 for
+the project-specific version.
 
-| Book | Edition | EOT clause | Key entitlement events |
-|---|---|---|---|
-| Red Book | 1999 | Cl. 8.4 | Cl. 8.4(a)–(e): Employer variation, exceptionally adverse climatic conditions, Employer delay, unforeseeable shortages, other Employer Risk Events |
-| Red Book | 2017 | Cl. 8.5 | Cl. 8.5(a)–(e): same structure, updated drafting — verify PC amendments |
-| Yellow Book | 1999 | Cl. 8.4 | Same as Red Book — design risk excluded from Employer Risk Events |
-| Yellow Book | 2017 | Cl. 8.5 | Same as Red Book 2017 — design risk excluded |
-| Silver Book | 1999 | Cl. 8.4 | Narrower — Contractor bears most risk; Employer Risk Events limited; unforeseeable physical conditions excluded |
-| Silver Book | 2017 | Cl. 8.5 | Narrower than Red/Yellow — same principle as 1999 Silver |
+**SCL Protocol 2017 — analytical reference:**
+The SCL Protocol is the primary framework for delay methodology
+assessment in GCC proceedings. Core principles: contemporaneous
+records are the evidential foundation; prospective analysis is more
+reliable than retrospective; concurrent delay must be addressed;
+float is a shared resource absent express contractual agreement.
+Retrieve from Layer 2 to apply these principles to the retrieved
+analysis.
 
-All entitlement event lists in this table are standard form defaults.
-**Read the Particular Conditions before applying any of these.**
-GCC Particular Conditions frequently remove or qualify entitlement
-events — particularly exceptionally adverse weather and unforeseeable
-physical conditions.
-
-### Delay analysis methodologies — assessment criteria
-
-**Time Impact Analysis (TIA):**
-Most defensible. Insert fragnet into current programme update,
-measure forward impact on completion. Data required: programme
-updates at regular intervals, fragnets for each delay event.
-Assessment: verify the fragnet represents the actual event, verify
-the programme update used is the one current at the time of the
-event, verify the critical path impact is calculated from the
-insertion point forward.
-
-**Windows Analysis:**
-Preferred retrospective method for concurrent delay. Divide the
-project into time windows and analyse each separately. Data required:
-programme updates across the project, delay event records per window.
-Assessment: verify window boundaries are logical and not manipulated
-to exclude unfavourable periods, verify concurrent delay is addressed
-within each window.
-
-**Collapsed As-Built:**
-Remove delay events from as-built programme, derive undelayed
-completion. Data required: complete as-built programme, defined
-delay events. Assessment: verify the as-built programme is based
-on contemporaneous records not retrospective reconstruction, verify
-the delay events removed are correctly characterised.
-
-**As-Planned vs As-Built:**
-Compare planned completion to actual completion. Data required:
-baseline programme, as-built records. Assessment: lowest reliability
-for complex projects — flag if used on a project with multiple
-concurrent delay events; it cannot isolate causation.
-
-**Impacted As-Planned:**
-Insert delay events into baseline programme theoretically. Data
-required: baseline programme only. Assessment: flag this methodology
-on any complex project — it does not account for actual performance
-and is routinely challenged in GCC arbitration. State the
-limitation in the finding.
-
-### SCL Protocol 2nd Edition 2017 — key principles for EOT
-
-Float is a shared resource: absent express contractual
-stipulation, float belongs to the project, not to either party.
-A Contractor cannot claim an EOT for a period covered by float
-unless the float has been exhausted.
-
-Concurrent delay: where Employer-caused and Contractor-caused
-delays are truly concurrent on the critical path, the Contractor
-retains time entitlement but cost entitlement for the concurrent
-period is uncertain and depends on the governing law and contract
-terms. The GCC position generally follows the SCL Protocol.
-
-Contemporaneous records are the foundation: a retrospective
-claim without contemporaneous support is inherently weaker.
-Flag the absence of contemporaneous records as a credibility
-issue, not merely an evidentiary gap.
-
-### GCC-specific practice
-
-Primavera P6 is the de facto standard on major GCC projects.
-A delay analysis not traceable to a P6 schedule faces credibility
-challenges in arbitration proceedings before ICC, DIAC, ADCCAC,
-SCCA, and QICCA.
-
-UAE government projects: internal approval thresholds on
-determinations mean Engineer's responses to EOT claims are
-frequently delayed beyond the contractual determination period.
-Under FIDIC 2017 Cl. 3.7, a failure to determine within the
-prescribed period results in deemed rejection. This creates a
-significant procedural risk for Contractors on UAE government
-projects — flag where a determination is outstanding beyond
-the contractual period.
-
-Saudi government projects: modified FIDIC forms frequently
-restrict Contractor entitlement events. Always extract from
-the Particular Conditions — do not assume Red Book defaults.
-
-Qatar: FIFA World Cup legacy projects established strong
-programme records culture. Absence of P6 records on a major
-Qatar project is itself a forensic signal worth flagging.
+**Delay methodology hierarchy — analytical reference:**
+TIA and Windows Analysis are the most defensible methodologies in
+GCC arbitration. Collapsed As-Built and As-Planned vs As-Built are
+acceptable for simpler projects. Impacted As-Planned is the least
+defensible — it models delay theoretically without reference to
+as-built records and is routinely challenged. These assessments
+apply to the methodology identified from the retrieved documents.

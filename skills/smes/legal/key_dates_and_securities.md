@@ -1,427 +1,502 @@
-# Key Dates and Securities — Legal & Contractual Specialist
+# Key Dates and Securities
+
+**Skill type:** Mixed
+- Contract-type-agnostic: the requirement to extract dates, periods,
+  and security parameters from retrieved project documents, and to
+  flag contradictions, absences, and anomalies
+- Contract-type-specific: which documents contain these parameters
+  differs by book (Appendix to Tender vs Contract Data vs negotiated
+  agreement); the Taking-Over Certificate and Performance Certificate
+  mechanisms differ by book and edition
+**Layer dependency:**
+- Layer 1 — project documents: Contract Data / Appendix to Tender;
+  Contract Agreement; any amendments; the Taking-Over Certificate;
+  the Performance Certificate; security instruments (bonds, guarantees);
+  the Notice to Proceed or Commencement notice; progress reports
+- Layer 2 — reference standards: FIDIC clauses governing commencement,
+  completion, DNP, and securities for the confirmed book and edition
+**Domain:** Legal & Contractual SME
+**Invoked by:** Legal orchestrator
+
+---
 
 ## When to apply this skill
 
-Apply this skill when a query concerns contractual dates, milestones, time periods,
-or security instruments — including the Commencement Date, Time for Completion,
-Defects Notification Period, milestone dates, sectional completion dates, performance
-bonds, advance payment guarantees, retention, and parent company guarantees. Also
-apply when assessing whether a security instrument is current, in the correct form,
-for the correct amount, and has been validly called or is at risk of expiry.
+Apply when a query concerns contractual dates, milestones, time
+periods, or security instruments — including Commencement Date, Time
+for Completion, Defects Notification Period, milestone dates, sectional
+completion, performance bonds, advance payment guarantees, retention,
+and parent company guarantees. Also apply when assessing whether a
+security instrument is current, correctly stated, for the correct
+amount, or at risk of expiry.
 
 ---
 
 ## Before you begin
 
-This is a Round 1 skill. There are no upstream specialist findings to read.
+### Foundational requirements
+Read contract_assembly findings first.
 
-The following must be established from prior skill outputs before this skill runs:
+From contract_assembly:
+- Confirmed book type and edition
+- Confirmed source of key parameters (Contract Data / Appendix to
+  Tender / Contract Agreement)
+- Particular Conditions amendments affecting time periods or security
+  instruments
+- Any supplemental agreements that may have modified original dates
 
-From contract_assembly.md:
-- FIDIC book type and edition
-- Contract Data / Appendix to Tender (source of all contractual dates and security
-  parameters)
-- Particular Conditions amendments affecting time periods or security instruments
-- Any supplemental agreements or amendments that may have modified original dates
+**If book type is UNCONFIRMED:** Proceed with extraction but flag
+that edition-specific analysis (Taking-Over, DNP trigger) cannot
+be applied without confirmed book type.
 
-From engineer_identification.md:
-- Identity of the Engineer or Employer's Representative — relevant to who issued
-  the Taking-Over Certificate and Performance Certificate that mark the end of
-  key periods
+From notice_and_instruction_compliance:
+- Commencement Date position — was a formal Notice to Proceed or
+  Commencement notice issued and when?
 
-From notice_and_instruction_compliance.md:
-- Commencement Date confirmation — was a formal Notice to Proceed issued and
-  when was it received?
+From engineer_identification:
+- Identity of the Engineer or Employer's Representative — relevant
+  to who issued the Taking-Over Certificate and Performance Certificate
 
-If any prior skill output is unavailable, retrieve the Contract Data, Appendix to
-Tender, Contract Agreement, and any security instruments from the warehouse before
-proceeding.
+### Layer 1 documents to retrieve (project-specific)
+
+Call `search_chunks` and `get_related_documents` to retrieve:
+- Contract Data or Appendix to Tender — primary source of all dates
+  and security parameters
+- Contract Agreement — cross-check for key parameters
+- Letter of Acceptance (Red/Yellow) — may state or confirm dates
+- Any amendments or supplemental agreements modifying original dates
+- Notice to Proceed or Commencement Date notice
+- Taking-Over Certificate (if issued)
+- Performance Certificate (if issued)
+- Performance bond / Performance Security instrument
+- Advance Payment Guarantee instrument
+- Retention release correspondence
+- Parent company guarantee (if applicable)
+
+**If the Contract Data / Appendix to Tender is not retrieved:**
+State CANNOT CONFIRM any contractual date, period, or security
+parameter. Do not extract from any secondary source without
+flagging the source hierarchy issue.
+
+**If a security instrument is not retrieved:**
+State CANNOT CONFIRM the terms, amount, validity period, or form
+of that security instrument.
+
+**For each date or parameter extracted:** State the source document
+and its reference number. Do not state any value without a source.
+
+### Layer 2 documents to retrieve (reference standards)
+
+After confirming book type, call `search_chunks` to retrieve from
+Layer 2:
+- FIDIC clause governing the Taking-Over Certificate for the
+  confirmed book and edition (Clause 10.1)
+- FIDIC clause governing the Performance Certificate
+- FIDIC clause governing the Performance Security (Clause 4.2)
+- FIDIC clause governing retention (Clause 14.9) if retention is
+  in scope
+
+**Purpose:** To establish the structural framework for assessing
+whether the Taking-Over and Performance Certificate mechanisms, and
+security provisions, have operated correctly. The specific periods
+and amounts are in Layer 1 — Layer 2 provides the framework for
+interpreting them.
 
 ---
 
 ## Analysis workflow
 
-**Step 1 — Extract all contractual dates from the Contract Data**
+### Step 1 — Extract all contractual dates and periods
+*Contract-type-agnostic*
 
-From the Contract Data or Appendix to Tender, extract and record the following
-dates and periods. For each, note the source document and clause reference:
+From the retrieved Contract Data or Appendix to Tender, extract and
+record each of the following. For every item: state the source
+document, the clause reference within that document, and the value
+as stated. Do not calculate, convert, or adjust any value.
 
-- Commencement Date (or the period within which it must occur after the Letter of
-  Acceptance / Contract Agreement)
-- Time for Completion (overall, and per section if sectional completion applies)
-- Milestone dates (if any, from the programme schedule incorporated into the contract)
-- Defects Notification Period (DNP) — duration from Taking-Over
-- Period for Performance Security validity
-- Period for Advance Payment Guarantee validity (if applicable)
-- Retention percentage and release conditions
-- Any other time-limited obligation stated in the Contract Data
+- Commencement Date (or the period within which it must occur) —
+  as stated in the retrieved Contract Data
+- Time for Completion — overall, and per section if sectional
+  completion is stated in the retrieved documents
+- Milestone dates — only if stated in retrieved contract documents
+  or an incorporated programme
+- Defects Notification Period — as stated in retrieved Contract Data
+- Period for Performance Security validity — as stated in retrieved
+  documents
+- Period for Advance Payment Guarantee validity — as stated if
+  applicable
+- Retention percentage — as stated in retrieved documents
+- Retention first release trigger and amount — as stated
+- Retention second release trigger and amount — as stated
+- Any other time-limited obligation stated in the retrieved Contract
+  Data
 
-Cross-check each extracted date against the Contract Agreement and Letter of
-Acceptance. If a date appears differently in two documents, flag the contradiction
-immediately and apply the document hierarchy from contract_assembly.md to determine
-which governs.
+**Cross-check:** If the same parameter appears in both the Contract
+Data and the Contract Agreement with different values: flag the
+contradiction immediately. Apply the order of precedence from
+contract_assembly findings to identify which governs — if order of
+precedence is unconfirmed: state CANNOT DETERMINE which value governs.
 
-**Step 2 — Confirm the actual Commencement Date**
+**If a parameter is not found in any retrieved document:**
+State NOT FOUND IN RETRIEVED DOCUMENTS for that parameter. Do not
+estimate, calculate, or apply any default.
 
-The contractual Commencement Date triggers the Time for Completion countdown. It is
-not necessarily the date stated in the Contract Data — it is the date on which the
-Notice to Proceed was received (if the contract defines commencement by notice) or
-the date the conditions precedent to commencement were satisfied.
+### Step 2 — Confirm the actual Commencement Date
+*Contract-type-agnostic*
 
-From the warehouse, identify:
-- Whether a formal Notice to Proceed or Engineer's notice of Commencement Date was
-  issued
-- The date on which it was received by the Contractor
-- Whether the conditions precedent to commencement (mobilisation, site access,
-  advance payment, bond submission) were satisfied on that date
+The contractual Commencement Date triggers the Time for Completion
+countdown. It may not be the date stated in the Contract Data —
+it is the date on which commencement actually occurred per the
+contract mechanism.
 
-If commencement was delayed beyond the date stated in the Contract Data due to
-Employer failure to give access or issue the notice, flag this — delayed
-commencement caused by the Employer is a potential EOT ground and cost entitlement
-under Clause 8.1.
+From the retrieved documents, identify:
+- Whether a formal Notice to Proceed or Engineer's Commencement
+  notice was issued — retrieve it; state the date
+- Whether any conditions precedent to commencement (site access,
+  advance payment, bond submission) are stated in the retrieved
+  contract documents and whether they were satisfied
 
-**Step 3 — Identify all EOT grants and revised completion dates**
+**Do not calculate the commencement date.** State only what the
+retrieved documents show. If the Notice to Proceed has not been
+retrieved: state CANNOT CONFIRM the actual Commencement Date from
+the warehouse documents. Note that the date in the Contract Data
+may be the stated contractual date but actual commencement may
+differ — this gap cannot be resolved without the notice.
 
-From the retrieved documents, identify any extensions of time that have been
-granted. For each EOT grant:
-- The instruction or determination reference
-- The number of days granted
-- The revised Time for Completion
-- Whether the grant was from the Engineer (Red/Yellow) or Employer's Representative
-  (Silver)
-- Whether the grant was agreed, determined, or issued unilaterally
+**If commencement was delayed:** State what the retrieved documents
+show about the delay and its cause. Do not characterise the delay
+as an Employer or Contractor event without retrieved evidence.
 
-Compile the current contractual completion date: original Time for Completion plus
-all granted EOTs. This is the date against which actual completion or current
-programme is assessed. Flag if EOT claims are pending that may further extend this
-date — pass to Claims specialist.
+### Step 3 — Assess EOT history and adjusted completion date
+*Contract-type-agnostic*
 
-**Step 4 — Assess liquidated damages exposure**
+From the retrieved documents, identify:
+- Any EOT claims submitted — retrieve from the warehouse
+- Any EOT granted — by Engineer determination or agreement
+- The cumulative EOT granted (if determinable from retrieved
+  documents)
+- The adjusted contractual completion date (original date plus
+  confirmed EOT) — state only if both the original date and the
+  granted EOT are confirmed from retrieved documents
 
-From the Contract Data, confirm:
-- The LD rate (per day or per week)
-- The LD cap (maximum LD amount, if stated)
-- Whether LDs have been deducted from any IPC
+**Do not calculate an adjusted completion date unless both inputs
+are confirmed from retrieved documents.** If either is unconfirmed:
+state CANNOT CALCULATE adjusted completion date.
 
-Calculate the maximum LD exposure: LD rate × delay period to current date (or to
-actual completion if the project is complete). Compare against the LD cap.
+Assess LD exposure only from confirmed values:
+- Original or adjusted completion date: from retrieved documents
+- Actual completion date (from Taking-Over Certificate if retrieved)
+- LD rate: from retrieved Contract Data only
+- LD cap: from retrieved Contract Data or Particular Conditions only
 
-Apply GCC-specific flags:
-- Qatar: government contracts typically cap LDs at 10% of contract value — confirm
-  whether the contractual cap is consistent with this or whether there is a gap
-- Saudi Arabia: CTL Article 179 allows courts to reduce LDs if proved excessive —
-  flag if LD exposure is large relative to contract value
-- UAE: no statutory LD cap but courts may reduce manifestly excessive LDs under
-  good faith principles — flag if LD rate appears unusually high
+**Do not calculate LD liability.** State the inputs confirmed from
+retrieved documents and flag any input that is unconfirmed.
 
-**Step 5 — Assess performance security and bonds**
+### Step 4 — Assess Taking-Over Certificate status
+*Contract-type-specific*
 
-For each security instrument referenced in the contract (Performance Bond, Advance
-Payment Guarantee, Retention Bond, Parent Company Guarantee), assess:
+From the retrieved documents:
+- Has a Taking-Over Certificate (TOC) been issued? Retrieve it.
+- If issued: state the date, issuing entity, and what was taken over
+  (whole of Works, section, or part)
+- If issued: does the TOC date trigger the DNP countdown? — confirm
+  the DNP trigger from the retrieved Particular Conditions; if PC not
+  retrieved: state CANNOT CONFIRM the trigger mechanism
+- If not issued: are there retrieved documents indicating the Works
+  are complete but the TOC has not been issued?
 
-- Is the instrument present in the warehouse?
-- Is it in the correct form — on-demand or conditional? The contract will specify
-  the required form. An on-demand bond can be called without proving breach — a
-  conditional bond requires the Employer to prove entitlement. This distinction is
-  forensically critical.
-- Is the amount correct per the Contract Data?
-- What is the expiry date? Has it expired or is it at risk of expiry before the
-  relevant contractual period ends?
-- Under 2017 FIDIC: has the Employer given written notification before calling the
-  bond? Clause 4.2 (2017) requires written notice to the Contractor before the
-  Employer calls the Performance Security.
-- Has the bond been called? If so, was the call valid per the bond terms and the
-  contract?
+**If no TOC has been retrieved:** State CANNOT CONFIRM TOC status.
+Do not assume the Works are complete or incomplete.
 
-If a security instrument is referenced in the Contract Agreement but not present
-in the warehouse, call tools to search for it. Do not classify the security
-position without the instrument document.
+### Step 5 — Assess Performance Certificate status
+*Contract-type-agnostic*
 
-**Step 6 — Identify the Defects Notification Period and its implications**
+From the retrieved documents:
+- Has a Performance Certificate been issued? Retrieve it.
+- If issued: state the date and issuing entity
+- If not issued: has the DNP period expired based on retrieved dates?
+  If both the TOC date and the DNP period are confirmed from retrieved
+  documents, and the resulting DNP expiry date has passed: flag that
+  the Performance Certificate may be overdue. State the basis for
+  this assessment from retrieved documents only.
 
-From the Contract Data and any Taking-Over Certificate retrieved, establish:
-- The DNP start date: date of Taking-Over Certificate for the whole works (or
-  section, if sectional completion)
-- The DNP duration from the Contract Data
-- The DNP end date: DNP start + DNP duration
-- Whether the DNP has expired, is current, or has not yet started
-- Whether the Performance Certificate has been issued (marks end of Contractor's
-  obligations under the contract)
+**If the DNP period has not been confirmed from retrieved documents:**
+State CANNOT DETERMINE whether the Performance Certificate is overdue.
 
-Flag if:
-- The DNP has expired but the Performance Certificate has not been issued — the
-  Engineer/Employer's Representative is in delay in issuing the certificate and
-  the Contractor may have a claim for release of retention
-- Defects are being notified after the DNP expiry — the Employer's right to
-  require defects correction under the contract may have expired (subject to
-  decennial liability for structural defects)
-- The DNP was extended by the Engineer — confirm the extension was validly issued
-  and within the Engineer's authority
+### Step 6 — Assess security instruments
+*Contract-type-agnostic*
 
-**Step 7 — Compile and structure findings**
+For each security instrument in the warehouse, assess:
 
-Compile all findings in the output format below. The key dates extracted here are
-foundational facts for every downstream specialist — Schedule needs the
-Commencement Date and Time for Completion; Claims needs the LD rate and cap;
-Governance needs the DNP and Performance Certificate status.
+**(a) Performance bond / Performance Security:**
+- Issuing bank or surety: from retrieved instrument
+- Amount: from retrieved instrument (state as retrieved — do not
+  compare to a "required" amount unless the required amount is
+  also confirmed from a retrieved document)
+- Expiry date: from retrieved instrument
+- Form: on-demand / conditional — from retrieved instrument
+- Whether the required amount matches the contract requirement:
+  only if both the bond amount AND the required percentage are
+  confirmed from retrieved documents
+- Whether the bond is current: compare expiry date to the current
+  project status as established from retrieved documents only
+
+**(b) Advance Payment Guarantee:**
+Same framework as Performance Security. In addition: confirm the
+advance payment amount from the retrieved Contract Data and whether
+the guarantee amount reduces as the advance is recovered — only
+if the mechanism is stated in the retrieved documents.
+
+**(c) Retention:**
+State the retention amounts as found in the retrieved payment
+certificates or financial records. Confirm the release trigger
+from the retrieved Particular Conditions. Do not calculate
+retention amounts — extract from retrieved documents.
+
+**(d) Parent company guarantee:**
+Identify from retrieved documents. Note the issuing entity and
+the obligations guaranteed.
+
+**For any security instrument not retrieved:**
+State NOT FOUND IN WAREHOUSE DOCUMENTS. Do not assess form or
+adequacy of an instrument that has not been retrieved.
 
 ---
 
 ## Classification and decision rules
 
-**Commencement Date:**
-- Confirmed from Notice to Proceed with conditions precedent satisfied: CONFIRMED
-- Notice to Proceed issued but conditions precedent not confirmed as satisfied:
-  CONDITIONALLY CONFIRMED — flag outstanding conditions
-- No Notice to Proceed found in warehouse: UNCONFIRMED — call tools; flag absence
-- Commencement delayed beyond Contract Data date: DELAYED COMMENCEMENT — state
-  cause and flag potential EOT entitlement
+**Contractual dates:**
 
-**Time for Completion and revised completion date:**
-- Original date confirmed, no EOTs granted: ORIGINAL DATE CURRENT
-- EOTs granted — revised date calculable: REVISED DATE CONFIRMED — state revised date
-- EOT claims pending — revised date uncertain: REVISED DATE UNCERTAIN — state current
-  confirmed date and flag pending claims
-- Contradiction between documents on original date: CONTRADICTED — state both
-  values and which governs per hierarchy
+Date confirmed from retrieved Contract Data or Contract Agreement →
+CONFIRMED — state value and source
+Date found only in secondary documents (correspondence, progress
+reports) → FOUND IN NON-PRIMARY DOCUMENTS — state value, source,
+and note that primary source not retrieved
+Date not found in any retrieved document → NOT FOUND IN RETRIEVED
+DOCUMENTS — do not state a value
 
-**Liquidated damages:**
-- No delay beyond current contractual completion date: NO LD EXPOSURE CURRENTLY
-- Delay exists — LD exposure calculable: STATE EXPOSURE — rate × days × cap check
-- LD cap reached: LD CAP REACHED — Employer's LD entitlement is exhausted
-- LD rate or cap contradicted between documents: CONTRADICTED — state both values
+**Contradiction between documents:**
+
+Same date/value in two retrieved documents at different hierarchy
+levels → STATE BOTH — state which governs per confirmed precedence
+or state CANNOT DETERMINE if precedence unconfirmed
+Same date/value in two retrieved documents at same level →
+CONTRADICTION — flag RED; state both values; cannot be resolved
+from retrieved documents
+
+**Taking-Over Certificate:**
+
+TOC retrieved → ISSUED — state date and scope
+TOC not retrieved after searching → NOT FOUND IN WAREHOUSE — cannot
+confirm issuance or completion status
+
+**Performance Certificate:**
+
+Performance Certificate retrieved → ISSUED — state date
+Performance Certificate not retrieved AND DNP expiry confirmed from
+retrieved dates → POTENTIALLY OVERDUE — flag; state the basis
+Performance Certificate not retrieved AND DNP status unknown →
+NOT FOUND IN WAREHOUSE — cannot confirm issuance status
 
 **Security instruments:**
-- Instrument present, correct form, correct amount, not expired: VALID
-- Instrument present but expiring within 30 days: AT RISK — flag immediately
-- Instrument present but expired: EXPIRED — flag; Employer has no live security
-- Instrument referenced in contract but not in warehouse: NOT CONFIRMED — call tools
-- Instrument in wrong form (e.g. conditional when on-demand required): FORM DEFECT
 
-**DNP and Performance Certificate:**
-- DNP current, Performance Certificate not yet due: CURRENT
-- DNP expired, Performance Certificate issued: COMPLETE
-- DNP expired, Performance Certificate not issued: ENGINEER IN DELAY — flag
-- Taking-Over Certificate not issued: DNP NOT STARTED
+Instrument retrieved and within its stated validity period →
+CURRENT — state expiry date and source
+Instrument retrieved and past its stated expiry date → EXPIRED —
+flag; state expiry date and source
+Instrument not retrieved → NOT FOUND IN WAREHOUSE
 
 ---
 
 ## When to call tools
 
-**Signal:** Contract Data states a Commencement Date but no Notice to Proceed has
-been retrieved
-**Tool:** `search_chunks` querying for "Notice to Proceed", "Commencement Date",
-"site access"
-**Look for:** The formal notice and any correspondence about delayed commencement
+**Signal:** Contract Data or Appendix to Tender has not been retrieved
+and key dates cannot be confirmed
+**Action:** `search_chunks` with query "contract data appendix tender
+time completion commencement date"; `get_related_documents` with
+document type "Contract Data" or "Appendix to Tender"
+**Look for:** The primary source of contractual dates and periods
 
-**Signal:** Contract Agreement references a Performance Bond and/or Advance Payment
-Guarantee but neither document has been retrieved
-**Tool:** `get_related_documents` filtered to Performance Security, Bond, Guarantee
-**Look for:** The bond documents; if not found, flag as NOT CONFIRMED and note
-that security validity cannot be assessed without the instrument
-
-**Signal:** EOT determinations are referenced in correspondence but no formal EOT
-grant documents have been retrieved
-**Tool:** `search_chunks` querying for "extension of time", "EOT", "revised
+**Signal:** A Taking-Over Certificate is referenced in correspondence
+but not retrieved
+**Action:** `get_related_documents` with document type "Taking-Over
+Certificate"; `search_chunks` with query "taking over certificate
 completion date"
-**Look for:** Engineer's determinations or instructions granting EOT; compile the
-full EOT history
+**Look for:** The Taking-Over Certificate document
 
-**Signal:** A Taking-Over Certificate or Performance Certificate is referenced in
-correspondence but has not been retrieved
-**Tool:** `get_related_documents` filtered to Taking-Over Certificate, Performance
-Certificate
-**Look for:** The certificate documents; confirm the date and scope (whole works
-or section)
+**Signal:** A performance bond or other security instrument is
+referenced in the Contract Agreement but not retrieved
+**Action:** `get_related_documents` with document types "Performance
+Bond", "Performance Security", "Advance Payment Guarantee",
+"Parent Company Guarantee"
+**Look for:** The instrument itself
 
-**Signal:** Sectional completion is referenced in the query or documents but the
-Contract Data for each section has not been retrieved
-**Tool:** `search_chunks` querying for "section", "sectional completion", "Section
-Time for Completion"
-**Look for:** The Contract Data entries for each section; assess each section
-separately
+**Signal:** EOT has been claimed but no EOT award or Engineer's
+determination has been retrieved
+**Action:** `get_related_documents` with document type "Engineer's
+Determination"; `search_chunks` with query "extension of time
+granted awarded EOT determination"
+**Look for:** Any document recording a granted EOT and the period
+awarded
+
+**Signal:** Layer 2 FIDIC clauses for Taking-Over, DNP, or securities
+have not been retrieved
+**Action:** `search_chunks` with query "[FIDIC book] [edition]
+clause [10 / 4.2 / 14.9] [subject]"
+**Look for:** Standard FIDIC text for structural comparison
 
 ---
 
 ## Always flag — regardless of query
 
-1. **Any security instrument at risk of expiry within 30 days** — always flag
-   immediately regardless of the query. An expiring bond is a time-critical issue
-   that requires immediate action. If the Performance Bond expires before the
-   Taking-Over Certificate is issued, the Employer loses its on-demand security.
+1. **Contract Data or Appendix to Tender not retrieved** — flag
+   immediately; state that all date and security analysis is affected.
 
-2. **Delayed commencement caused by the Employer** — always flag if the actual
-   Commencement Date was later than the Contract Data date due to Employer failure
-   to give site access, issue the notice, or satisfy conditions precedent. This is
-   a potential EOT and cost entitlement ground that Claims must assess.
+2. **Contradiction in key parameters between retrieved documents**
+   — flag any contradiction in Time for Completion, LD rate, DNP,
+   or security amounts; state both values and their sources.
 
-3. **LD cap reached or close to being reached** — always flag if the LD exposure
-   calculation is at or approaching the contractual cap. Once the cap is reached
-   the Employer's LD entitlement is exhausted — a fact that changes the commercial
-   dynamics of the project significantly.
+3. **Taking-Over Certificate outstanding where Works appear complete**
+   — if retrieved records indicate completion but no TOC has been
+   found, flag; state the forensic implication (DNP not started,
+   LD position unclear, retention not released).
 
-4. **DNP expired without Performance Certificate issued** — always flag. The
-   Engineer or Employer's Representative is in delay in issuing the certificate.
-   The Contractor may have grounds to claim release of retention and closure of
-   its outstanding obligations.
+4. **Performance Certificate outstanding where DNP appears to have
+   expired** — flag; state the DNP end date as derived from retrieved
+   documents only and the consequence of non-issuance.
 
-5. **Contradiction between documents on any key date or rate** — always surface
-   contradictions on Time for Completion, LD rate, LD cap, DNP duration, and
-   retention percentage. These are the parameters most frequently disputed and
-   any contradiction must be resolved by applying the document hierarchy.
+5. **Security instrument expired or approaching expiry** — flag any
+   instrument whose retrieved expiry date has passed or is within
+   30 days, based on project status as established from retrieved
+   documents only.
+
+6. **Security amount not confirmed** — if the bond or guarantee
+   amount cannot be compared to the required amount because the
+   required percentage is not in a retrieved document: flag the gap;
+   do not state whether the security amount is adequate.
 
 ---
 
 ## Output format
+
 ```
 ## Key Dates and Securities Assessment
 
-### Contractual Dates
-| Parameter | Contract Data value | Source document | Status |
-|---|---|---|---|
-| Commencement Date | | | [CONFIRMED / UNCONFIRMED / DELAYED] |
-| Time for Completion | | | [ORIGINAL / REVISED / CONTRADICTED] |
-| Revised completion date (if EOTs granted) | | | |
-| Milestone dates (if any) | | | |
-| Defects Notification Period | | | [CURRENT / EXPIRED / NOT STARTED] |
-| Performance Certificate issued | | | [YES / NO / DATE] |
+### Documents Retrieved (Layer 1)
+[List every document retrieved with reference numbers and dates.]
 
-Commencement Date detail:
-Notice to Proceed issued: [YES — date / NO — not found]
-Conditions precedent satisfied: [YES / NO / CANNOT CONFIRM]
-Delayed commencement flag: [YES — state cause / NO]
+### Documents Not Retrieved
+[List every document required for this analysis not found in the
+warehouse. State which parameters cannot be confirmed as a result.]
 
-### Revised Completion Date
-Original Time for Completion: [date]
-EOTs granted: [list each grant with reference, days, and authority]
-Current contractual completion date: [date]
-Pending EOT claims: [list or "None identified"]
-Revised date status: [CONFIRMED / UNCERTAIN — pending claims]
+### Layer 2 Reference Retrieved
+[State whether FIDIC clauses for Taking-Over, DNP, and securities
+were retrieved from Layer 2. If not: state analytical knowledge applied.]
 
-### Liquidated Damages Exposure
-LD rate: [rate] per [day/week] — source: [document]
-LD cap: [amount or "None stated"] — source: [document]
-Current delay (if any): [days beyond current contractual completion date]
-Current LD exposure: [rate × days]
-LD cap reached: [YES / NO / N/A]
-GCC-specific flags: [Qatar cap / Saudi CTL / UAE good faith — or "None"]
+### Contractual Dates and Periods
+[For each item — state value, source document, and source clause.
+If not found: state NOT FOUND IN RETRIEVED DOCUMENTS.]
+
+| Parameter | Value | Source document | Source clause | Status |
+|---|---|---|---|---|
+| Commencement Date (contractual) | | | | [CONFIRMED/NOT FOUND] |
+| Actual Commencement Date | | | | [CONFIRMED/NOT FOUND] |
+| Time for Completion | | | | [CONFIRMED/NOT FOUND] |
+| Sectional completion (if any) | | | | [CONFIRMED/N/A/NOT FOUND] |
+| Defects Notification Period | | | | [CONFIRMED/NOT FOUND] |
+| [Other parameters as applicable] | | | | |
+
+### Contradictions in Dates/Parameters
+[List any contradiction found, or "None identified in retrieved documents."]
+
+### EOT History and Adjusted Completion Date
+EOT claimed: [value from retrieved claim documents / NOT FOUND]
+EOT granted: [value from retrieved determination or agreement / NOT FOUND]
+Adjusted completion date: [calculated from confirmed values only /
+CANNOT CALCULATE — state which input is unconfirmed]
+LD inputs confirmed from retrieved documents:
+  Original/adjusted completion date: [confirmed value and source / NOT CONFIRMED]
+  Actual completion date: [from retrieved TOC / NOT CONFIRMED]
+  LD rate: [confirmed value and source / NOT CONFIRMED]
+  LD cap: [confirmed value and source / NOT CONFIRMED]
+LD exposure: CANNOT CALCULATE — state which inputs are unconfirmed
+
+### Taking-Over Certificate
+Status: [ISSUED — date and scope / NOT FOUND IN WAREHOUSE]
+Source: [document reference]
+DNP triggered: [YES — start date from TOC date and confirmed DNP period /
+CANNOT CONFIRM — TOC not retrieved / CANNOT CONFIRM — DNP period not retrieved]
+
+### Performance Certificate
+Status: [ISSUED — date / NOT FOUND IN WAREHOUSE]
+Source: [document reference]
+DNP period expiry: [calculated from confirmed values only / CANNOT CALCULATE]
+Performance Certificate overdue: [YES — state basis from retrieved docs /
+CANNOT ASSESS — DNP period or TOC date not confirmed]
 
 ### Security Instruments
-[For each instrument:]
-**[Instrument type]**
-Present in warehouse: [YES / NO]
-Form: [On-demand / Conditional / CANNOT CONFIRM]
-Amount: [amount] — required per Contract Data: [amount] — [CORRECT / DISCREPANCY]
-Expiry date: [date]
-Status: [VALID / AT RISK / EXPIRED / NOT CONFIRMED / FORM DEFECT]
-2017 call notification requirement: [APPLICABLE / NOT APPLICABLE (1999)]
-Called by Employer: [YES — date and validity assessment / NO]
 
-### Defects Notification Period
-Taking-Over Certificate issued: [YES — date / NO]
-DNP start date: [date or "Not started"]
-DNP duration: [period from Contract Data]
-DNP end date: [date or "Not calculable"]
-DNP status: [CURRENT / EXPIRED / NOT STARTED]
-Performance Certificate issued: [YES — date / NO]
-Engineer/ER delay in issuing Performance Certificate: [YES — flag / NO]
+**Performance Security / Bond**
+Retrieved: [YES / NO — NOT FOUND IN WAREHOUSE]
+Issuing entity: [from retrieved instrument / CANNOT CONFIRM]
+Amount: [from retrieved instrument / CANNOT CONFIRM]
+Required amount: [from retrieved Contract Data / CANNOT CONFIRM]
+Adequacy: [CONFIRMED ADEQUATE / SHORTFALL / CANNOT ASSESS — required amount not retrieved]
+Form: [on-demand / conditional — from retrieved instrument / CANNOT CONFIRM]
+Expiry date: [from retrieved instrument / CANNOT CONFIRM]
+Status: [CURRENT / EXPIRED / APPROACHING EXPIRY / CANNOT CONFIRM]
 
-### Foundational Facts for Downstream Specialists
-Commencement Date: [date] [CONFIRMED / UNCONFIRMED]
-Current contractual completion date: [date]
-Time for Completion (original): [period and date]
-LD rate: [rate]
-LD cap: [amount or "None"]
-Current LD exposure: [amount or "None"]
-DNP expiry: [date]
-Performance Certificate status: [issued / not issued]
-Security instruments: [summary of status of each]
-Delayed commencement flag: [YES / NO]
-LD cap reached flag: [YES / NO]
+**Advance Payment Guarantee**
+[Same structure, or NOT APPLICABLE]
+
+**Retention**
+Retention percentage: [from retrieved Contract Data / CANNOT CONFIRM]
+First release trigger: [from retrieved PC / CANNOT CONFIRM]
+Second release trigger: [from retrieved PC / CANNOT CONFIRM]
+Current retention position: [from retrieved payment certificates / NOT FOUND]
+
+**Parent Company Guarantee**
+[Instrument summary if retrieved, or NOT FOUND IN WAREHOUSE]
+
+### FLAGS
+[Each flag with one-sentence forensic implication]
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / RED / GREY]
-Summary: [two to three sentences stating the key dates position, the most
-significant security or timing finding, and any immediate action flags]
+Summary: [two to three sentences — facts from retrieved documents only]
 ```
 
 ---
 
-## Domain knowledge and standards
+## Analytical framework
+*Reference only — do not apply any period, amount, or trigger from
+this section without first confirming it from retrieved project
+documents.*
 
-### FIDIC Time Period Architecture
+**FIDIC security provisions — structural summary (analytical reference):**
+Under FIDIC (all books, both editions), the Performance Security must
+be maintained until the Performance Certificate is issued. The required
+amount is stated in the Contract Data — retrieve from Layer 1. The
+Advance Payment Guarantee reduces as the advance is recovered — the
+recovery mechanism is in the contract; retrieve from Layer 1. These
+are structural frameworks for interpretation — all values and trigger
+events must come from retrieved documents.
 
-FIDIC contracts operate on a sequence of time periods that build on each other:
+**Taking-Over and DNP — analytical reference:**
+The Taking-Over Certificate triggers the DNP and the first retention
+release. The Performance Certificate ends the DNP and triggers the
+second retention release. The duration of the DNP is in the Contract
+Data — retrieve from Layer 1. The standard FIDIC DNP is one year from
+Taking-Over for the whole of the Works — this is a General Conditions
+default that may be amended by Particular Conditions. Always retrieve
+from Layer 1 before stating any DNP period.
 
-1. **Contract formation to Commencement Date** — the period between Letter of
-   Acceptance (Red/Yellow) or Contract Agreement (Silver) and the Commencement Date.
-   The Employer must give the Contractor at least 7 days notice of the Commencement
-   Date (Cl. 8.1). Failure to do so is an Employer default.
-
-2. **Commencement Date to Taking-Over** — the Time for Completion. This is the
-   period within which the Contractor must complete the Works. It runs from the
-   Commencement Date, not the contract signing date.
-
-3. **Taking-Over to Performance Certificate** — the Defects Notification Period.
-   The Contractor remains obligated to correct notified defects. Retention (second
-   half) is released on the Performance Certificate.
-
-4. **Performance Certificate** — marks the end of the Contractor's obligations under
-   the contract (subject to decennial liability). The Engineer must issue the
-   Performance Certificate within 28 days of the later of expiry of the DNP and
-   correction of all notified defects.
-
-Understanding this sequence is essential — a claim or dispute that references dates
-must be placed correctly in this sequence to be meaningful.
-
-### Security Instruments — On-Demand vs Conditional
-
-The distinction between an on-demand bond and a conditional bond is one of the most
-significant forensic issues in construction security assessment.
-
-An **on-demand bond** (also called an unconditional bond or demand guarantee) can be
-called by the Employer on first written demand without proving breach or loss. The
-bank or surety pays on demand and recovers separately. FIDIC standard Performance
-Security (Annex to Particular Conditions) is an on-demand form.
-
-A **conditional bond** (also called a default bond or see-to-it bond) can only be
-called after proving the Contractor's breach and the Employer's loss. The surety's
-liability mirrors the Contractor's liability under the contract. Calling a
-conditional bond requires a court judgment or arbitral award in most jurisdictions.
-
-In GCC practice, on-demand bonds are standard for performance security. A Contractor
-whose contract requires an on-demand bond but who provides a conditional bond has
-not complied with the contract — the Employer may be entitled to reject it. When
-assessing a bond, always determine which form is required by the contract and which
-form has been provided.
-
-**FIDIC 2017 change:** Clause 4.2 (2017) requires the Employer to give written
-notification to the Contractor before making a call on the Performance Security,
-stating the nature of the default. This is a new protection introduced in 2017
-that does not exist in 1999. On a 2017 project, a bond call without prior written
-notification may be challengeable.
-
-### GCC Security Practice
-
-**UAE:** On-demand bank guarantees from UAE-licensed banks are standard. Courts
-will enforce on-demand bonds without looking behind the demand, subject to fraud
-exception. The fraud exception is narrowly construed — a Contractor resisting a
-bond call must show clear fraud, not merely dispute the underlying claim.
-
-**Saudi Arabia:** Performance bonds from Saudi-licensed banks or approved
-international banks. SAMA-regulated bank guarantees are standard. Saudi courts
-and arbitration centres enforce on-demand bonds but will examine whether the call
-conditions have been met.
-
-**Qatar:** On-demand bonds from Qatar-licensed banks standard on public works
-projects. Qatar courts apply similar principles to UAE on enforcement.
-
-### Retention
-
-FIDIC standard retention: 5% of each IPC, up to a retention limit of 5% of the
-contract sum. First half released on Taking-Over Certificate. Second half released
-on Performance Certificate (or expiry of DNP if defects have been corrected).
-
-Particular Conditions commonly modify retention: higher percentage, higher limit,
-deferred release conditions, or replacement by retention bond. Always extract the
-actual retention terms from the Contract Data and note any amendments.
+**GCC security practices — analytical reference:**
+On-demand bonds are standard in the GCC — the Employer can call the
+bond without establishing a contractual breach. Conditional bonds
+require proof of breach before calling. The form is stated in the
+instrument — retrieve from Layer 1 to confirm. UAE, Saudi Arabia,
+and Qatar courts have generally upheld on-demand bond calls even
+where the underlying dispute is in arbitration, except where fraud
+is clearly established. This is analytical context only — the
+instrument form must be confirmed from the retrieved document.

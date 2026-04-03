@@ -1,234 +1,304 @@
-# Engineer Identification — Legal & Contractual Specialist
+# Engineer Identification
+
+**Skill type:** Mixed
+- Contract-type-specific: the contract administrator role differs
+  fundamentally between Red/Yellow Book (Engineer) and Silver Book
+  (Employer's Representative). Authority scope, independence obligation,
+  and determination mechanism are book-specific.
+- Contract-type-agnostic: the requirement to identify the contract
+  administrator from project documents, map delegated authority, and
+  flag authority anomalies applies regardless of book type.
+**Layer dependency:**
+- Layer 1 — project documents: Contract Agreement, Particular
+  Conditions, Engineer/Employer's Representative appointment letter,
+  any delegation instruments, correspondence revealing actual authority
+  exercised
+- Layer 2 — reference standards: FIDIC Clause 3 (Engineer / Employer's
+  Representative) for the relevant book and edition — structural
+  comparison and authority scope
+**Domain:** Legal & Contractual SME
+**Invoked by:** Legal orchestrator
+
+---
 
 ## When to apply this skill
 
-Apply this skill at the start of every Legal & Contractual analysis, immediately after
-contract_assembly.md. The identity and authority of the contract administrator must be
-established before notice compliance, instruction validity, entitlement, or any other
-legal analysis can proceed. Also apply when a query directly concerns the Engineer's
-authority, the validity of a determination, the identity of the certifier, or the
-delegation of Engineer functions.
+Apply when a query concerns the identity, authority, or actions of the
+contract administrator (Engineer or Employer's Representative), whether
+a specific instruction or determination was within delegated authority,
+whether the Engineer is acting with the required independence, or
+whether a GCC split-role arrangement creates ambiguity about which
+entity has authority for a specific action.
 
 ---
 
 ## Before you begin
 
-This is a Round 1 skill. There are no upstream specialist findings to read.
+### Foundational requirement
+This skill requires the book type and edition to be confirmed.
+Read the contract_assembly findings first. If book type is
+UNCONFIRMED: state CANNOT ASSESS this skill. The contract administrator
+role is fundamentally different between books — analysis without
+confirmed book type is not possible.
 
-The FIDIC book type and edition must already be established from contract_assembly.md
-before this skill runs. Read the contract_assembly.md output and extract:
-- FIDIC book type (Red / Yellow / Silver)
-- FIDIC edition (1999 / 2017)
+### Layer 1 documents to retrieve (project-specific)
 
-If contract_assembly.md has not yet run or its output is not available, run
-contract_assembly.md first. Do not begin engineer identification without knowing the
-book type — the entire analysis differs between Red/Yellow and Silver Book.
+Call `search_chunks` and `get_related_documents` to retrieve:
+- The Particular Conditions (Clause 3 and any amendment)
+- The Contract Data / Appendix to Tender (Engineer / Employer's
+  Representative named entity)
+- Engineer / Employer's Representative appointment letter or agreement
+- Any delegation letters from the Engineer to a named representative
+- Correspondence issued by the Engineer or Employer's Representative
+  (to establish actual authority exercised in practice)
+- Any Project Management Consultant (PMC) or Supervision Consultant
+  appointment letter where a split-role arrangement may exist
 
-Before beginning the analysis, retrieve the following from the warehouse:
-- Engineer's appointment letter or Employer's Representative appointment letter
-- Any delegation notices issued by the Engineer or Employer's Representative
-- Particular Conditions Clause 3 (Engineer / Employer's Representative)
-- Any PMC, Supervision Consultant, or Construction Manager appointment letters
-- Correspondence headers and notice routing from project correspondence
+**If the Particular Conditions are not retrieved:**
+State CANNOT CONFIRM the Engineer's scope of authority, independence
+position, or any amendment to the standard Clause 3 role.
+
+**If no appointment document is retrieved:**
+State CANNOT CONFIRM the identity of the named Engineer or Employer's
+Representative from the project documents.
+
+### Layer 2 documents to retrieve (reference standards)
+
+After confirming book type from contract_assembly findings, call
+`search_chunks` to retrieve from Layer 2:
+- FIDIC Clause 3 for the confirmed book and edition (Engineer's duties
+  and authority / Employer's Representative)
+- FIDIC Clause 3.5 (1999) or Clause 3.7 (2017) — Engineer's
+  determination provisions (Red and Yellow Book only)
+
+**Purpose:** To establish what the standard FIDIC Clause 3 says, so
+that Particular Conditions amendments can be assessed against the
+baseline. Do not apply standard Clause 3 provisions without checking
+whether they have been amended by the Particular Conditions.
 
 ---
 
 ## Analysis workflow
 
-**Step 1 — Determine the contract administrator role from the book type**
+### Step 1 — Confirm the contract administrator role
+*Contract-type-specific*
 
-Red Book and Yellow Book: the contract administrator is the Engineer under Clause 3.
-The Engineer acts for the Employer in most matters but holds an independent determination
-obligation — in 1999 editions the duty is to act fairly; in 2017 editions the Engineer
-must act neutrally between the parties when making determinations under Clause 3.7.
+From the confirmed book type (contract_assembly findings) and the
+retrieved Particular Conditions:
 
-Silver Book: there is no Engineer. The contract administrator is the Employer's
-Representative under Clause 3. The Employer's Representative acts as the Employer's
-agent with no independent determination obligation. On Silver Book projects, skip
-Steps 2 and 3 and proceed directly to Step 4.
+**Red Book / Yellow Book:**
+The contract administrator is the Engineer. Retrieve the Engineer's
+identity from the Contract Data or Appendix to Tender. The Engineer
+acts on behalf of the Employer but has an independence obligation under
+FIDIC when making determinations.
 
-**Step 2 — Identify the Engineer (Red and Yellow Books only)**
+**Silver Book:**
+There is no Engineer. The contract administrator is the Employer's
+Representative. The Employer's Representative acts solely as the
+Employer's agent — there is no independence obligation in the Silver
+Book. Any reference to an "Engineer" in a Silver Book project is
+anomalous — flag it.
 
-From the Particular Conditions Contract Data / Appendix to Tender and the Engineer's
-appointment letter, identify:
-- The name and organisation of the Engineer
-- The date of appointment
-- Whether the appointment was in place at the contract commencement date
+**If book type is not confirmed:** State CANNOT IDENTIFY the contract
+administrator role. Do not proceed.
 
-Check whether the entity named as Engineer in the Particular Conditions matches the
-entity in the appointment letter. If they differ, flag as a CONTRADICTION — both
-identities must be surfaced and the discrepancy noted.
+### Step 2 — Identify the named contract administrator
+*Contract-type-agnostic*
 
-**Step 3 — Map the Engineer's authority under Clause 3 (Red and Yellow Books only)**
+From the retrieved Contract Data, Appendix to Tender, or appointment
+letter, identify:
+- The named entity appointed as Engineer or Employer's Representative
+- The named individual representative (if stated)
+- The date of appointment (if retrievable)
 
-The Engineer's authority under FIDIC Clause 3 covers the following functions. For each
-function, confirm whether the Engineer holds full authority, delegated authority, or
-restricted authority based on the Particular Conditions and any delegation notices:
+**Do not assume any entity is the Engineer or Employer's Representative
+without a retrieved document that names them.** If no appointment
+document is found after searching: state CANNOT CONFIRM the identity
+of the contract administrator from the warehouse documents.
 
-- Issue instructions (Clause 3.3 / 3.4 in 1999; Clause 3.5 in 2017)
-- Agree or determine entitlement (Clause 3.5 in 1999; Clause 3.7 in 2017)
-- Issue payment certificates (Clause 14.6)
-- Issue Taking-Over Certificate (Clause 10.1)
-- Issue Performance Certificate (Clause 11.9)
-- Approve programme submissions (Clause 8.3)
-- Issue variation instructions (Clause 13.1)
+### Step 3 — Assess delegated authority scope
+*Contract-type-specific*
 
-Check the Particular Conditions for any amendment to Clause 3 that restricts the
-Engineer's authority or requires Employer approval before the Engineer can act. This
-is a common and forensically significant pattern in GCC contracts — an Engineer whose
-authority is subject to Employer approval is not independent and cannot make neutral
-determinations. Flag any such restriction explicitly.
+From the retrieved Particular Conditions, identify any amendment to
+Clause 3 that defines or restricts the contract administrator's
+authority. Key authority questions:
 
-**Step 4 — Identify the Employer's Representative (Silver Book only)**
+**Red Book / Yellow Book (contract-type-specific):**
+- Is the Engineer's authority to approve variations restricted by a
+  financial threshold requiring Employer consent? Extract the threshold
+  from the Particular Conditions — do not apply any default.
+- Is the Engineer required to obtain Employer consent before issuing
+  specific instructions, determinations, or certificates? Extract from
+  Particular Conditions.
+- Does the Engineer have authority to grant EOT, determine claims, and
+  issue payment certificates without Employer pre-approval? Extract
+  from Particular Conditions.
 
-From the Particular Conditions Contract Data and the Employer's Representative
-appointment letter, identify:
-- The name and organisation of the Employer's Representative
-- The scope of delegated authority
-- Whether any functions have been sub-delegated to named individuals
+**Silver Book (contract-type-specific):**
+- The Employer's Representative acts on Employer instructions — there
+  is no independence obligation. The scope of the Representative's
+  authority is defined by the Employer's instructions, not by FIDIC.
+  Retrieve the appointment letter or Employer instructions if available.
 
-On Silver Book projects, flag immediately that there is no independent certifier — the
-Employer or Employer's Representative issues payment notices rather than independent
-IPCs. Flag that Engineer's determinations do not exist on Silver Book projects —
-disputes escalate directly to DAB (1999) or DAAB (2017) without a prior determination
-step. This is a critical distinction for Claims and Governance specialists.
+**If the Particular Conditions are not retrieved:**
+State CANNOT CONFIRM the delegated authority scope. Do not state any
+authority threshold or restriction.
 
-**Step 5 — Check for GCC split-role pattern (Red and Yellow Books only)**
+### Step 4 — Assess Engineer's independence position
+*Contract-type-specific — Red Book and Yellow Book only*
+*Not applicable to Silver Book*
 
-In many GCC projects the Engineer's role under FIDIC is split between two or more
-entities — typically a Project Management Consultant (PMC) or Construction Manager (CM)
-handling administrative functions and a Supervision Consultant (SC) handling technical
-functions. FIDIC does not provide for this split.
+Under FIDIC (Red and Yellow, both editions), the Engineer must act
+impartially when making determinations — not as the Employer's agent.
+GCC Particular Conditions frequently modify this by requiring Employer
+consent before the Engineer makes determinations, or by removing the
+Engineer's independence obligation.
 
-Search for evidence of role fragmentation:
-- Multiple appointment letters covering different Engineer functions
-- Correspondence routed to different entities for different purposes
-- References in correspondence to "PMC", "SC", "CM", "Supervision Engineer",
-  "Contract Administrator" as distinct roles
-- Site instructions signed by a different entity than payment certificates
+From the retrieved Particular Conditions, identify:
+- Whether Clause 3.5 (1999) or Clause 3.7 (2017) has been amended
+- Whether the Engineer is required to obtain Employer approval before
+  making a determination or issuing a certificate
+- Whether the independence obligation has been modified or removed
 
-If role fragmentation is identified, map each Engineer function listed in Step 3 to
-the entity actually performing it. Identify any functions where the responsible entity
-is unclear or where both entities appear to have acted. Flag every gap and ambiguity
-— notice routing errors caused by split-role ambiguity are a primary source of
-procedural deficiency findings.
+**Classify the Engineer's independence position based only on what
+the retrieved Particular Conditions say.** If the Particular Conditions
+have not been retrieved: state CANNOT ASSESS the independence position.
 
-**Step 6 — Assess delegation validity**
+### Step 5 — Identify GCC split-role arrangements
+*Contract-type-agnostic (pattern) / Contract-type-specific (implications)*
 
-Under FIDIC Clause 3.2 (1999) and Clause 3.4 (2017), the Engineer may delegate
-authority to assistants. Any delegation must be in writing and must specify the scope
-of delegated authority. A determination or instruction issued by a person who was not
-properly delegated authority may be invalid.
+In GCC projects, the Engineer role is frequently split between a Project
+Management Consultant (PMC) handling commercial and contractual
+administration and a Supervision Consultant handling technical
+supervision. This split is not recognised in standard FIDIC — it is a
+GCC practice that creates ambiguity about which entity has authority
+for which category of instruction.
 
-For each entity or individual found to be performing Engineer functions, confirm:
-- Was a written delegation notice issued?
-- Does the delegation cover the function being performed?
-- Was the delegation notice communicated to the Contractor?
+From the retrieved documents, identify:
+- Whether a PMC appointment document exists in the warehouse
+- Whether a Supervision Consultant appointment document exists
+- Whether the contract documents define which entity exercises which
+  part of the Engineer's role
+- Whether correspondence shows different entities acting as Engineer
+  for different purposes
 
-If any function is being performed without a valid written delegation, flag as
-DELEGATION GAP with the specific function and entity identified.
+**Identify the split only from retrieved documents.** Do not assume
+a split arrangement exists because a PMC or Supervision Consultant
+appears in the warehouse — confirm from the documents which entity
+is named as the Engineer in the contract and what authority each
+entity has been delegated.
 
-**Step 7 — Compile and structure findings**
+### Step 6 — Assess instructions and determinations issued
+*Contract-type-agnostic*
 
-Compile all findings in the output format below. Flag any ambiguity about Engineer
-identity or authority clearly — these findings are critical for notice_and_instruction_
-compliance.md, which cannot assess notice validity without knowing who the correct
-recipient is.
+If the query or context involves specific Engineer instructions or
+determinations, assess for each:
+- Was it issued by the named contract administrator or a delegated
+  representative?
+- Was it within the authority scope confirmed from the Particular
+  Conditions?
+- Was it issued in writing (required under all FIDIC books and editions)?
+- Did it comply with the Clause 1.3 notice requirements (form, method,
+  recipient)?
+
+**Authority excess flag:** If a retrieved instruction or determination
+was issued by an entity or individual whose authority cannot be confirmed
+from the project documents, flag as AUTHORITY UNCONFIRMED. Do not
+characterise this as valid or invalid without the authority source.
 
 ---
 
 ## Classification and decision rules
 
-**Engineer identity confirmed:**
-- Single entity named consistently in Particular Conditions and appointment letter,
-  appointment pre-dates contract commencement: CONFIRMED
-- Entity named in Particular Conditions differs from appointment letter: CONTRADICTION
-  — flag both, state which governs per hierarchy, AMBER confidence
-- No appointment letter in warehouse: UNCONFIRMED — flag absence, state name from
-  Particular Conditions only, AMBER confidence
+**Contract administrator identity:**
+Named in retrieved Contract Data or appointment letter → CONFIRMED —
+state entity and source document
+Not found after searching → CANNOT CONFIRM — flag; state what was
+searched and not found
 
-**Split-role pattern:**
-- No evidence of role fragmentation: state Engineer is single entity, no split-role
-  flag required
-- Evidence of role fragmentation but functions clearly allocated: SPLIT-ROLE IDENTIFIED
-  — map functions, flag for notice routing, AMBER confidence
-- Evidence of role fragmentation with gaps or overlaps in function allocation:
-  SPLIT-ROLE WITH GAPS — list each gap explicitly, RED confidence for affected functions
+**Delegated authority:**
+Authority scope confirmed from retrieved Particular Conditions →
+state scope and source document
+Particular Conditions not retrieved → CANNOT CONFIRM authority scope
 
-**Engineer independence (Red and Yellow Books):**
-- No Particular Conditions restriction on Engineer authority: INDEPENDENT
-- Particular Conditions require Employer approval for Engineer decisions: NOT INDEPENDENT
-  — flag explicitly; determinations issued under these conditions may not satisfy the
-  FIDIC neutrality standard; forensically significant in any dispute about
-  Engineer's determinations
+**Independence position (Red/Yellow only):**
+Independence obligation present and unmodified in retrieved PC →
+INDEPENDENT — cite source
+Independence obligation modified in retrieved PC → MODIFIED — describe
+the modification and cite source
+Independence obligation absent from retrieved PC AND PC retrieved →
+INDEPENDENCE OBLIGATION NOT FOUND IN RETRIEVED PC — flag
+Particular Conditions not retrieved → CANNOT ASSESS
 
-**Silver Book Employer's Representative:**
-- Appointment confirmed, authority scope documented: CONFIRMED — note absence of
-  independence obligation; note no determination mechanism
-- Appointment not in warehouse: UNCONFIRMED — flag absence
-
-**Delegation:**
-- All functions covered by written delegations: VALID
-- One or more functions performed without written delegation: DELEGATION GAP — list
-  each gap
+**Split-role arrangement:**
+Confirmed from retrieved appointment documents → CONFIRMED SPLIT —
+describe allocation and cite sources
+Not found in retrieved documents → NOT IDENTIFIED FROM WAREHOUSE
+DOCUMENTS — note this does not mean no split exists
 
 ---
 
 ## When to call tools
 
-**Signal:** Particular Conditions name an Engineer entity but no appointment letter
-has been retrieved
-**Tool:** `search_chunks` querying for the Engineer entity name and "appointment"
-**Look for:** Appointment letter, novation of appointment, any document confirming
-the entity's authority to act
+**Signal:** Contract Data or Appendix to Tender names an entity as
+Engineer but no appointment letter has been retrieved
+**Action:** `search_chunks` with query "[entity name] appointment
+engineer"; `get_related_documents` with document type "Appointment
+Letter" or "Consultant Agreement"
+**Look for:** Appointment instrument confirming the entity's role and
+scope
 
-**Signal:** Correspondence headers route notices to different entities for different
-purposes — possible split-role
-**Tool:** `search_chunks` querying for "PMC", "Supervision Consultant", "Construction
-Manager", "Contract Administrator"
-**Look for:** Appointment letters or scope documents for each entity; confirmation of
-which functions each entity holds
+**Signal:** Instructions or correspondence in the warehouse reference
+a PMC or Supervision Consultant acting as Engineer but no appointment
+document establishes their authority
+**Action:** `search_chunks` with query "PMC project management
+consultant appointment authority engineer"; `get_related_documents`
+with document type "Appointment Letter"
+**Look for:** Appointment instrument defining which entity exercises
+which part of the Engineer's role
 
-**Signal:** A delegation notice is referenced in correspondence but has not been
+**Signal:** Particular Conditions Clause 3 amendment is referenced
+in the contract_assembly findings but the clause content has not been
 retrieved
-**Tool:** `get_related_documents` filtered to document type: Delegation Notice,
-Engineer's Instruction
-**Look for:** Written delegation confirming scope and date; confirm it was issued
-before the relevant action was taken
+**Action:** `get_document` on the Particular Conditions document ID;
+`search_chunks` with query "clause 3 engineer authority approval
+Employer consent"
+**Look for:** The specific amendment text — authority thresholds,
+consent requirements, independence modifications
 
-**Signal:** The Engineer entity named in the contract appears to have changed during
-the project — different entity names appear in earlier vs later correspondence
-**Tool:** `search_chunks` querying for "novation", "replacement", "new Engineer",
-"Engineer appointment"
-**Look for:** Novation of Engineer appointment or formal replacement notice; if found,
-flag the date of change and its effect on prior notices and instructions
+**Signal:** Layer 2 FIDIC Clause 3 has not been retrieved for the
+confirmed book and edition
+**Action:** `search_chunks` with query "[FIDIC book name] [edition]
+clause 3 engineer authority"
+**Look for:** Standard FIDIC Clause 3 text for structural comparison
 
 ---
 
 ## Always flag — regardless of query
 
-1. **The identity of the contract administrator** — always state who the Engineer or
-   Employer's Representative is and the source document that confirms this. Every
-   downstream specialist needs to know who issued instructions, certificates, and
-   determinations.
+1. **Silver Book with a document referencing an Engineer** — this is
+   anomalous; the Silver Book has no Engineer; flag and identify the
+   document that makes the reference.
 
-2. **Any Particular Conditions restriction on Engineer independence** — always flag
-   if the Engineer's authority is subject to Employer approval. This affects the
-   validity of every determination the Engineer has issued and is one of the most
-   forensically significant findings in GCC contract administration.
+2. **Engineer's independence modified or removed by Particular
+   Conditions** — always flag; state the modification and its forensic
+   implication for any determination or certificate in dispute.
 
-3. **Split-role pattern** — always flag if two or more entities are performing
-   Engineer functions. The ambiguity about who is "the Engineer" for notice purposes
-   affects every notice compliance assessment downstream.
+3. **Instructions or determinations issued by an entity whose authority
+   cannot be confirmed from retrieved documents** — always flag;
+   state the instruction reference and what authority document is
+   missing from the warehouse.
 
-4. **Silver Book — absence of independent certifier and determination mechanism** —
-   always flag on Silver Book projects. Claims and Governance specialists must know
-   that payment notices come from the Employer, not an independent certifier, and
-   that disputes go directly to DAB/DAAB without an Engineer's determination.
+4. **Split-role arrangement confirmed or suspected but not formally
+   documented in the retrieved contract documents** — always flag;
+   state the split pattern identified and the absence of a formal
+   authority allocation document.
 
-5. **Delegation gaps** — always flag any Engineer function being performed by an
-   entity or individual without a confirmed written delegation. Instructions or
-   determinations issued outside delegated authority may be invalid.
+5. **Employer consent requirement before Engineer determinations** —
+   if the retrieved Particular Conditions require Employer consent
+   before the Engineer can determine claims or certify payment, always
+   flag; state the clause and its forensic implication for any
+   contested determination.
 
 ---
 
@@ -237,136 +307,100 @@ flag the date of change and its effect on prior notices and instructions
 ```
 ## Engineer Identification Assessment
 
+### Documents Retrieved (Layer 1)
+[List every document retrieved relevant to this skill, with reference
+numbers and dates.]
+
+### Documents Not Retrieved
+[List every document required for this analysis not found in the
+warehouse. State which analysis steps are affected.]
+
+### Layer 2 Reference Retrieved
+[State whether FIDIC Clause 3 for the confirmed book and edition was
+retrieved from Layer 2. If not: state that standard form text has been
+applied from analytical knowledge.]
+
 ### Contract Administrator Role
-Book type: [Red / Yellow / Silver]
-Role: [Engineer (Clause 3) / Employer's Representative (Clause 3)]
-Independence obligation: [YES — fair determination (1999) / YES — neutral determination
-(2017) / NO — Silver Book / RESTRICTED — Employer approval required per PC Clause X.X]
+Book type confirmed: [YES — from contract_assembly / NO — CANNOT ASSESS]
+Role: [Engineer (Red/Yellow) / Employer's Representative (Silver) /
+CANNOT CONFIRM]
+Analysis gate: [PROCEED / CANNOT ASSESS — state reason]
 
-### Engineer / Employer's Representative Identity
-Name and organisation: [identity or UNCONFIRMED]
-Source: [document name and reference]
-Appointment date: [date or not confirmed]
-Appointment pre-dates contract commencement: [YES / NO / CANNOT CONFIRM]
-Contradiction with Particular Conditions: [YES — state both identities / NO]
+### Named Contract Administrator
+Identity: [entity name / CANNOT CONFIRM]
+Source: [document name and reference, or NOT FOUND IN WAREHOUSE]
+Named individual representative: [name if stated / NOT STATED IN
+RETRIEVED DOCUMENTS]
 
-### Authority Mapping (Red and Yellow Books)
-| Function | FIDIC Clause | Authority Status | Delegated To | Notes |
-|---|---|---|---|---|
-| Issue instructions | 3.3/3.4 (1999) / 3.5 (2017) | [FULL/DELEGATED/RESTRICTED] | | |
-| Agree or determine entitlement | 3.5 (1999) / 3.7 (2017) | [FULL/DELEGATED/RESTRICTED] | | |
-| Issue payment certificates | 14.6 | [FULL/DELEGATED/RESTRICTED] | | |
-| Issue Taking-Over Certificate | 10.1 | [FULL/DELEGATED/RESTRICTED] | | |
-| Issue Performance Certificate | 11.9 | [FULL/DELEGATED/RESTRICTED] | | |
-| Approve programme | 8.3 | [FULL/DELEGATED/RESTRICTED] | | |
-| Issue variations | 13.1 | [FULL/DELEGATED/RESTRICTED] | | |
+### Delegated Authority Scope
+Source: [Particular Conditions reference, or CANNOT CONFIRM]
+Authority to grant EOT: [YES / RESTRICTED — state threshold and source /
+CANNOT CONFIRM]
+Authority to determine claims: [YES / REQUIRES EMPLOYER CONSENT —
+state source / CANNOT CONFIRM]
+Authority to certify payment: [YES / RESTRICTED — state threshold /
+CANNOT CONFIRM]
+Financial approval threshold: [value from retrieved PC / CANNOT CONFIRM]
+Other restrictions: [from retrieved PC / NONE FOUND / CANNOT CONFIRM]
 
-### Split-Role Assessment
-Split-role pattern identified: [YES / NO]
-[If YES:]
-| Function | Entity performing function | Delegation confirmed |
-|---|---|---|
-| [function] | [entity] | [YES / NO / PARTIAL] |
-Gaps identified: [list or "None"]
-Notice routing implication: [state which entity notices must be addressed to for each
-function, or flag ambiguity]
+### Independence Position (Red/Yellow Book only)
+Applicable: [YES / NOT APPLICABLE — Silver Book]
+Independence obligation: [PRESENT AND UNMODIFIED / MODIFIED — describe /
+NOT FOUND IN RETRIEVED PC / CANNOT ASSESS — PC not retrieved]
+Source: [Particular Conditions reference]
 
-### Employer's Representative Assessment (Silver Book only)
-Name and organisation: [identity or UNCONFIRMED]
-Source: [document name and reference]
-Authority scope: [summary of delegated authority]
-Sub-delegations: [list or "None identified"]
-No independent certifier: CONFIRMED — payment notices issued by Employer /
-Employer's Representative
-No determination mechanism: CONFIRMED — disputes escalate directly to
-[DAB (1999) / DAAB (2017)]
+### Split-Role Arrangement
+Identified from retrieved documents: [YES — describe / NOT IDENTIFIED]
+PMC appointment in warehouse: [YES — reference / NOT FOUND]
+Supervision Consultant appointment in warehouse: [YES — reference /
+NOT FOUND]
+Authority allocation documented: [YES — describe / NOT DOCUMENTED IN
+RETRIEVED DOCUMENTS]
 
-### Delegation Validity
-Overall delegation status: [VALID / DELEGATION GAPS IDENTIFIED]
-[If gaps:]
-| Function | Performed by | Written delegation | Gap description |
-|---|---|---|---|
+### Instructions and Determinations Assessed
+[For each instruction or determination in scope:]
+Reference: [document reference]
+Issuing entity: [named entity]
+Authority confirmed: [YES — source / CANNOT CONFIRM — reason]
+Form compliance: [COMPLIANT / ISSUE — describe]
+Finding: [from retrieved documents only]
 
-### Findings for Downstream Specialists
-Contract administrator: [name and entity]
-Notice recipient for Contractor claims: [entity name — critical for notice compliance]
-Payment certifier: [entity name and independence status]
-Determination mechanism: [Engineer Cl. 3.5/3.7 / None — Silver Book]
-Split-role flag: [YES with mapping / NO]
-Engineer independence: [INDEPENDENT / RESTRICTED / NOT APPLICABLE — Silver Book]
+### FLAGS
+[Each flag with one-sentence forensic implication]
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / RED / GREY]
-Summary: [two to three sentences stating who the contract administrator is, any
-authority restrictions or split-role ambiguity, and the key forensic implication
-for downstream specialists]
+Summary: [two to three sentences — facts from retrieved documents only]
 ```
 
 ---
 
-## Domain knowledge and standards
+## Analytical framework
+*Reference only — do not apply any value or position from this section
+without first confirming it from retrieved project documents.*
 
-### FIDIC Clause 3 — The Engineer's Role
+**FIDIC Clause 3 — structural summary (analytical reference):**
+Under Red Book and Yellow Book (both editions), Clause 3 defines the
+Engineer's role and authority. The Engineer has an independence
+obligation when making determinations under Clause 3.5 (1999) or
+Clause 3.7 (2017). Under the 2017 editions, the Engineer's
+determination is time-limited — failure to determine within the
+prescribed period has a deemed rejection effect. The Silver Book
+replaces the Engineer entirely with the Employer's Representative,
+who has no independence obligation. Retrieve the specific clause text
+from Layer 2 before applying its provisions.
 
-**Red and Yellow Books 1999:** The Engineer acts for the Employer under Clause 3.1 but
-is required to act fairly when making determinations under Clause 3.5. The 1999 standard
-does not use the word "neutral" — the obligation is fairness, not neutrality. The
-Engineer has no time limit to issue a determination under 1999 Clause 3.5.
+**GCC split-role pattern (analytical reference):**
+GCC government projects frequently appoint a PMC to handle commercial
+and contractual administration and a Supervision Consultant to handle
+technical supervision. This split is not addressed in standard FIDIC
+and creates authority ambiguity. The presence of two consulting
+entities in the project documents is the signal — confirm the
+authority allocation from retrieved appointment documents.
 
-**Red and Yellow Books 2017:** The Engineer is required to act neutrally between the
-parties when exercising functions under Clause 3.7 (determinations). The 2017 edition
-introduces an 84-day timetable for determinations (42 days consultation + 42 days
-determination). If no determination is issued within the period, it is deemed a
-rejection. The neutrality obligation is a significant enhancement of Engineer
-independence compared to 1999.
-
-**Silver Book 1999 and 2017:** There is no Engineer. Clause 3 governs the Employer's
-Representative. The Employer's Representative acts as the Employer's agent. In the 2017
-Silver Book the 84-day timetable is adopted but the neutrality obligation is deliberately
-omitted — this was a conscious FIDIC drafting decision reflecting the Silver Book's
-risk allocation philosophy. The absence of neutrality is not a Particular Conditions
-amendment — it is the standard Silver Book position.
-
-### GCC-Specific Engineer Authority Patterns
-
-**Employer approval requirements:** A common Particular Conditions amendment in GCC
-contracts (particularly Abu Dhabi government projects and Saudi Vision 2030 projects)
-requires the Engineer to obtain the Employer's approval before issuing determinations,
-granting extensions of time, or certifying variations above a threshold value. This
-amendment is forensically significant because:
-- It means the Engineer cannot act independently on these matters
-- Determinations issued without required Employer approval may be challengeable
-- It creates a conflict of interest — the Employer is effectively determining its own
-  liability to the Contractor
-- Under FIDIC 2017 this amendment conflicts with the Engineer's neutrality obligation
-  and may constitute a Golden Principles violation (GP1)
-
-When this pattern is found, flag it explicitly and note its implications for every
-determination and certificate in the project record.
-
-**PMC/SC split-role pattern:** The most common GCC split-role pattern is:
-- Project Management Consultant (PMC) or Construction Manager (CM): holds contract
-  administration authority including payment certification, variation approval, and
-  formal determinations
-- Supervision Consultant (SC) or Resident Engineer (RE): holds technical authority
-  including site instructions, RFI responses, drawing approvals, and NCR issuance
-
-FIDIC does not accommodate this structure. The forensic consequences are:
-- A notice addressed to the SC rather than the PMC (or vice versa) may be argued
-  invalid by the Employer
-- A site instruction issued by the SC may be argued not to constitute a formal
-  Engineer's Instruction under Clause 3 unless the SC held a valid delegation
-- Payment certificates issued by the PMC may be challenged if the PMC was not
-  formally appointed as Engineer
-
-The test is always: what do the contract documents say, and is there a written
-delegation that covers the relevant function?
-
-### DIFC Court Guidance on Engineer Authority
-
-Key DIFC Court decisions confirm that the Engineer's determination under FIDIC Clause
-3.5 (1999) is a condition precedent to DAB proceedings in most circumstances. An attempt
-to go to DAB without a prior Engineer's determination (or a deemed rejection) may be
-challenged as procedurally premature. This reinforces the importance of correctly
-identifying who holds the determination authority and whether determinations were
-properly issued.
+**FIDIC 2017 Clause 3.7 — analytical reference:**
+Under FIDIC 2017, the Engineer's determination is subject to a time
+limit. Failure to issue a determination within the prescribed period
+results in a deemed rejection which triggers the Notice of
+Dissatisfaction (NOD) period. The prescribed period is stated in the
+Contract Data — retrieve from Layer 1 before stating any period.

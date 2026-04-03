@@ -1,398 +1,439 @@
-# Contract Assembly — Legal & Contractual Specialist
+# Contract Assembly
+
+**Skill type:** Mixed
+- Contract-type-agnostic: the requirement to retrieve and verify the contract
+  document hierarchy, identify amendments, and flag missing documents
+- Contract-type-specific: the expected document hierarchy, the role of the
+  contract administrator, and the formation mechanism differ by FIDIC book
+  and edition
+**Layer dependency:**
+- Layer 1 — project documents: Contract Agreement, Letter of Acceptance,
+  Particular Conditions, General Conditions, and all other contract documents
+- Layer 2 — reference standards: FIDIC General Conditions (relevant book and
+  edition) for structural comparison and clause interpretation
+**Domain:** Legal & Contractual SME
+**Invoked by:** Legal orchestrator
+
+---
 
 ## When to apply this skill
 
-Apply this skill at the start of every Legal & Contractual analysis, regardless of the specific
-query. Contract assembly is a foundational task — the hierarchy, the amendments in the Particular
-Conditions, and the document completeness assessment must be established before any other legal
-analysis begins. Also apply when a query directly concerns document precedence, contract
-completeness, or the interpretation of a specific contractual term.
+Apply at the start of every Legal & Contractual analysis regardless of the
+query. Contract assembly is the foundational skill — the document hierarchy,
+Particular Conditions amendments, and document completeness must be established
+before any other legal analysis can proceed. Also apply directly when a query
+concerns document precedence, contract completeness, or contractual term
+interpretation.
 
 ---
 
 ## Before you begin
 
-This is a Round 1 skill. There are no upstream specialist findings to read.
+### Layer 1 documents to retrieve (project-specific)
 
-Before beginning the analysis, retrieve the following from the warehouse:
-
+Call `search_chunks` and `get_related_documents` to retrieve:
 - Contract Agreement
-- Letter of Acceptance (if present)
-- Letter of Tender and Appendix to Tender / Contract Data
-- Particular Conditions (Part II in 1999; Part A – Contract Data and Part B – Special Provisions
-  in 2017)
-- General Conditions (confirm book type from cover or header)
-- Employer's Requirements (Yellow and Silver Books only)
-- Contractor's Proposal (Yellow and Silver Books only)
-- Any contract amendments, supplemental agreements, side letters, or novation agreements
+- Letter of Acceptance (Red Book, Yellow Book)
+- Letter of Tender / Appendix to Tender / Contract Data
+- Particular Conditions (all parts)
+- General Conditions (confirm book from cover or header)
+- Employer's Requirements (Yellow Book, Silver Book only)
+- Contractor's Proposal (Yellow Book, Silver Book only)
+- Any amendments, supplemental agreements, side letters, novation agreements
 
-If none of these documents are in the retrieved chunks, call `search_chunks` before proceeding.
-Do not begin analysis on empty or insufficient context.
+**If the Particular Conditions are not retrieved:**
+State CANNOT ASSESS for all steps that depend on the amendment position.
+Do not apply General Conditions text as if unamended. Flag this as a
+critical gap in every section of the output.
+
+**If the Contract Agreement is not retrieved:**
+State CANNOT ASSESS for contract formation, order of precedence, and
+any parameter that appears only in the Contract Agreement.
+
+**If no contract documents are retrieved at all:**
+State CANNOT ASSESS for this entire skill. Do not proceed.
+
+### Layer 2 documents to retrieve (reference standards)
+
+After establishing the book type and edition from Layer 1, call
+`search_chunks` to retrieve the relevant FIDIC General Conditions clauses
+from Layer 2:
+- Clause 1.5 (priority of documents / order of precedence)
+- The document hierarchy list for the identified book and edition
+
+**Purpose of Layer 2 retrieval:** To establish what the standard FIDIC
+text says so that any Particular Conditions amendment can be assessed
+against the baseline. Layer 2 provides the interpretive framework.
+Layer 1 provides what this project actually agreed.
+
+**If Layer 2 FIDIC is not retrieved:**
+You may apply your analytical knowledge of the standard FIDIC text as
+the interpretive framework, but note in the output that the Layer 2
+reference was not retrieved and the standard text has been applied from
+training knowledge rather than from the ingested reference document.
 
 ---
 
 ## Analysis workflow
 
-**Step 1 — Identify the FIDIC book and edition**
+### Step 1 — Identify the FIDIC book and edition
+*Contract-type-specific*
 
-Read the Contract Agreement and the Particular Conditions cover or header. Identify:
-- Which FIDIC book governs: Red (Construction), Yellow (Plant & Design-Build), or Silver
-  (EPC/Turnkey)
-- Which edition: 1999 or 2017
+Read the retrieved Contract Agreement and Particular Conditions. Identify:
+- FIDIC book: Red Book (Construction) / Yellow Book (Plant & Design-Build) /
+  Silver Book (EPC/Turnkey)
+- Edition: 1999 or 2017
 
-If the book type cannot be positively identified from the retrieved documents, flag this
-immediately as a BOOK TYPE UNCONFIRMED finding and proceed using the most likely book based on
-contextual signals (e.g. presence of Employer's Requirements suggests Yellow or Silver; presence
-of Engineer appointment letter suggests Red or Yellow). State your assumption explicitly and flag
-that downstream analysis is conditional on it.
+The book type and edition must be stated in the retrieved documents.
+Do not infer from contextual signals alone.
 
-If the edition cannot be determined, flag EDITION UNCONFIRMED and proceed using 1999 as the
-default, stating this assumption.
+**If book type cannot be confirmed from retrieved documents:**
+Classify as BOOK TYPE UNCONFIRMED. State what was retrieved and why
+the book type cannot be determined. Set output confidence to GREY.
+Do not proceed with book-type-specific steps. Flag that all downstream
+analysis is suspended pending book type confirmation.
 
-**Step 2 — Map the expected document hierarchy for the identified book and edition**
+**If edition cannot be confirmed from retrieved documents:**
+Classify as EDITION UNCONFIRMED. State what was retrieved and why.
+Do not apply edition-specific clause references. Flag for each
+edition-dependent step that it CANNOT BE ASSESSED.
 
-Apply the correct expected hierarchy:
+### Step 2 — Assess document completeness against the retrieved hierarchy
+*Contract-type-specific*
 
-- Red Book 1999 (8 items): Contract Agreement → Letter of Acceptance → Letter of Tender /
-  Appendix to Tender → Particular Conditions → General Conditions → Specification → Drawings →
-  Schedules
-- Red Book 2017 (11 items): Contract Agreement → Letter of Acceptance → Letter of Tender →
-  Particular Conditions Part A (Contract Data) → Particular Conditions Part B (Special
-  Provisions) → General Conditions → Specification → Drawings → Schedules → JV Undertaking →
-  other documents
-- Yellow Book 1999 (8 items): Contract Agreement → Letter of Acceptance → Letter of Tender /
-  Appendix to Tender → Particular Conditions → General Conditions → Employer's Requirements →
-  Schedules → other documents
-- Yellow Book 2017 (11 items): Contract Agreement → Letter of Acceptance → Letter of Tender →
-  Particular Conditions Part A → Particular Conditions Part B → General Conditions →
-  Employer's Requirements → Schedules → Contractor's Proposal → JV Undertaking → other documents
-- Silver Book 1999 (5 items): Contract Agreement → Particular Conditions → General Conditions →
-  Employer's Requirements → the Tender / other documents
-- Silver Book 2017 (9 items): Contract Agreement → Particular Conditions Part A → Particular
-  Conditions Part B → General Conditions → Employer's Requirements → Schedules → the Tender →
-  JV Undertaking → other documents
+Based on the book type confirmed in Step 1, assess which documents are
+expected. The expected document set for each book is defined in the FIDIC
+General Conditions — retrieve from Layer 2 for comparison.
 
-Note: Silver Book has no Letter of Acceptance and no Letter of Tender as standalone items —
-contract is formed by negotiated agreement, not tender-acceptance.
+For each document in the expected set: classify as PRESENT, ABSENT,
+or PARTIALLY PRESENT (retrieved but appears truncated or incomplete).
 
-**Step 3 — Assess document completeness**
+**Flag every absent document.** Do not proceed with any analysis step
+that requires an absent document. State explicitly which analysis steps
+are suspended as a result.
 
-For each item in the expected hierarchy, determine whether the document is present in the
-warehouse. Classify each item: PRESENT / ABSENT / PARTIALLY PRESENT (chunks retrieved but
-document appears incomplete).
+Critical absences:
+- Particular Conditions absent → CANNOT ASSESS amendment position,
+  time bar, entitlement modifications, or any clause-specific analysis
+- Contract Agreement absent → CANNOT ASSESS contract formation,
+  contract sum, or parameters stated only in the Contract Agreement
+- General Conditions absent → retrieve from Layer 2 as the baseline;
+  flag that the project-specific version has not been confirmed
 
-Flag every absent document. An absent Particular Conditions is a critical gap — the General
-Conditions cannot be applied without knowing what was amended. An absent Contract Agreement is a
-critical gap for Silver Book projects (it is the primary contract formation document with no
-Letter of Acceptance as backup).
+### Step 3 — Establish the effective order of precedence
+*Contract-type-specific*
 
-**Step 4 — Establish the effective order of precedence**
+From the retrieved Particular Conditions, identify any amendment to the
+order of precedence clause (Clause 1.5 in all books and editions).
 
-Based on the documents actually present, state the effective hierarchy. Where a higher-ranked
-document is absent, note that its position cannot be filled and any ambiguity between lower-ranked
-documents cannot be resolved by reference to it.
+**The order of precedence to apply is the order stated in the retrieved
+Particular Conditions.** Do not apply the General Conditions order
+without first confirming it has not been amended.
 
-Check the Particular Conditions for any express modification to the standard hierarchy. GCC
-employers sometimes amend Clause 1.5 to elevate or demote specific documents. If found, apply
-the amended hierarchy and flag the modification.
+If no Particular Conditions amendment to Clause 1.5 is found and the
+Particular Conditions have been retrieved and reviewed: note that no
+amendment was found and the General Conditions order appears to apply —
+citing the Particular Conditions document as the source of that finding.
 
-**Step 5 — Map Particular Conditions amendments**
+If the Particular Conditions have not been retrieved: state CANNOT
+CONFIRM order of precedence. Do not state any hierarchy as governing.
 
-Read all retrieved Particular Conditions chunks. For every amendment to the General Conditions,
-record:
-- The sub-clause amended
-- What the standard General Conditions text says
-- What the Particular Conditions substitutes, adds, or deletes
-- Whether the amendment is forensically significant
+### Step 4 — Map Particular Conditions amendments
+*Contract-type-specific and contract-type-agnostic elements*
 
-Forensically significant amendments include: removal or modification of the DAB/DAAB clause,
-removal of Clause 14.8 (financing charges), modification of the time bar, transfer of risk
-events from Employer to Contractor, restriction of the Engineer's authority or independence,
-modification of the LD rate or cap, and any clause that removes or limits a party's entitlement
-to claim.
+Read all retrieved Particular Conditions chunks. For every amendment to
+the General Conditions, record:
+- The sub-clause amended (cite the sub-clause number)
+- What the amendment does: substitutes / adds / deletes / restricts
+- The forensic significance of the amendment
 
-Flag any amendment that may violate FIDIC Golden Principles (2019) — particularly GP3 (risk
-allocated to the party best able to bear and control it). These amendments are commonly seen in
-GCC contracts and are forensically significant in disputes.
+**Do not characterise the effect of an amendment by applying General
+Conditions text that you have not retrieved from Layer 2.** If the
+Layer 2 standard text for the amended clause was not retrieved, describe
+what the Particular Conditions say and note that comparison to the
+standard form requires Layer 2 retrieval.
 
-**Step 6 — Check for contradictions between documents in the hierarchy**
+Forensically significant amendments — flag any of the following:
+- Removal or modification of the DAB/DAAB clause
+- Modification of the notice or time bar provisions
+- Transfer of Employer Risk Events to Contractor risk
+- Restriction of the Engineer's authority or independence obligation
+- Modification of the LD rate or LD cap
+- Removal or restriction of cost recovery heads (e.g. financing charges)
+- Any clause that removes or limits a party's right to claim
+- Any clause inconsistent with FIDIC Golden Principles GP1–GP5
 
-Compare key parameters across all retrieved documents: Time for Completion, LD rate, retention
-percentage, Defects Notification Period, contract sum, and any other figure that appears in more
-than one document.
+*Contract-type-specific note:* The Silver Book has no Engineer. Any
+Particular Conditions provision referencing an Engineer on a Silver Book
+project is anomalous — flag it.
 
-Where the same parameter appears in two documents at different hierarchy levels, note both values
-and confirm which governs per the order of precedence. Where the same parameter appears in two
-documents at the same hierarchy level, flag this as a CONTRADICTION — both values must be
-surfaced and the ambiguity cannot be resolved without further instruction.
+### Step 5 — Check for contradictions between documents
+*Contract-type-agnostic*
 
-**Step 7 — Identify governing law and dispute resolution mechanism**
+For key parameters that may appear in more than one retrieved document
+(Time for Completion, LD rate, retention percentage, DNP, contract sum,
+commencement date), compare the values across all retrieved documents.
 
-From the Particular Conditions and Contract Data, identify:
-- The governing law of the contract
-- The dispute resolution mechanism: DAB (1999) / DAAB (2017) / replaced by arbitration / other
-- The seat and rules of arbitration if applicable
-- Any jurisdiction-specific flags triggered (see Domain Knowledge section)
+**Both values must be stated. Do not resolve the contradiction by
+choosing one.**
 
-**Step 8 — Compile and structure findings**
+If the same parameter appears in two documents at different hierarchy
+levels: state which governs per the order of precedence established in
+Step 3. If the order of precedence is unconfirmed (Particular Conditions
+not retrieved): state CANNOT DETERMINE which value governs.
 
-Compile all findings in the output format below. This output is passed forward to Claims,
-Schedule, and Governance specialists as foundational context for their analysis.
+If the same parameter appears in two documents at the same hierarchy
+level: classify as UNRESOLVABLE CONTRADICTION from the retrieved
+documents. Flag as RED.
+
+### Step 6 — Identify governing law and dispute resolution mechanism
+*Contract-type-specific*
+
+From the retrieved Particular Conditions and Contract Data, identify:
+- The governing law of the contract (must be stated in retrieved documents)
+- The dispute resolution mechanism as amended by Particular Conditions
+- The seat and rules of arbitration if stated
+
+**Do not assume any governing law or dispute resolution mechanism.**
+If the Particular Conditions have not been retrieved: state CANNOT
+CONFIRM governing law or dispute resolution mechanism.
 
 ---
 
 ## Classification and decision rules
 
 **Document completeness:**
-- If all expected hierarchy documents are present: COMPLETE
-- If Particular Conditions or Contract Agreement is absent: CRITICALLY INCOMPLETE — flag
-  immediately; downstream analysis is severely constrained
-- If one or more lower-ranked documents (Specification, Drawings, Schedules) are absent: PARTIAL
-  — flag each absence; note which analysis tasks are affected
-- If documents are present but appear truncated in the warehouse: flag as PARTIALLY PRESENT and
-  call `get_document` to retrieve the full document
+All expected documents present → COMPLETE
+Particular Conditions or Contract Agreement absent → CRITICALLY
+INCOMPLETE — downstream analysis severely constrained; state which
+steps cannot proceed
+One or more secondary documents absent → PARTIAL — flag each absence
+and its effect on analysis
 
-**Book type identification:**
-- If book type confirmed from contract documents: state the book type and source document
-- If book type cannot be confirmed: flag BOOK TYPE UNCONFIRMED; state assumption used and basis
-  for it; classify overall confidence as AMBER at minimum
+**Book type:**
+Confirmed from retrieved documents → state book type and source
+Cannot be confirmed → BOOK TYPE UNCONFIRMED — output confidence GREY —
+downstream specialists cannot proceed with book-specific analysis
 
 **Particular Conditions amendments:**
-- Standard amendments (governing law, arbitration, LD rate): note and record — not forensically
-  significant unless the rate is unusually high or the mechanism removes DAB/DAAB
-- Amendments that remove or restrict entitlements, shift risk, or remove procedural rights:
-  FORENSICALLY SIGNIFICANT — flag explicitly with the sub-clause reference and the nature of
-  the change
-- Amendments that may violate FIDIC Golden Principles: flag with the relevant Golden Principle
-  number and a brief statement of the apparent violation
+Amendment found and recorded → state sub-clause, effect, and
+forensic significance
+No amendment found to a clause AND Particular Conditions retrieved →
+state "no amendment found" citing the Particular Conditions as source
+No amendment found AND Particular Conditions not retrieved → state
+CANNOT CONFIRM amendment status for this clause
 
 **Contradictions:**
-- Between documents at different hierarchy levels: note both values; state which governs per the
-  hierarchy; AMBER confidence unless the governing document is unambiguous
-- Between documents at the same hierarchy level: RED confidence; both values stated; cannot be
-  resolved without further instruction
+Same parameter in documents at different hierarchy levels, hierarchy
+confirmed → state both values, state which governs, cite both sources
+Same parameter in documents at different hierarchy levels, hierarchy
+not confirmed → state both values, state CANNOT DETERMINE which governs
+Same parameter in documents at same hierarchy level → UNRESOLVABLE
+from retrieved documents — flag RED
 
 ---
 
 ## When to call tools
 
-**Signal:** Retrieved chunks include a Contract Agreement or Letter of Acceptance that references
-additional documents not retrieved (e.g. "Appendix 1 to the Contract Agreement", "Schedule of
-Key Personnel", "List of Approved Subcontractors")
-**Tool:** `get_document` on the Contract Agreement or Letter of Acceptance document ID
-**Look for:** The full list of incorporated documents and any additional terms
+**Signal:** Contract Agreement or Letter of Acceptance references
+additional incorporated documents not retrieved
+**Action:** `get_document` on the Contract Agreement / Letter of
+Acceptance document ID
+**Look for:** Full list of incorporated documents and additional terms
 
-**Signal:** Particular Conditions chunks appear to be truncated — numbering suggests sub-clauses
-are missing or the document ends mid-sentence
-**Tool:** `get_document` on the Particular Conditions document ID
-**Look for:** Complete amendment list; confirm no forensically significant clauses have been
-missed
+**Signal:** Particular Conditions chunks appear truncated — numbering
+suggests sub-clauses are missing
+**Action:** `get_document` on the Particular Conditions document ID
+**Look for:** Complete amendment list — confirm no forensically
+significant clauses have been missed
 
-**Signal:** A parameter (e.g. Time for Completion, LD rate) appears in retrieved chunks but
-the source document is not the Particular Conditions or Contract Data — it may be in a
-supplemental agreement or side letter not yet retrieved
-**Tool:** `search_chunks` with the parameter as query and filter to document types:
-Contract Amendment, Supplemental Agreement, Side Letter
-**Look for:** Any document that modifies the parameter after the original contract was executed
+**Signal:** A parameter appears in chunks but the source document is
+not a primary contract document — may be in a supplemental agreement
+**Action:** `search_chunks` with the parameter as query; then
+`get_related_documents` with document types: Contract Amendment,
+Supplemental Agreement, Side Letter
+**Look for:** Any document that modifies the parameter post-execution
 
-**Signal:** The Contract Agreement references a Performance Bond, Advance Payment Guarantee,
-or Parent Company Guarantee but those documents have not been retrieved
-**Tool:** `get_related_documents` filtered to document type: Performance Security, Bond,
-Guarantee
-**Look for:** Whether the securities exist in the warehouse; pass finding to
-`key_dates_and_securities.md` skill
+**Signal:** Book type is unclear — contract documents use FIDIC language
+but do not identify Red, Yellow, or Silver
+**Action:** `search_chunks` querying "Employer's Requirements",
+"Engineer", "Employer's Representative", "design responsibility"
+**Look for:** Presence of Employer's Requirements and Contractor design
+obligation suggests Yellow or Silver; Engineer (not Employer's
+Representative) as contract administrator suggests Red or Yellow.
+Note: contextual signals only — do not confirm book type from signals
+alone if the contract documents do not confirm it explicitly.
 
-**Signal:** Book type is ambiguous — contract documents use FIDIC language but do not clearly
-identify Red, Yellow, or Silver Book
-**Tool:** `search_chunks` querying for "Employer's Requirements", "Engineer", "Employer's
-Representative", "design responsibility"
-**Look for:** Presence of Employer's Requirements → Yellow or Silver; Engineer (not Employer's
-Representative) → Red or Yellow; design obligation on Contractor → Yellow or Silver
+**Signal:** Layer 2 FIDIC General Conditions for the identified book and
+edition have not been retrieved
+**Action:** `search_chunks` with query "[book name] [edition year]
+general conditions [clause number]"
+**Look for:** The relevant FIDIC standard text for comparison against
+the Particular Conditions amendments
 
 ---
 
 ## Always flag — regardless of query
 
-1. **Book type and edition** — always state which FIDIC book and edition governs and the source
-   document that confirms this. If unconfirmed, flag explicitly. Every downstream specialist
-   needs this.
+1. **Book type and edition** — always state the confirmed book type and
+   edition and the source document. If unconfirmed, flag explicitly.
+   Every downstream analysis depends on this.
 
-2. **Particular Conditions amendments that remove or restrict entitlement or procedural rights**
-   — always surface these even if the query is about something else entirely. A Particular
-   Conditions clause that removes the DAB, modifies the time bar, or eliminates financing charges
-   affects the entire project forensic picture.
+2. **Particular Conditions absent or not fully retrieved** — always flag
+   if the Particular Conditions were not retrieved or appear incomplete.
+   State which downstream analysis steps cannot proceed.
 
-3. **Any document in the hierarchy that is absent from the warehouse** — always flag missing
-   documents. A missing Particular Conditions means the General Conditions are being applied in
-   a vacuum. A missing Letter of Acceptance in a Red or Yellow Book project means the contract
-   formation evidence is incomplete.
+3. **Any Particular Conditions amendment that removes or restricts
+   entitlement, procedural rights, or risk allocation** — always surface
+   these regardless of the query.
 
-4. **Contradictions between documents on key parameters** — Time for Completion, LD rate,
-   contract sum, Defects Notification Period. These are the parameters most frequently in dispute.
-   Any contradiction must be surfaced immediately regardless of the query.
+4. **Contradictions between documents on key parameters** — Time for
+   Completion, LD rate, contract sum, DNP. Surface any contradiction
+   found regardless of the query.
 
-5. **Side letters, supplemental agreements, or novation agreements** — if present in the
-   warehouse, always flag their existence and state what they purport to change. Side letters that
-   override main contract terms without proper Clause 1.3 notice compliance are a common
-   forensic signal.
+5. **Side letters, supplemental agreements, or novation agreements** —
+   if present in the warehouse, always flag their existence and state
+   what they purport to change.
+
+6. **Silver Book: absence of Engineer** — if a Silver Book is confirmed
+   and any document references an Engineer, flag the anomaly.
 
 ---
 
 ## Output format
+
 ```
 ## Contract Assembly Assessment
 
+### Documents Retrieved (Layer 1)
+[List every document retrieved with its document reference number and date.
+List every expected document that was NOT retrieved.]
+
+### Documents Not Retrieved
+[List every document that was required for this analysis but not found
+in the warehouse. For each: state which analysis steps are affected.]
+
+### Layer 2 Reference Retrieved
+[State whether FIDIC General Conditions for the identified book and
+edition were retrieved from Layer 2. If not: state that standard form
+text has been applied from analytical knowledge, not from the ingested
+reference document.]
+
 ### Book Type and Edition
-Governing book: [Red Book / Yellow Book / Silver Book / UNCONFIRMED]
+Confirmed: [YES / NO]
+Book: [Red Book / Yellow Book / Silver Book / UNCONFIRMED]
 Edition: [1999 / 2017 / UNCONFIRMED]
-Source: [document name and reference]
-Assumption (if applicable): [state assumption and basis]
+Source: [document name and reference number]
+Analysis gate: [PROCEED / SUSPENDED — state reason if suspended]
 
 ### Document Completeness
-| Document | Expected | Status | Notes |
+| Document | Expected | Status | Analysis impact if absent |
 |---|---|---|---|
-| Contract Agreement | Yes | [PRESENT / ABSENT / PARTIAL] | |
-| Letter of Acceptance | [Yes/No per book] | [PRESENT / ABSENT / N/A] | |
-| Letter of Tender / Contract Data | Yes | [PRESENT / ABSENT / PARTIAL] | |
-| Particular Conditions | Yes | [PRESENT / ABSENT / PARTIAL] | |
-| General Conditions | Yes | [PRESENT / ABSENT / PARTIAL] | |
-| Specification / Employer's Requirements | Yes | [PRESENT / ABSENT / PARTIAL] | |
-| Drawings / Contractor's Proposal | [Yes/No per book] | [PRESENT / ABSENT / N/A] | |
-| Schedules | Yes | [PRESENT / ABSENT / PARTIAL] | |
-| Amendments / Side Letters | If any | [PRESENT / NONE FOUND] | |
-Completeness classification: [COMPLETE / PARTIAL / CRITICALLY INCOMPLETE]
+| Contract Agreement | Yes | [PRESENT/ABSENT/PARTIAL] | [impact] |
+| Letter of Acceptance | [Yes/No/N/A per book] | [status] | [impact] |
+| Particular Conditions | Yes | [PRESENT/ABSENT/PARTIAL] | [impact] |
+| General Conditions | Yes | [PRESENT/ABSENT — Layer 2 used] | [impact] |
+| [other documents per book] | | | |
+Overall: [COMPLETE / PARTIAL / CRITICALLY INCOMPLETE]
 
 ### Order of Precedence
-[List the effective hierarchy for this project in precedence order, highest first, noting any
-Clause 1.5 amendments. Flag any absent documents that create gaps in the hierarchy.]
+Source: [Particular Conditions document reference, or CANNOT CONFIRM]
+[State the hierarchy as confirmed from retrieved documents, or state
+CANNOT CONFIRM and why]
 
 ### Particular Conditions Amendments
-[For each amendment:]
-Sub-clause [X.X]: [description of amendment]
+[For each amendment found:]
+Sub-clause [X.X]: [what the amendment does]
+Source: [Particular Conditions reference, page/clause if identifiable]
 Forensic significance: [STANDARD / SIGNIFICANT]
-[If SIGNIFICANT: state why and the forensic impact]
+[If SIGNIFICANT: state the forensic impact in one sentence]
+
+[If no amendments found AND Particular Conditions retrieved:]
+No amendments to General Conditions identified in retrieved
+Particular Conditions. Source: [document reference].
+
+[If Particular Conditions not retrieved:]
+CANNOT ASSESS — Particular Conditions not retrieved.
 
 ### Contradictions Between Documents
 [For each contradiction:]
-Parameter: [parameter name]
-Document A: [document name] — states [value]
-Document B: [document name] — states [value]
-Governing document: [per hierarchy] / AMBIGUOUS
-[If AMBIGUOUS: state why resolution is not possible from the documents]
+Parameter: [name]
+Document A: [name, reference] — value: [X]
+Document B: [name, reference] — value: [Y]
+Governing document: [per confirmed hierarchy / CANNOT DETERMINE]
+
+[If none found:]
+No contradictions identified across retrieved documents.
 
 ### Governing Law and Dispute Resolution
-Governing law: [jurisdiction]
-Dispute resolution: [DAB / DAAB / Arbitration / Other]
-Arbitration seat and rules (if applicable): [details]
-Jurisdiction flags: [list any GCC-specific flags from Domain Knowledge section, or "None"]
+Governing law: [from retrieved documents, or CANNOT CONFIRM]
+Source: [document reference]
+Dispute resolution: [from retrieved documents, or CANNOT CONFIRM]
+Arbitration rules and seat: [from retrieved documents, or CANNOT CONFIRM]
 
-### Foundational Facts for Downstream Specialists
-FIDIC book: [book type] [edition]
-Time for Completion: [value] [source document]
-LD rate: [value] [source document]
-Defects Notification Period: [value] [source document]
-Contract sum: [value] [source document]
-Governing law: [jurisdiction]
-Dispute resolution: [mechanism]
-Contract administrator: [Engineer / Employer's Representative] [identity if retrievable]
-[Note: Engineer identity is assessed in full by engineer_identification.md skill]
+### Foundational Facts for Downstream Skills
+[Only populate from retrieved documents. State CANNOT CONFIRM for any
+item not found in the warehouse.]
+FIDIC book: [value] Source: [document]
+FIDIC edition: [value] Source: [document]
+Time for Completion: [value] Source: [document]
+LD rate: [value] Source: [document]
+DNP: [value] Source: [document]
+Contract sum: [value] Source: [document]
+Governing law: [value] Source: [document]
+Dispute resolution: [value] Source: [document]
+Contract administrator role: [Engineer / Employer's Representative /
+CANNOT CONFIRM] Source: [document]
+
+### FLAGS
+[Each flag on a separate line. State the flag and its forensic
+implication in one sentence.]
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / RED / GREY]
-Summary: [two to three sentences stating the contract document position, any critical gaps,
-and the most significant forensic finding from this assessment]
+Summary: [two to three sentences — only facts from retrieved documents]
 ```
 
 ---
 
-## Domain knowledge and standards
+## Analytical framework
+*Reference only — do not apply any value from this section without
+first confirming it from retrieved project documents.*
 
-### FIDIC Clause 1.5 — Document Hierarchy
+**FIDIC document hierarchy structure (analytical reference):**
+The FIDIC system places the Contract Agreement at the top of the
+hierarchy, followed by the Letter of Acceptance (where applicable),
+the Appendix to Tender or Contract Data, the Particular Conditions,
+and the General Conditions. Technical documents (Specification,
+Drawings, Schedules, Employer's Requirements) rank below the
+contractual documents. The exact list and order differ by book and
+edition and are subject to Clause 1.5 and any Particular Conditions
+amendment. Retrieve from Layer 2 and confirm against Layer 1.
 
-FIDIC Sub-Clause 1.5 governs interpretation in cases of conflict, ambiguity, or discrepancy
-between contract documents. In 2017 editions the trigger clause was expanded from "ambiguity or
-discrepancy" to "conflict, ambiguity or discrepancy" — a minor but deliberate drafting change.
+**Silver Book contract formation:**
+The Silver Book uses negotiated contract formation. There is no Letter
+of Acceptance as a standalone contract formation document. The Contract
+Agreement is the primary formation document. Retrieve from Layer 1 to
+confirm.
 
-The Particular Conditions override the General Conditions in all books and editions. This is the
-single most important principle in contract assembly analysis. GCC Particular Conditions
-frequently contain sweeping amendments that transform the standard risk allocation — these must
-be identified and recorded before any entitlement analysis begins.
+**FIDIC Golden Principles (2019) — analytical reference:**
+FIDIC published five Golden Principles to protect the integrity of the
+FIDIC system when Particular Conditions are drafted. GP1 — party roles
+and responsibilities must be identifiable. GP2 — dispute
+avoidance/adjudication mechanism must not be removed. GP3 — time
+periods must not be changed to render compliance impossible or
+impractical. GP4 — express obligations and time limits must not be
+unreasonably altered. GP5 — risk allocation must not be fundamentally
+changed. Use these as the framework for assessing whether a Particular
+Conditions amendment is forensically significant. The assessment of
+whether an amendment violates a Golden Principle must be based on
+what the retrieved amendment actually says.
 
-### FIDIC Golden Principles (2019)
-
-FIDIC published five Golden Principles to protect the integrity of the FIDIC system when Particular
-Conditions are drafted. The five principles are:
-
-- GP1: Duties, obligations, roles and responsibilities of the Employer, Engineer/Employer's
-  Representative, and Contractor must be identifiable
-- GP2: The FIDIC dispute avoidance/adjudication mechanism must not be removed
-- GP3: Time periods must not be changed to render them impossible or impractical to comply with
-- GP4: The Express obligations and the time limits for fulfilling them must not be unreasonably
-  altered
-- GP5: All of the above must not be so heavily amended as to fundamentally change the risk
-  allocation
-
-Violations most commonly seen in GCC Particular Conditions: removal of the DAB/DAAB clause
-(GP2), shortening of the time bar below 28 days (GP3), removal of the Engineer's independence
-obligation (GP1). Flag any Particular Conditions amendment that appears to violate these
-principles — this is a forensically significant finding regardless of whether a dispute has
-arisen.
-
-Note: The Silver Book's Clause 4.12 risk transfer is not a Golden Principles violation — it is
-a deliberate structural feature of the Silver Book design philosophy.
-
-### GCC-Specific Patterns
-
-**Abu Dhabi — ADGCC (2024 revision):** The Abu Dhabi Government Conditions of Contract is
-mandatory for Abu Dhabi government department projects. Based on FIDIC 1999 Red Book (construction
-works version) and FIDIC 1999 Yellow Book (design-and-build version) with heavy amendments. The
-2024 revision (ADPIC / Dentons) introduces DAAB provisions and pilots Conflict Avoidance Panels.
-Projects procured post-2024 under ADGCC may have DAAB provisions not present in earlier ADGCC
-contracts — always check the contract date and confirm which ADGCC version applies. ADGCC
-modifications typically include: Employer-favourable risk reallocation, Engineer's independence
-circumscribed (Employer approval required for material decisions), Arabic as governing language,
-alignment with Article 880 decennial liability.
-
-**Dubai:** Dubai procurement law does not recognise standard FIDIC contracts. A project in Dubai
-nominally using FIDIC may have its contractual mechanisms overridden by Dubai procurement law.
-When the governing law is identified as Dubai or UAE law and the project is in Dubai, flag this
-as a critical forensic issue requiring legal opinion.
-
-**Saudi Arabia:** FIDIC 1999 Red Book dominates. 2017 editions not yet in significant use.
-Common amendments: DAB clause removed and replaced with SCCA arbitration in Riyadh; Clause 14.8
-(financing charges) removed or modified (riba prohibition). Governing language is typically
-Arabic — dual-language contracts present interpretation risk; confirm which language governs from
-the Particular Conditions.
-
-**Qatar:** Public works projects (Ashghal/PWA, Kahramaa) use heavily amended FIDIC Red Book
-forms that are effectively bespoke. Government contracts typically cap liquidated damages at 10%
-of contract value — if the Particular Conditions LD rate would produce a figure exceeding this,
-note the potential enforceability issue. Qatar arbitration: Qatar International Court and Dispute
-Resolution Centre (QICDRC) and ICC are common.
-
-**Saudi Vision 2030 mega-projects (NEOM, The Line, Trojena, Qiddiya):** Use FIDIC 1999 with
-heavy amendments. High likelihood of non-standard risk allocation and bespoke Particular
-Conditions. Treat the Particular Conditions review for these projects as a full clause-by-clause
-exercise — do not assume standard FIDIC positions.
-
-### Silver Book — Special Considerations
-
-On Silver Book projects, the Contract Agreement is the primary contract formation document.
-There is no Letter of Acceptance. The contract is formed by negotiated agreement, not
-tender-acceptance. If only a Letter of Acceptance is in the warehouse and no Contract Agreement
-has been retrieved, either the contract is not a Silver Book contract, or the Contract Agreement
-is missing — call `search_chunks` to confirm.
-
-The Contractor's Proposal under a Silver Book is subsumed in "the Tender" (1999) or listed
-separately in Schedules (2017). It occupies the lowest positions in the hierarchy and is
-overridden by all Employer documents. This means a Contractor's Proposal that conflicts with the
-Employer's Requirements on a technical or commercial matter is overridden by the Employer's
-Requirements — a frequent source of Contractor claims in EPC projects.
-
-### Decennial Liability
-
-UAE Civil Code Article 880 and Saudi Building Code Implementing Regulations Article 29 impose
-10-year joint liability on architect and contractor for defects that may lead to building collapse
-or structural failure. This obligation cannot be contracted out of and runs in parallel with the
-FIDIC Defects Notification Period provisions regardless of which FIDIC book governs. When
-recording the governing law as UAE or Saudi law, flag that decennial liability applies.
+**GCC contractual patterns — analytical reference:**
+Abu Dhabi government projects may use the ADGCC (Abu Dhabi Government
+Conditions of Contract). Dubai procurement law may affect standard FIDIC
+mechanisms. Saudi Arabia government contracts frequently replace the
+DAB clause and remove financing charge recovery. Qatar public works
+projects use heavily amended FIDIC forms. These patterns are provided
+as analytical context — the actual amendment position must always be
+confirmed from the retrieved Particular Conditions.

@@ -1,400 +1,407 @@
-# Entitlement Basis — Legal & Contractual Specialist
+# Entitlement Basis
+
+**Skill type:** Contract-type-specific
+The entitlement framework differs materially across Red, Yellow, and
+Silver Books due to different risk allocation and design responsibility.
+The specific FIDIC sub-clause that supports a claimed entitlement,
+whether that sub-clause has been amended by Particular Conditions, and
+what it requires the claimant to demonstrate — all of these are
+book-specific and project-specific.
+**Layer dependency:**
+- Layer 1 — project documents: the claim document; Particular
+  Conditions (entitlement clauses, Employer Risk Events, cost recovery
+  provisions); Contract Agreement; relevant correspondence
+- Layer 2 — reference standards: FIDIC General Conditions for the
+  confirmed book and edition — the specific sub-clauses cited in the
+  claim and the relevant entitlement framework
+**Domain:** Legal & Contractual SME
+**Invoked by:** Legal orchestrator
+
+---
 
 ## When to apply this skill
 
-Apply this skill when a query concerns whether a Contractor or Employer has a
-contractual entitlement to additional time, cost, or both — including EOT claims,
-prolongation cost claims, variation entitlements, unforeseeable conditions claims,
-suspension claims, and termination compensation. Also apply when assessing whether
-the FIDIC clause cited in a claim document actually supports the relief claimed, or
-whether Particular Conditions amendments have modified or removed the entitlement.
+Apply when a query concerns whether a Contractor or Employer has a
+contractual entitlement to additional time, cost, or both — including
+EOT claims, prolongation cost claims, variation entitlements,
+unforeseeable conditions claims, suspension claims, or termination
+compensation. Also apply when assessing whether the FIDIC clause cited
+in a claim document actually supports the relief claimed, or whether
+Particular Conditions amendments have modified or removed the
+entitlement.
 
 ---
 
 ## Before you begin
 
-This is a Round 1 skill. There are no upstream specialist findings to read.
+### Foundational requirements
+Read contract_assembly and notice_and_instruction_compliance findings
+first.
 
-The following must be established from prior skill outputs before this skill runs:
+From contract_assembly:
+- Confirmed book type and edition — required to apply the correct
+  entitlement framework
+- Particular Conditions amendments — especially any that modify
+  entitlement clauses, narrow Employer Risk Events, restrict cost
+  recovery, or remove specific heads of claim
 
-From contract_assembly.md:
-- FIDIC book type and edition
-- Particular Conditions amendments — especially any that modify entitlement clauses,
-  narrow Employer Risk Events, restrict cost recovery, or remove specific heads of
-  claim
-- Governing law and jurisdiction
+From notice_and_instruction_compliance:
+- Time bar status for any notice corresponding to this claim
+- If notice is POTENTIALLY TIME-BARRED: flag this at the start of
+  the entitlement assessment. The entitlement analysis is secondary
+  to the notice position. Proceed with entitlement assessment and
+  note the time bar caveat throughout.
 
-From engineer_identification.md:
-- Identity of the Engineer or Employer's Representative
-- Engineer independence status — relevant to whether determinations of entitlement
-  are credible
+**If book type is UNCONFIRMED:** State CANNOT ASSESS entitlement
+basis. The entitlement framework is book-specific — analysis without
+confirmed book type will produce unreliable output.
 
-From notice_and_instruction_compliance.md:
-- Time bar status for any claim notices assessed — a POTENTIALLY TIME-BARRED finding
-  means entitlement analysis is secondary; flag this at the start and proceed with
-  entitlement assessment noting the time bar caveat
+### Layer 1 documents to retrieve (project-specific)
 
-If any prior skill output is unavailable, retrieve the Particular Conditions,
-Contract Agreement, and the claim document from the warehouse before proceeding.
+Call `search_chunks` and `get_related_documents` to retrieve:
+- The claim document (EOT claim, variation claim, or other) — required
+  to identify the FIDIC clause cited and the relief claimed
+- The Particular Conditions — required to confirm whether the cited
+  clause has been amended and what the actual entitlement terms are
+- The General Conditions — if not in Layer 1, retrieve from Layer 2
+- Any Engineer's determination or Employer's Representative response
+  to the claim
+- Supporting correspondence and records referenced in the claim
+
+**If the claim document is not retrieved:** State CANNOT ASSESS
+entitlement basis. A claim document must be present to assess.
+
+**If the Particular Conditions are not retrieved:** State CANNOT
+CONFIRM whether the entitlement clause cited in the claim has been
+amended. Do not assess entitlement against the General Conditions
+text without confirming the Particular Conditions position.
+
+### Layer 2 documents to retrieve (reference standards)
+
+After confirming book type and the specific FIDIC sub-clause cited in
+the claim, call `search_chunks` to retrieve from Layer 2:
+- The specific sub-clause cited in the claim (for the confirmed book
+  and edition) — to establish what the standard text says
+- The entitlement clause (Clause 8.4/8.5 for EOT; Clause 13 for
+  variations; the relevant sub-clause for the specific event type)
+
+**Purpose:** To compare what the standard FIDIC clause says against
+what the Particular Conditions say for this project. The entitlement
+terms to apply are those in the retrieved Particular Conditions (as
+amended), not the Layer 2 standard text. Layer 2 is the comparison
+baseline only.
 
 ---
 
 ## Analysis workflow
 
-**Step 1 — Identify the claimed entitlement and the FIDIC clause cited**
+### Step 1 — Identify the claimed entitlement and the clause cited
+*Contract-type-agnostic*
 
-From the retrieved claim document or query context, identify:
-- What relief is claimed: EOT only / Cost only / EOT + Cost / EOT + Cost + Profit /
-  Termination compensation / Other
-- Which FIDIC sub-clause is cited as the basis for entitlement
-- The nature of the event giving rise to the claim
+From the retrieved claim document, identify:
+- What relief is claimed: EOT only / Cost only / EOT + Cost /
+  EOT + Cost + Profit / Termination compensation / Other
+- Which FIDIC sub-clause is cited as the entitlement basis
+- The nature of the event giving rise to the claim (as described
+  in the claim document)
 
-If no FIDIC clause is cited in the claim document, note this as a deficiency —
-a claim that does not identify its contractual basis is procedurally deficient under
-both 1999 and 2017 FIDIC. Under 2017 Clause 20.2.4, the fully detailed claim must
-include the contractual basis; failure to do so affects the claim's standing.
+**Do not characterise the claim beyond what the retrieved document
+states.** If the claim document does not cite a FIDIC sub-clause:
+note this as a deficiency in the claim — a claim without a stated
+contractual basis is procedurally deficient under both editions.
 
-**Step 2 — Confirm the book type and apply the correct entitlement framework**
+### Step 2 — Confirm the entitlement clause from the Particular Conditions
+*Contract-type-specific*
 
-The entitlement framework differs materially across the three FIDIC books. Apply the
-framework for the confirmed book type:
+From the retrieved Particular Conditions, confirm:
+- Whether the sub-clause cited in the claim exists in the project
+  contract (i.e. has not been deleted by Particular Conditions)
+- Whether the sub-clause has been amended and if so how
+- What relief the sub-clause as amended actually provides
 
-**Red Book (Construction) — Employer Risk Events under Sub-Clause 8.4 / 8.5:**
-The Contractor is entitled to EOT for delays caused by:
-- Variation or other substantial change in quantity (Cl. 13)
-- Cause of delay giving right to extension under the contract
-- Exceptionally adverse climatic conditions
-- Unforeseeable shortages of personnel or goods
-- Delay caused by Employer, Engineer, or other contractor employed by Employer
-- Any other cause listed in the Particular Conditions
+**The entitlement clause to apply is the version in the retrieved
+Particular Conditions.** If the Particular Conditions contain an
+amendment to the cited sub-clause: apply the amended version and
+state the amendment. If no amendment is found AND the Particular
+Conditions have been fully retrieved: note that the General Conditions
+version appears to apply — citing the Particular Conditions as source.
+If the Particular Conditions have not been retrieved: state CANNOT
+CONFIRM the applicable entitlement terms.
 
-For Cost recovery, the event must fall under a specific cost-entitlement clause
-(e.g. Cl. 4.12 unforeseeable physical conditions, Cl. 4.24 fossils, Cl. 8.9
-suspension, Cl. 17.4 Employer's risks). EOT entitlement does not automatically
-confer Cost entitlement — the two must be assessed separately.
+### Step 3 — Assess whether the event qualifies under the confirmed clause
+*Contract-type-specific*
 
-**Yellow Book (Plant & Design-Build) — same EOT grounds as Red Book with one
-key distinction:**
-Sub-Clause 1.9 — if the Contractor suffers delay or incurs cost due to a failure
-in the Employer's Requirements that an experienced contractor could not have
-discovered at tender, the Contractor is entitled to EOT and Cost. This is an
-Employer Risk Event specific to Yellow Book — it does not exist in Red or Silver.
-Design defects that are the Contractor's own errors are not Employer Risk Events.
+Apply the entitlement framework for the confirmed book type.
+The key distinction is between the three books:
 
-**Silver Book (EPC/Turnkey) — significantly narrower entitlement:**
-Sub-Clause 4.12 — the Contractor is deemed to have accepted total responsibility
-for having foreseen all difficulties and costs. Unforeseeable physical conditions
-are not an Employer Risk Event under Silver Book. The EOT grounds are narrower:
-exceptionally adverse climatic conditions and unforeseeable shortages are removed.
-The Contractor bears substantially all risk events that would give rise to
-entitlement under Red and Yellow Books. Assess Silver Book claims against the
-specific and narrow list of Employer Risk Events in the Particular Conditions —
-do not apply Red Book entitlement logic to a Silver Book project.
+**Red Book (Construction):**
+Design responsibility is the Employer's. Contractor Risk Events are
+primarily execution-related. Employer Risk Events are defined in the
+clause — retrieve from Layer 1 (PC as amended) and Layer 2 (standard
+text for comparison). Do not characterise an event as an Employer
+Risk Event unless it falls within the events as stated in the
+retrieved Particular Conditions (or the confirmed unamended General
+Conditions).
 
-**Step 3 — Check whether the Particular Conditions have modified the entitlement**
+**Yellow Book (Plant & Design-Build):**
+Design responsibility is the Contractor's. Contractor's design errors
+are not Employer Risk Events. The Employer's Requirements deficiency
+ground (Clause 1.9) may provide entitlement where a design failure
+was unforeseeable at tender — this is Yellow Book specific and does
+not exist in the Red Book. Check whether Clause 1.9 applies only
+after retrieving the relevant clause from Layer 2 and confirming
+any PC amendment from Layer 1.
 
-The Particular Conditions override the General Conditions. Before concluding on
-entitlement, check the amendments mapped by contract_assembly.md for any that affect
-the claimed clause. Common GCC modifications that restrict entitlement:
+**Silver Book (EPC/Turnkey):**
+The Contractor bears most risk. The Employer Risk Events are
+significantly narrower than in the Red or Yellow Book. Unforeseeable
+physical conditions are not an Employer Risk Event in the standard
+Silver Book — the Contractor bears this risk. Do not apply Red or
+Yellow Book Employer Risk Event lists to a Silver Book project.
 
-- Removal of Clause 4.12 (unforeseeable physical conditions) — Contractor bears
-  all ground conditions risk regardless of foreseeability
-- Removal of Clause 14.8 (financing charges) — common in Saudi projects (riba)
-- Modification of Clause 8.4/8.5 to remove specific EOT grounds
-- Capping of prolongation costs — time-related costs recoverable only up to a
-  stated daily rate
-- Removal of profit from cost recovery — "Cost" defined to exclude profit in
-  Particular Conditions
-- Modification of the definition of "Cost" to exclude head office overheads
-- Reduction of the LD cap or removal of the LD cap
+**For all books:** Retrieve the Employer Risk Event list from the
+confirmed Particular Conditions (as amended). Do not apply the
+General Conditions list without confirming it is unamended.
 
-If a Particular Conditions amendment removes or restricts the entitlement claimed,
-state this explicitly: the entitlement basis does not survive the Particular
-Conditions amendment. Do not assess the merits of the claim under the General
-Conditions if the Particular Conditions have removed the right.
+### Step 4 — Assess cost entitlement separately from time entitlement
+*Contract-type-agnostic principle / contract-type-specific application*
 
-**Step 4 — Assess whether the entitlement clause supports the relief claimed**
+EOT entitlement and Cost entitlement are separate assessments under
+FIDIC. An event may entitle the Contractor to EOT without Cost (Neutral
+Event), or to both EOT and Cost (Employer Risk Event), or to EOT and
+Cost and Profit (specific clauses only). Profit is recoverable only
+where the entitlement sub-clause expressly provides for it.
 
-Match the relief claimed (EOT / Cost / Profit) against what the cited FIDIC clause
-actually provides.
+For each claimed head (time, cost, profit):
+- Confirm the sub-clause cited in the claim
+- Confirm whether that sub-clause provides for that head in the
+  retrieved Particular Conditions
+- If Profit is claimed and the sub-clause provides for Cost only:
+  flag — Profit is not recoverable under that clause as retrieved
 
-Key mapping for common claims:
-- Cl. 4.12 (unforeseeable physical conditions): EOT + Cost — no Profit
-- Cl. 4.24 (fossils): EOT + Cost — no Profit
-- Cl. 8.4/8.5 (EOT): EOT only — Cost requires a separate clause
-- Cl. 8.9 (suspension by Engineer): EOT + Cost + Profit if suspension exceeds 84
-  days and Contractor elects to terminate
-- Cl. 13.1 (variation): EOT + Cost + Profit — full variation valuation applies
-- Cl. 17.4/18.4 (Employer's risks / Force Majeure): EOT + Cost — no Profit unless
-  Particular Conditions provide otherwise
-- Cl. 16.4 (termination by Contractor): Cost + Profit on work not executed +
-  reasonable profit on terminated work — no obligation to continue
+### Step 5 — Assess the required proof elements
+*Contract-type-agnostic*
 
-If the claimed relief exceeds what the cited clause provides (e.g. Profit claimed
-under Clause 4.12), flag the excess as NOT ESTABLISHED under the cited clause.
-Note whether a different clause might support the excess relief — do not dismiss
-without checking.
+Every FIDIC entitlement sub-clause requires the claimant to demonstrate
+specific elements to establish entitlement. From the retrieved Layer 2
+clause text (compared against the Layer 1 Particular Conditions
+version), identify the required proof elements.
 
-**Step 5 — Assess Employer's claims entitlement (if applicable)**
+For each element:
+- Identify it from the retrieved clause text
+- Assess whether the retrieved claim documents provide evidence for it
+- Classify: DEMONSTRATED / NOT DEMONSTRATED / CANNOT ASSESS (evidence
+  not in warehouse)
 
-Under 1999 Clause 2.5, Employer's claims are governed by a separate, asymmetric
-procedure. The Employer must give notice to the Engineer as soon as practicable.
-There is no 28-day time bar on the Employer's claims under 1999.
+Do not characterise proof elements as demonstrated on the basis of
+what the claim document asserts — assess against independent evidence
+in the retrieved documents.
 
-Under 2017 Clause 20.2, Employer's claims are symmetric with Contractor's claims —
-the same 28-day time bar and 84-day detailed claim procedure applies to both parties.
-This is a significant change from 1999. If assessing an Employer's claim on a 2017
-project, apply the full Clause 20.2 procedure including the time bar.
+### Step 6 — Assess the Engineer's determination
+*Contract-type-specific — Red Book and Yellow Book only*
 
-Common Employer entitlement claims: liquidated damages (Cl. 8.7/8.8), defects
-correction costs (Cl. 11.4), reduction in contract price for uncorrected defects
-(Cl. 11.4), insurance proceeds shortfall. For LD claims, confirm the LD rate and
-cap from the Contract Data and check the Qatar 10% cap where applicable.
+If an Engineer's determination has been retrieved:
+- Does the determination address the entitlement claimed?
+- What position has the Engineer taken on the entitlement basis?
+- Is the Engineer's position consistent with the retrieved clause text?
+- Does the determination reveal any Employer consent issues (from
+  engineer_identification findings)?
 
-**Step 6 — Identify GCC-specific entitlement patterns**
-
-Flag any of the following patterns if present:
-
-- **Decennial liability parallel claim:** Where the claimed defect may engage UAE
-  Civil Code Article 880 or Saudi Building Code Article 29, note that the
-  contractual defects liability period runs in parallel with the 10-year statutory
-  liability — the Employer may have rights beyond the contractual DNP.
-
-- **Saudi CTL Article 179 LD reduction:** In Saudi-governed contracts, the court
-  may reduce LDs if proved excessive regardless of the contractual LD rate. Flag
-  if LDs are claimed and the project is Saudi-governed.
-
-- **Qatar LD cap:** Qatar government contracts typically cap LDs at 10% of contract
-  value. If the LD calculation exceeds this, flag the potential enforceability issue.
-
-- **Silver Book risk challenge:** Where a Silver Book Contractor claims under a
-  provision that does not exist in Silver Book (e.g. Sub-Clause 4.12 for
-  unforeseeable conditions), flag that the entitlement basis is not established
-  under the applicable book. Do not apply Red Book logic.
-
-- **Force majeure / exceptional events:** Under 2017 FIDIC the "Exceptional Events"
-  clause (Cl. 18) replaces the 1999 Force Majeure clause (Cl. 19). The 2017
-  clause is more detailed and introduces an obligation to give notice within 14
-  days of the start of the exceptional event. Check notice compliance if a force
-  majeure / exceptional events claim is being assessed.
-
-**Step 7 — Compile and structure findings**
-
-Compile all findings in the output format below. The entitlement basis findings are
-passed forward to the Claims specialist, who will assess causation, delay analysis,
-and quantum. Do not duplicate those assessments here — the Legal specialist's role
-is to confirm the contractual basis, not to assess the merit of the evidence.
+If no determination has been retrieved after searching:
+State CANNOT ASSESS the Engineer's position on entitlement.
 
 ---
 
 ## Classification and decision rules
 
-**Entitlement basis:**
-- Cited clause exists, applies to the event type, and supports the relief claimed
-  without Particular Conditions modification: ESTABLISHED
-- Cited clause exists and applies but supports lesser relief than claimed (e.g.
-  no Profit): PARTIALLY ESTABLISHED — state what is established and what is not
-- Cited clause exists but Particular Conditions have removed or restricted it:
-  NOT ESTABLISHED — state the Particular Conditions clause that removes it
-- Cited clause does not apply to the event type claimed: NOT ESTABLISHED — state
-  why and identify any alternative clause that might apply
-- No clause cited in the claim document: CLAUSE NOT IDENTIFIED — flag as procedural
-  deficiency; assess based on event type if possible
-- Silver Book project claiming under a Red/Yellow Book provision: NOT ESTABLISHED
-  UNDER APPLICABLE BOOK — state the Silver Book position
+**Entitlement clause confirmed:**
 
-**Relief type:**
-- EOT claimed and clause supports EOT: EOT ESTABLISHED
-- Cost claimed and clause supports Cost: COST ESTABLISHED
-- Profit claimed and clause supports Profit: PROFIT ESTABLISHED
-- Any component claimed that clause does not support: [COMPONENT] NOT ESTABLISHED
+Sub-clause exists and unamended in retrieved PC → clause governs as
+per General Conditions standard text (cite PC as source of
+confirmation)
+Sub-clause amended in retrieved PC → apply amended version — state the
+amendment and its effect
+Sub-clause deleted in retrieved PC → NO CONTRACTUAL BASIS for this
+claim under the cited clause — flag; state the deletion and source
+Particular Conditions not retrieved → CANNOT CONFIRM entitlement
+clause — do not proceed with entitlement assessment beyond flagging
+this gap
 
-**Particular Conditions modification:**
-- No relevant amendment found: GENERAL CONDITIONS APPLY UNMODIFIED
-- Amendment found that restricts but does not remove entitlement: MODIFIED —
-  state the restriction and its effect
-- Amendment found that removes entitlement entirely: ENTITLEMENT REMOVED BY
-  PARTICULAR CONDITIONS
+**Event qualification:**
+
+Event falls within Employer Risk Events as stated in retrieved PC →
+IN SCOPE — proceed with proof element assessment
+Event does not fall within Employer Risk Events as stated in retrieved
+PC → OUT OF SCOPE under cited clause — flag; state which retrieved
+clause provision excludes the event
+Event is a Neutral Event under retrieved PC → EOT ONLY — no Cost
+entitlement under this clause
+Cannot determine event classification because PC not retrieved →
+CANNOT CLASSIFY
+
+**Proof elements:**
+
+All required elements demonstrated in retrieved documents →
+ENTITLEMENT ESTABLISHED FROM RETRIEVED DOCUMENTS
+Some elements demonstrated, some absent from warehouse →
+PARTIALLY DEMONSTRATED — state which elements are established and
+which are not, and what documents would be needed
+No proof elements demonstrated in retrieved documents →
+CANNOT ESTABLISH ENTITLEMENT FROM WAREHOUSE DOCUMENTS
 
 ---
 
 ## When to call tools
 
-**Signal:** The claim cites a FIDIC clause but the Particular Conditions for that
-clause have not been retrieved — cannot confirm whether the clause was amended
-**Tool:** `search_chunks` querying for the specific sub-clause number and
-"Particular Conditions"
-**Look for:** Any amendment to the cited clause; if none found after search, state
-General Conditions apply unmodified
+**Signal:** Claim cites a sub-clause but the Particular Conditions
+amendment to that sub-clause has not been retrieved
+**Action:** `get_document` on the Particular Conditions document ID;
+`search_chunks` with query "clause [number] particular conditions
+[subject matter]"
+**Look for:** The amendment to the cited clause in the PC
 
-**Signal:** The event described in the claim does not obviously match any standard
-FIDIC Employer Risk Event — possible bespoke entitlement in Particular Conditions
-**Tool:** `search_chunks` querying for the event description and "Particular
-Conditions"
-**Look for:** Any bespoke entitlement clause added by the Particular Conditions
-for this event type
+**Signal:** Claim references supporting documents (records, reports,
+correspondence) that have not been retrieved
+**Action:** `get_related_documents` with the document types referenced;
+`search_chunks` with the event description and date range
+**Look for:** The supporting documents evidencing the claimed event
+and its impact
 
-**Signal:** The claim document is an EOT claim but no programme or delay analysis
-has been retrieved — cannot assess whether the EOT ground is supported by evidence
-**Tool:** `get_related_documents` filtered to Programme, Delay Analysis Report,
-Progress Report
-**Look for:** Pass to Claims specialist — note that causation and programme evidence
-assessment is outside Legal specialist scope but flag the absence
+**Signal:** Layer 2 FIDIC clause for the cited sub-clause has not
+been retrieved
+**Action:** `search_chunks` with query "[FIDIC book name] [edition]
+clause [number] [subject]"
+**Look for:** The standard FIDIC text for the cited sub-clause for
+comparison against the PC version
 
-**Signal:** Multiple claims are referenced in the query but only one claim document
-has been retrieved
-**Tool:** `search_chunks` querying for each claim reference number
-**Look for:** All claim documents in the series; assess each separately
+**Signal:** Engineer's determination has been referenced in the
+correspondence but not retrieved
+**Action:** `get_related_documents` with document type "Engineer's
+Determination"; `search_chunks` with query "determination entitlement
+[claim event description]"
+**Look for:** The determination document and the Engineer's position
+on entitlement
 
 ---
 
 ## Always flag — regardless of query
 
-1. **Particular Conditions amendments that restrict or remove entitlement** — always
-   surface any PC amendment that affects the entitlement being assessed, even if the
-   query did not ask about the PC. A Contractor relying on General Conditions
-   entitlement that has been removed by the PC has no entitlement regardless of
-   the merits of its claim.
+1. **Time bar caveat** — if notice_and_instruction_compliance findings
+   show POTENTIALLY TIME-BARRED, always flag at the top: the
+   entitlement analysis is secondary to the notice position; state
+   in one sentence the consequence if the time bar is upheld.
 
-2. **Silver Book risk allocation where Red Book logic has been applied** — whenever
-   the project is a Silver Book and the claim relies on a Red Book Employer Risk
-   Event (particularly Sub-Clause 4.12), always flag that the entitlement basis
-   does not exist under the applicable book.
+2. **Entitlement clause deleted or restricted by Particular
+   Conditions** — always flag when the cited clause has been removed
+   or materially restricted; state what the restriction is and its
+   forensic implication.
 
-3. **Mismatch between claimed relief and clause entitlement** — always flag when
-   Profit is claimed under a clause that does not provide for it, or when Cost is
-   claimed under an EOT-only clause. These are common errors in claim documents.
+3. **Silver Book Employer Risk Event claim that would succeed under
+   Red Book but not Silver Book** — always flag the book-specific
+   risk allocation distinction; state why the event does or does not
+   qualify under the Silver Book as retrieved.
 
-4. **Time bar caveat on entitlement findings** — whenever notice_and_instruction_
-   compliance.md has found POTENTIALLY TIME-BARRED, always preface the entitlement
-   finding with this caveat. A perfectly established entitlement basis is academic
-   if the notice was out of time.
+4. **Profit claimed where retrieved clause provides Cost only** —
+   always flag; state the clause reference and the Cost-only
+   limitation as retrieved from the documents.
 
-5. **2017 Clause 20.2.4 — contractual basis requirement** — on 2017 edition
-   projects, always check whether the detailed claim identifies the contractual
-   basis. A claim submitted without identifying the contractual basis within 84 days
-   of the notice lapses under Clause 20.2.4. Flag if the contractual basis is absent
-   or insufficient.
+5. **Claim without stated FIDIC contractual basis** — always flag;
+   a claim without a cited sub-clause is procedurally deficient under
+   both 1999 and 2017 FIDIC.
 
 ---
 
 ## Output format
+
 ```
 ## Entitlement Basis Assessment
 
-### Time Bar Caveat
-[If notice_and_instruction_compliance.md found POTENTIALLY TIME-BARRED:]
-CAVEAT: Notice for [claim reference] assessed as POTENTIALLY TIME-BARRED. Entitlement
-analysis follows but is secondary to the time bar finding.
-[If no time bar issue:] No time bar issue identified for this claim.
+### Documents Retrieved (Layer 1)
+[List every document retrieved with reference numbers and dates.]
 
-### Claim Reference and Relief Claimed
-Claim reference: [reference]
-Relief claimed: [EOT / Cost / Profit / combination]
-FIDIC clause cited: [clause reference or "None cited"]
-Event type: [brief description]
+### Documents Not Retrieved
+[List every document required for this analysis not found in the
+warehouse. State which analysis steps are affected.]
 
-### Book Type and Entitlement Framework Applied
-Book: [Red / Yellow / Silver]
-Edition: [1999 / 2017]
-Applicable Employer Risk Event framework: [brief statement of applicable framework]
+### Layer 2 Reference Retrieved
+[State whether the relevant FIDIC clause(s) for the confirmed book
+and edition were retrieved from Layer 2. If not: state analytical
+knowledge applied.]
 
-### Particular Conditions Assessment
-PC amendments relevant to cited clause: [list or "None found"]
-Effect on entitlement: [GENERAL CONDITIONS APPLY UNMODIFIED / MODIFIED / ENTITLEMENT
-REMOVED]
-[If modified or removed: state the PC clause reference and the specific effect]
+### Notice Position (from notice_and_instruction_compliance)
+[State the notice classification — time bar caveat if applicable]
 
-### Entitlement Basis Assessment
-Cited clause applies to event type: [YES / NO / PARTIALLY]
-Clause supports EOT: [YES / NO / N/A]
-Clause supports Cost: [YES / NO / N/A]
-Clause supports Profit: [YES / NO / N/A]
-Entitlement basis: [ESTABLISHED / PARTIALLY ESTABLISHED / NOT ESTABLISHED /
-CLAUSE NOT IDENTIFIED]
-[If not established or partial: state specifically what is not established and why]
-[If alternative clause identified: state the alternative and what it provides]
+### Claim Summary
+Relief claimed: [EOT / Cost / EOT + Cost / EOT + Cost + Profit / Other]
+FIDIC clause cited: [sub-clause number, or NOT CITED IN CLAIM DOCUMENT]
+Event description: [from retrieved claim document]
+Source: [claim document reference]
 
-### GCC-Specific Flags
-[List any GCC-specific flags triggered, or "None"]
+### Entitlement Clause Confirmation
+Sub-clause exists in retrieved PC: [YES / NO — DELETED / AMENDED /
+CANNOT CONFIRM — PC not retrieved]
+PC amendment: [describe amendment / NONE FOUND / CANNOT CONFIRM]
+Source: [PC document reference]
+Applicable clause terms: [from retrieved PC as amended / CANNOT CONFIRM]
 
-### Findings for Downstream Specialists
-Claim reference: [reference]
-Entitlement basis: [ESTABLISHED / PARTIALLY ESTABLISHED / NOT ESTABLISHED]
-Relief confirmed under contract: [EOT / Cost / Profit — list what is established]
-Relief not confirmed: [list what is not established, or "None"]
-Key PC amendment affecting entitlement: [state or "None"]
-Time bar caveat: [YES / NO]
-Note for Claims specialist: [any specific instruction for Claims assessment, e.g.
-"causation and programme evidence required to complete EOT assessment" or "Profit
-not recoverable under cited clause — Claims should not include Profit in quantum"]
+### Event Qualification
+Book type: [Red / Yellow / Silver — from contract_assembly]
+Event classification: [Employer Risk Event / Neutral Event /
+Contractor Risk Event / CANNOT CLASSIFY]
+Classification basis: [cite the specific retrieved PC provision]
+Time entitlement: [YES / NO / CANNOT CONFIRM]
+Cost entitlement: [YES / NO — clause provides EOT only / CANNOT CONFIRM]
+Profit entitlement: [YES — clause explicitly provides / NO — Cost only /
+CANNOT CONFIRM]
+
+### Proof Elements Assessment
+| Element required by clause | Evidence in warehouse | Classification |
+|---|---|---|
+| [element from retrieved clause] | [document reference or ABSENT] | [DEMONSTRATED / NOT DEMONSTRATED / CANNOT ASSESS] |
+
+### Engineer's Determination
+Determination retrieved: [YES / NO — NOT FOUND IN WAREHOUSE]
+Engineer's position on entitlement: [from retrieved determination /
+CANNOT ASSESS]
+Source: [document reference]
+
+### FLAGS
+[Each flag with one-sentence forensic implication]
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / RED / GREY]
-Summary: [two to three sentences stating the entitlement position, the most
-significant finding, and the key caveat for downstream specialists]
+Summary: [two to three sentences — facts from retrieved documents only]
 ```
 
 ---
 
-## Domain knowledge and standards
+## Analytical framework
+*Reference only — do not apply any entitlement classification or
+proof element from this section without first confirming it from
+retrieved project documents (Layer 1) and the relevant FIDIC clause
+(Layer 2).*
 
-### FIDIC Entitlement Architecture
+**Book-level risk allocation — analytical reference:**
+The three FIDIC books allocate risk differently. Red Book: Employer
+takes design risk and physical conditions risk. Yellow Book: Contractor
+takes design risk; Employer takes unforeseeable physical conditions
+risk under Clause 4.12 (subject to PC amendment). Silver Book:
+Contractor takes most risk including design and most physical
+conditions. These are general structural positions — the actual
+allocation for any project is the allocation in the retrieved
+Particular Conditions.
 
-FIDIC separates EOT entitlement from Cost entitlement. This is a fundamental point
-that is frequently misunderstood in claim documents. Sub-Clause 8.4 (1999) and
-8.5 (2017) list the grounds for EOT. Cost recovery requires a separate sub-clause
-that specifically provides for it. A Contractor who proves an EOT ground has not
-automatically proved Cost entitlement — they must additionally point to a clause
-that provides for Cost recovery for that event.
+**Entitlement structure — analytical reference:**
+FIDIC entitlement sub-clauses follow a pattern: event occurs →
+notice given → entitlement to EOT and/or Cost established by the
+specific clause → detailed claim follows. Not all sub-clauses provide
+both time and money. Some provide time only (Neutral Events). Some
+provide time and cost. Some provide time, cost, and profit. The
+specific provision in the retrieved Particular Conditions governs —
+not the general pattern.
 
-The clauses that provide for both EOT and Cost are the exception, not the rule.
-The clauses that provide for EOT only are more numerous. Profit is recoverable only
-under specific clauses (primarily variations under Clause 13 and termination under
-Clause 16.4).
-
-### Silver Book Sub-Clause 4.12 — Total Risk Transfer
-
-The Silver Book Sub-Clause 4.12 states that the Contractor is deemed to have
-satisfied itself as to the correctness and sufficiency of the Contract Price and
-to have obtained all necessary information as to risks, contingencies and other
-circumstances which may affect or influence its performance. The Contractor accepts
-total responsibility for having foreseen all difficulties and costs of successfully
-completing the Works.
-
-This is not an amendment — it is the standard Silver Book position. A Contractor
-on a Silver Book project who encounters unforeseen ground conditions has no
-entitlement under Sub-Clause 4.12 regardless of how unforeseeable those conditions
-were. This is the most significant single risk distinction between the Silver Book
-and the Red and Yellow Books. Always apply this distinction when assessing Silver
-Book claims.
-
-### Yellow Book Sub-Clause 1.9 — Errors in Employer's Requirements
-
-Under Yellow Book Sub-Clause 1.9, if the Contractor suffers delay or incurs cost
-as a result of an error in the Employer's Requirements, and an experienced contractor
-exercising due care could not have discovered the error before the Base Date, the
-Contractor is entitled to EOT and Cost (no Profit). This entitlement recognises that
-the Employer is responsible for the accuracy of its own design brief. It does not
-apply where the Contractor's own design work contains errors — design liability
-rests with the Contractor under Yellow Book.
-
-### GCC Particular Conditions Entitlement Patterns
-
-Saudi Arabia — riba prohibition on Clause 14.8: Financing charges (Clause 14.8)
-are commonly removed from Saudi contracts due to the Islamic finance prohibition on
-interest. A Contractor claiming financing charges on a Saudi-governed contract faces
-a Particular Conditions barrier regardless of the General Conditions position.
-
-Saudi Arabia — CTL Article 179: Courts may reduce contractually agreed LDs if the
-Employer cannot prove actual loss or if the LD rate is proved excessive. This applies
-regardless of the Particular Conditions LD clause.
-
-Qatar — 10% LD cap: Standard Qatar government procurement caps LDs at 10% of
-contract value. A Contractor facing LD deductions that exceed this cap has a
-potential enforceability challenge under Qatar law.
-
-UAE — decennial liability: UAE Civil Code Article 880 creates a mandatory 10-year
-joint liability for collapse or structural defect risk. A contractual DNP shorter
-than 10 years does not extinguish this liability. Where structural defects are in
-issue, both the contractual and statutory liability periods apply.
+**FIDIC 2017 symmetric claims — analytical reference:**
+Under FIDIC 2017, Employer claims are subject to the same notice
+and proof requirements as Contractor claims. This symmetry does not
+exist in FIDIC 1999. The edition must be confirmed from Layer 1
+before applying this framework.
