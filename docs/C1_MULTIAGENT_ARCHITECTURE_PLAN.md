@@ -399,7 +399,9 @@ All existing 6 FIDIC reference documents tagged as `2b`,
   FLAGS, footnote citations)
 - Async query pipeline (query_jobs, Supabase persistence)
 - Markdown rendering with remark-gfm
-- 5 Legal SME skill files
+- 22 SME skill files across 4 domains: Legal (5), Claims (5),
+  Schedule & Programme (6), Technical & Construction (6) — all
+  authored against SKILLS_STANDARDS.md v1.3
 - Migration 001–011 applied
 
 ### Needs building (this plan)
@@ -519,45 +521,22 @@ be identical in quality to current system.
 
 **Prerequisite:** Phase A complete and verified
 
-#### Task B.1 — Legal SME skill files (migrate existing)
+#### Task B.1 — Legal SME skill files ✅ COMPLETE
 
-Move existing 5 skill files from `skills/legal/` to
-`skills/smes/legal/`. No content changes. Verify Legal orchestrator
-still produces identical output after migration.
+Five Legal SME skill files redrafted against SKILLS_STANDARDS.md v1.3
+and committed to `skills/smes/legal/`. Commit: `8bccc5b`
 
-#### Task B.2 — Claims & Disputes SME skill files
+#### Task B.2 — Claims & Disputes SME skill files ✅ COMPLETE
 
-**Agent:** Yasser + Strategic Partner (knowledge authorship)
-Author 5 skill files per SKILLS_STANDARDS.md:
-1. `notice_compliance.md`
-2. `eot_quantification.md`
-3. `prolongation_cost.md`
-4. `disruption.md`
-5. `dispute_resolution_procedure.md`
+5 skill files committed to `skills/smes/claims/`. Commit: `8bccc5b`
 
-#### Task B.3 — Schedule & Programme SME skill files
+#### Task B.3 — Schedule & Programme SME skill files ✅ COMPLETE
 
-**Agent:** Yasser + Strategic Partner (knowledge authorship)
-Author 6 skill files:
-1. `programme_assessment.md`
-2. `critical_path_analysis.md`
-3. `delay_identification.md`
-4. `acceleration.md`
-5. `time_at_large.md`
-6. `evm_and_cost_reporting.md` ← requires Yasser's domain input on
-   EVM methodology used in GCC projects
+6 skill files committed to `skills/smes/schedule/`. Commit: `efdb009`
 
-#### Task B.4 — Technical & Construction SME skill files
+#### Task B.4 — Technical & Construction SME skill files ✅ COMPLETE
 
-**Agent:** Yasser + Strategic Partner (knowledge authorship)
-Author 6 skill files:
-1. `design_liability.md`
-2. `specification_compliance.md`
-3. `rfi_and_submittal_review.md`
-4. `ncr_management.md`
-5. `site_execution.md` ← site diaries, progress records, method
-   statements, work permits, inspection records
-6. `testing_and_commissioning.md`
+6 skill files committed to `skills/smes/technical/`. Commit: `cca32c2`
 
 ---
 
