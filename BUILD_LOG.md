@@ -867,3 +867,35 @@ layer_type Layer 2b retrieval, CANNOT CONFIRM rules, STANDARD FORM NOT
 IN WAREHOUSE consistent throughout.
 
 Next session: rebuild 6 Technical SME files and commit.
+
+## Session — April 2026 (Phase 4 Technical SME — continued)
+
+Task: Rebuild skills/smes/technical/design_liability.md — form-agnostic
+Status: COMPLETE
+Commit: d36b660
+Changes: Replaced Red/Yellow/Silver Book design responsibility workflow with retrieve-first framework (Layer 2b + amendment document). Removed all FIDIC clause numbers. Replaced decennial liability GCC framing with jurisdiction-agnostic statutory structural liability (applicable law from Layer 2b). Evidence Declaration block added to output format.
+
+Task: Rebuild skills/smes/technical/ncr_management.md — form-agnostic
+Status: COMPLETE
+Commit: ceb0327
+Changes: Removed FIDIC Clause 7 and 11 references. Replaced "DNP" with "defects liability period" throughout. Replaced "Taking-Over Certificate" with "completion certificate". Layer 2b subject-matter searches. Evidence Declaration block added.
+
+Task: Rebuild skills/smes/technical/rfi_and_submittal_review.md — form-agnostic
+Status: COMPLETE
+Commit: 643ddf1
+Changes: Removed FIDIC Clause 1.9 reference. Employer risk event entitlement is now Layer 2b retrieval. Evidence Declaration block added.
+
+Task: Rebuild skills/smes/technical/site_execution.md — form-agnostic
+Status: COMPLETE
+Commit: d38e42e
+Changes: Removed FIDIC Clause 4.1 reference. Weather exceptionality note added (requires Layer 2b — skill states factual record only). Evidence Declaration block added.
+
+Task: Rebuild skills/smes/technical/specification_compliance.md — form-agnostic
+Status: COMPLETE
+Commit: 83240db
+Changes: Removed FIDIC Clauses 7 and 11. Layer 2b subject-matter searches for quality, testing, and defects. Evidence Declaration block added.
+
+Task: Rebuild skills/smes/technical/testing_and_commissioning.md — form-agnostic
+Status: COMPLETE
+Commit: 5fd82b4
+Changes: "Taking-Over Certificate" → "completion certificate". "DNP" → "defects liability period". "Performance Certificate" → "final certificate". Clauses 9, 10, 11 removed, replaced with Layer 2b subject-matter searches. GCC authority inspections section removed. Evidence Declaration block added.

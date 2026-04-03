@@ -180,7 +180,7 @@ Convert to a lightweight (max 100 lines) human-readable reference that:
 
 ---
 
-## Phase 4 — Skill Files: Rebuild All 20 Files
+## Phase 4 — Skill Files: Rebuild All 20 Files ✅ COMPLETE
 
 **Priority:** High
 **Files:** 3 orchestrator directives + 17 SME skill files
@@ -311,7 +311,12 @@ that do not interact with the intelligence layer)
 | `skills/smes/schedule/evm_and_cost_reporting.md` | FIDIC-specific | Phase 4 ✅ fad4065 |
 | `skills/smes/schedule/programme_assessment.md` | FIDIC-specific | Phase 4 ✅ 8452a1d |
 | `skills/smes/schedule/time_at_large.md` | FIDIC-specific | Phase 4 ✅ d1b7bb1 |
-| `skills/smes/technical/*.md` (6 files) | FIDIC-specific | Phase 4 — next session |
+| `skills/smes/technical/design_liability.md` | FIDIC-specific | Phase 4 ✅ d36b660 |
+| `skills/smes/technical/ncr_management.md` | FIDIC-specific | Phase 4 ✅ ceb0327 |
+| `skills/smes/technical/rfi_and_submittal_review.md` | FIDIC-specific | Phase 4 ✅ 643ddf1 |
+| `skills/smes/technical/site_execution.md` | FIDIC-specific | Phase 4 ✅ d38e42e |
+| `skills/smes/technical/specification_compliance.md` | FIDIC-specific | Phase 4 ✅ 83240db |
+| `skills/smes/technical/testing_and_commissioning.md` | FIDIC-specific | Phase 4 ✅ 5fd82b4 |
 | `src/agents/models.py` | Missing EvidenceRecord | Phase 5 |
 | `src/agents/base_specialist.py` | No validation | Phase 5 |
 | `src/agents/base_orchestrator.py` | No validation | Phase 5 |
