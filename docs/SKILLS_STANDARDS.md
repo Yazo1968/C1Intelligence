@@ -1,7 +1,7 @@
 # C1 — Skills Standards and Requirements
 ## Governing Reference for All Agent Skill File Authorship
 
-**Version:** 1.3
+**Version:** 1.4
 **Status:** Active — Governing Document
 **Location:** `docs/SKILLS_STANDARDS.md`
 **Applies to:** All six domain specialists — Legal & Contractual, Commercial & Financial, Schedule & Programme, Technical & Design, Claims & Disputes, Governance & Compliance
@@ -339,7 +339,7 @@ forensic output than a finding based on an assumed or inferred value.
 
 Claims & Disputes is the most forensically sensitive domain. It requires additional standards beyond the general requirements above.
 
-### 6.1 Professional Framework
+### 7.1 Professional Framework
 
 Claims & Disputes skill files must be consistent with the working methodology of professional claims consultants, quantum experts, and forensic delay analysts as defined by the following:
 
@@ -349,7 +349,7 @@ Claims & Disputes skill files must be consistent with the working methodology of
 
 **FIDIC Red, Yellow and Silver Books 1999 and 2017:** The contractual framework across all three books in GCC use. Defines entitlement, notice obligations, time bars, and the claims resolution procedure. The 28-day Notice of Claim time bar applies across all three books. The Engineer's determination mechanism exists in Red and Yellow but not Silver — on Silver Book projects disputes escalate directly to DAB/DAAB. Entitlement basis differs materially across books due to different risk allocation and design responsibility. Does not prescribe delay analysis methodology — that is left to SCL/AACE.
 
-### 6.2 Professional Claim Assessment Workflow
+### 7.2 Professional Claim Assessment Workflow
 
 Professional claims consultants assess claims in the following sequence. Skill files must reflect this sequence:
 
@@ -360,7 +360,7 @@ Professional claims consultants assess claims in the following sequence. Skill f
 5. **Quantum** — Is the cost claim properly supported? Are the heads of claim recoverable under the applicable FIDIC clause?
 6. **Contradiction and credibility** — Are there contradictions between documents? Are there forensic signals that indicate reconstruction, inflation, or procedural deficiency?
 
-### 6.3 Accepted Delay Analysis Methodologies
+### 7.3 Accepted Delay Analysis Methodologies
 
 Skill files that address delay analysis must reference these methodologies by name and be able to identify which is being used in a document:
 
@@ -372,7 +372,7 @@ Skill files that address delay analysis must reference these methodologies by na
 | Collapsed As-Built | Retrospective; complex projects | As-built programme, delay events |
 | Windows Analysis (Time Slice) | Retrospective; complex concurrent delay | Programme updates across defined periods |
 
-### 6.4 Required Document Types for Claims Assessment
+### 7.4 Required Document Types for Claims Assessment
 
 | Document type | Purpose in claims assessment |
 |---|---|
@@ -388,7 +388,7 @@ Skill files that address delay analysis must reference these methodologies by na
 | Notice of Dissatisfaction | Escalation trigger |
 | Correspondence | Contemporaneous record and notice compliance |
 
-### 6.5 Output Format for Claims Findings
+### 7.5 Output Format for Claims Findings
 
 Claims findings must follow this structure:
 
@@ -501,8 +501,8 @@ All updates must be logged in `BUILD_LOG.md` with: the query or event that trigg
 
 | Field | Value |
 |---|---|
-| Version | 1.3 — Section 6 added: Warehouse-Grounding Principles (four mandatory principles for all skill files); existing sections 6–10 renumbered to 7–11; version bump |
-| Date | March 2026 |
+| Version | 1.4 — Section 7 internal numbering corrected |
+| Date | April 2026 |
 | Location | `docs/SKILLS_STANDARDS.md` |
 | Updated when | Standard revised, new domain added, or validation practice updated |
 | Related documents | `docs/AGENT_PLAN.md`, `CLAUDE.md`, `README.md` |
