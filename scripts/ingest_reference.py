@@ -11,6 +11,8 @@ Run from the repository root:
         --document-type "FIDIC Conditions of Contract" \
         --standard-body "FIDIC" \
         --edition-year "1999" \
+        --layer 2b \
+        --jurisdiction international \
         --description "General Conditions (Part I) of the FIDIC Red Book 1999 edition"
 
 Requires environment variables: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY
@@ -53,9 +55,15 @@ def main() -> None:
     )
     parser.add_argument("--edition-year", default=None, help="Edition year or identifier")
     parser.add_argument(
+        "--layer",
+        choices=["2a", "2b"],
+        default="2b",
+        help="Layer type: 2a = internal reference (org policies, DOA); 2b = external reference (FIDIC, law, standards). Default: 2b",
+    )
+    parser.add_argument(
         "--jurisdiction",
         default=None,
-        help="Jurisdiction (None = global)",
+        help="Jurisdiction tag for Layer 2b documents: international, uae, ksa, or qatar. Leave unset for Layer 2a documents.",
     )
     parser.add_argument("--description", default=None, help="Additional description")
     args = parser.parse_args()
@@ -137,6 +145,7 @@ def main() -> None:
             "name": args.name,
             "document_type": args.document_type,
             "standard_body": args.standard_body,
+            "layer_type": args.layer,
             "status": "ACTIVE",
         }
         if args.edition_year:
