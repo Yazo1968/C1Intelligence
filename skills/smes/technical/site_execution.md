@@ -3,19 +3,22 @@
 **Skill type:** Contract-type-agnostic
 The review of site diaries, daily reports, method statements, work
 permits, inspection records, and resource reports to establish the
-factual record of site execution applies regardless of FIDIC book
-or edition. The contractual consequences of deviations from approved
+factual record of site execution applies regardless of standard form
+or version. The contractual consequences of deviations from approved
 methods, access restrictions, or resource shortfalls are assessed
-against the retrieved Particular Conditions and confirmed book type.
+against the retrieved amendment document provisions and the governing
+standard form retrieved from Layer 2b.
 **Layer dependency:**
 - Layer 1 — project documents: site diaries and daily construction
-  reports; method statements (submitted and approved); work permits;
-  daily resource reports (manpower, plant); progress photographs;
-  access records; weather records; Particular Conditions (relevant
-  clauses on method, access, and resources)
-- Layer 2 — reference standards: FIDIC Clause 4.1 (Contractor's
-  general obligations) and relevant access/method clauses for the
-  confirmed book and edition
+  reports; method statements (submitted and approved versions); work
+  permits; daily resource reports (manpower, plant); progress
+  photographs; access records; weather records; amendment document
+  (relevant clauses on method, access, and resources)
+- Layer 2b — reference standards: contractor general obligations
+  provisions for the confirmed standard form (method, resources,
+  access); employer access and possession provisions (if ingested)
+- Layer 2a — internal standards: site management procedures,
+  health and safety frameworks (if applicable)
 **Domain:** Technical & Construction SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
@@ -60,32 +63,43 @@ Call `search_chunks` and `get_related_documents` to retrieve:
 - Site diaries and daily construction reports for the period
   under analysis
 - Method statements for the activities under assessment —
-  submitted version and the Engineer's approved version
+  the submitted version and the approved version
 - Work permits for the relevant work types and period
 - Daily resource reports (manpower, plant) for the period
 - Progress photographs (dated) for the period
 - Weather records for the period (if weather is relevant)
 - Access records or site possession records
+- The amendment document — clauses on method, access, and resources
+  relevant to the query
 
 **If site diaries are not retrieved for the relevant period:**
 State CANNOT ESTABLISH the factual site record for that period
 from warehouse documents. The site diary is the primary
 contemporaneous record of site execution.
 
-**For each retrieved document:** State its reference, date,
-and the period it covers. Note any gaps in the record (e.g.
-site diaries retrieved for most of the period but missing for
-specific dates).
+**For each retrieved document:** State its reference, date, and
+the period it covers. Note any gaps (e.g. site diaries retrieved
+for most of the period but missing for specific dates).
 
-### Layer 2 documents to retrieve (reference standards)
+### Layer 2b documents to retrieve (reference standards)
 
-Call `search_chunks` to retrieve from Layer 2:
-- FIDIC Clause 4.1 for the confirmed book and edition —
-  Contractor's general obligations on method and resources
+Call `search_chunks` with `layer_type = '2b'` to retrieve:
+- Contractor general obligations provisions for the confirmed
+  standard form (search by subject matter: "contractor general
+  obligations method resources programme access")
+- Employer access and possession provisions for the confirmed
+  standard form (search by subject matter: "employer access
+  possession site contractor obligation")
 
-**Purpose:** To establish the FIDIC framework for method and
-resource obligations. Specific requirements are in the retrieved
-Particular Conditions.
+**Purpose:** To establish the standard form framework for method
+and resource obligations and employer access duties. Specific
+requirements are in the retrieved amendment document.
+
+**If the governing standard form is not retrieved from Layer 2b:**
+State CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE for the
+contractor obligations framework. Confidence cap: AMBER. This
+skill's primary value lies in the factual record from Layer 1 —
+proceed with Layer 1 analysis regardless.
 
 ---
 
@@ -115,7 +129,7 @@ retrieved site diaries:
 - Are there any deviations from the approved method recorded in
   the retrieved site diaries?
 - Was the method statement approved before the work commenced?
-  (Cross-reference submittal register if available.)
+  (Cross-reference the submittal register if available.)
 
 **Flag any deviation from the approved method that is evidenced
 in the retrieved site records.** Do not characterise a deviation
@@ -157,13 +171,13 @@ compliance from warehouse documents.
 *Contract-type-agnostic*
 
 From the retrieved access records and site diaries:
-- Was the Contractor given access to the areas required for the
+- Was the contractor given access to the areas required for the
   work on the planned dates?
 - Are there records of restricted access, delayed handover of
-  areas, or Employer interference with the Contractor's operations?
+  areas, or employer interference with the contractor's operations?
 
 **State the access position from the retrieved records.** Do not
-characterise an access restriction as an Employer event without
+characterise an access restriction as an employer default without
 retrieved evidence.
 
 ### Step 6 — Assess weather records
@@ -177,10 +191,12 @@ weather conditions:
 - Does the site diary record the impact of weather on specific
   activities?
 
-**State weather conditions from the retrieved records.** Do not
-assess whether conditions were "exceptionally adverse" within the
-FIDIC meaning — that assessment requires meteorological data
-not typically in the project warehouse. Flag this limitation.
+**State weather conditions from the retrieved records.** Whether
+conditions were sufficiently adverse to constitute a weather risk
+event under the governing standard form is a contractual assessment
+— flag that this requires the relevant Layer 2b provisions and
+the amendment document to confirm. State the factual weather record
+from retrieved documents only.
 
 ---
 
@@ -198,8 +214,8 @@ No site diaries retrieved → NO CONTEMPORANEOUS RECORD IN WAREHOUSE
 Approved method statement retrieved AND site diary shows
 compliance → COMPLIANT WITH APPROVED METHOD
 Approved method statement retrieved AND site diary records
-deviation → DEVIATION FROM APPROVED METHOD — flag; state
-the deviation and source documents
+deviation → DEVIATION FROM APPROVED METHOD — flag; state the
+deviation and source documents
 Method statement not retrieved → CANNOT ASSESS METHOD COMPLIANCE
 
 **Resource deployment:**
@@ -213,6 +229,7 @@ No resource reports retrieved → CANNOT CONFIRM RESOURCE DEPLOYMENT
 
 Permits retrieved and pre-dated work commencement → COMPLIANT
 Work evidenced before permit issue date → PERMIT COMPLIANCE ISSUE
+— flag
 Permits not retrieved → CANNOT CONFIRM WORK PERMIT COMPLIANCE
 
 **Access:**
@@ -234,21 +251,28 @@ diary daily report [date range]"
 
 **Signal:** Method statement not retrieved
 **Action:** `get_related_documents` with document type "Method
-Statement"; `search_chunks` with query "method statement
-[activity description] approved"
+Statement"; `search_chunks` with query "method statement [activity
+description] approved"
 **Look for:** The approved method statement for the activity
 
 **Signal:** Daily resource reports not retrieved
 **Action:** `get_related_documents` with document type "Daily
-Resource Report", "Manpower Report"; `search_chunks` with
-query "manpower plant resource [date range]"
+Resource Report", "Manpower Report"; `search_chunks` with query
+"manpower plant resource [date range]"
 **Look for:** Daily or weekly resource reports for the period
 
 **Signal:** Weather records not retrieved but weather is relevant
 **Action:** `search_chunks` with query "weather record rainfall
-temperature [period]"; `get_related_documents` with document
-type "Weather Record", "Meteorological Report"
+temperature [period]"; `get_related_documents` with document type
+"Weather Record", "Meteorological Report"
 **Look for:** Any weather records in the warehouse for the period
+
+**Signal:** Layer 2b contractor obligations provisions not retrieved
+**Action:** `search_chunks` with `layer_type = '2b'` and query
+"[standard form name] contractor general obligations method
+resources access"
+**Look for:** Standard form contractor general obligations and
+employer access provisions
 
 ---
 
@@ -258,9 +282,9 @@ type "Weather Record", "Meteorological Report"
    periods for which no site diary has been retrieved; state that
    the factual record cannot be established for those periods.
 
-2. **Deviation from approved method statement** — flag where
-   the site diary records a different construction method from
-   the approved method statement; state both documents.
+2. **Deviation from approved method statement** — flag where the
+   site diary records a different construction method from the
+   approved method statement; state both documents.
 
 3. **Access restriction recorded in site diary** — flag; state
    the period, the nature of the restriction, and the source
@@ -268,12 +292,17 @@ type "Weather Record", "Meteorological Report"
 
 4. **Resource deployment significantly below the resource-loaded
    programme** — flag where retrieved resource reports show
-   substantially fewer resources than the programme assumed;
-   state the figures from both documents.
+   substantially fewer resources than the programme assumed; state
+   the figures from both documents.
 
 5. **Work proceeded before work permit issued** — flag where
    retrieved records show this sequence; state the work type,
    dates, and source documents.
+
+6. **Governing standard not in Layer 2b** — flag; state that the
+   contractual framework for method and access obligations cannot
+   be confirmed from the warehouse; confidence capped at AMBER
+   for contractual consequence assessment.
 
 ---
 
@@ -281,6 +310,18 @@ type "Weather Record", "Meteorological Report"
 
 ```
 ## Site Execution Assessment
+
+### Evidence Declaration
+Layer 2b retrieved: [YES / NO / PARTIAL]
+Layer 2b source: [standard form name — or NOT RETRIEVED]
+Layer 2b provisions retrieved: [contractor obligations, employer
+access and possession — or NONE]
+Layer 2a retrieved: [YES / NO / NOT APPLICABLE]
+Layer 2a source: [policy name — or NOT RETRIEVED / NOT APPLICABLE]
+Layer 1 primary document: [site diary or daily report reference —
+or NOT RETRIEVED]
+Layer 1 amendment document: [name — or NOT RETRIEVED]
+Provisions CANNOT CONFIRM: [list — or NONE]
 
 ### Documents Retrieved (Layer 1)
 [List every document retrieved with reference numbers and dates.
@@ -290,9 +331,12 @@ Note the periods covered by site diaries and any gaps.]
 [List every document required but not found. State which steps
 are affected.]
 
-### Layer 2 Reference Retrieved
-[State whether FIDIC Clause 4.1 was retrieved. If not: state
-analytical knowledge applied.]
+### Layer 2b Reference Retrieved
+[State whether contractor obligations and employer access provisions
+were retrieved from Layer 2b. If not: state CANNOT CONFIRM —
+STANDARD FORM NOT IN WAREHOUSE. Note that the factual record from
+Layer 1 is unaffected by this gap. Confidence cap: AMBER for
+contractual consequence assessment.]
 
 ### Site Diary Coverage
 Period under analysis: [dates]
@@ -304,7 +348,8 @@ Coverage: [COMPLETE / INCOMPLETE — state gap dates / NONE RETRIEVED]
 or CANNOT ESTABLISH — site diaries not retrieved]
 
 ### Method Statement Compliance
-Method statement retrieved: [YES — reference and approval date / NOT FOUND]
+Method statement retrieved: [YES — reference and approval date /
+NOT FOUND]
 Work commencement vs approval: [APPROVED BEFORE COMMENCEMENT /
 WORK PRECEDED APPROVAL / CANNOT CONFIRM]
 Compliance with approved method: [COMPLIANT / DEVIATION — describe
@@ -322,18 +367,21 @@ not retrieved]
 
 ### Work Permit Compliance
 Work permits retrieved: [YES — list types / NOT FOUND]
-Pre-work issue confirmed: [YES / ISSUE IDENTIFIED — describe / CANNOT CONFIRM]
+Pre-work issue confirmed: [YES / ISSUE IDENTIFIED — describe /
+CANNOT CONFIRM]
 
 ### Access Position
 Access records retrieved: [YES — period / NOT FOUND]
-Access restrictions recorded: [YES — describe and source / NONE IN RETRIEVED RECORDS]
+Access restrictions recorded: [YES — describe and source /
+NONE IN RETRIEVED RECORDS]
 
 ### Weather Records
 Weather records retrieved: [YES — period / NOT FOUND]
 Weather stoppages recorded: [YES — dates and duration from records /
 NONE IN RETRIEVED RECORDS]
-Note: Exceptionality of weather conditions cannot be assessed
-without meteorological comparison data.
+Note: Whether weather conditions constitute a contractual risk
+event requires Layer 2b provisions and amendment document
+confirmation — this section states the factual record only.
 
 ### FLAGS
 [Each flag with one-sentence forensic implication]
@@ -349,7 +397,7 @@ documents only; note periods where the record is incomplete]
 ## Analytical framework
 *Reference only — do not apply any contractual obligation or
 standard from this section without first confirming it from the
-retrieved project documents.*
+retrieved project documents and Layer 2b.*
 
 **Site diary as contemporaneous evidence — analytical reference:**
 The site diary is the most important contemporaneous record in
@@ -362,10 +410,21 @@ the evidential basis for any claim or defence that depends on
 establishing what actually happened on site.
 
 **Method statement compliance — analytical reference:**
-The Contractor is required to execute the works in accordance with
-approved method statements. Deviations without the Engineer's
-approval may constitute a contractual breach. They may also be
-evidence of acceleration (different sequence, additional resources)
-or of the cause of a defect (deviation from the specified method).
-The connection between method deviation and outcome depends on
-the specific circumstances evidenced in the retrieved documents.
+The contractor is generally required to execute the works in
+accordance with approved method statements. Deviations without
+the contract administrator's approval may constitute a contractual
+breach. They may also be evidence of acceleration (different
+sequence, additional resources) or of the cause of a defect
+(deviation from the specified method). The connection between
+method deviation and outcome depends on the specific circumstances
+evidenced in the retrieved documents and the relevant obligation
+in the amendment document.
+
+**Resource deployment and disruption — analytical reference:**
+Daily resource reports, cross-referenced against the resource-loaded
+programme, establish whether the contractor deployed the resources
+the programme assumed. Below-programme resource deployment may
+indicate contractor culpability for delay; above-programme
+deployment may indicate disruption or acceleration. The forensic
+significance depends on the reason for the deviation, which must
+be established from the retrieved contemporaneous records.
