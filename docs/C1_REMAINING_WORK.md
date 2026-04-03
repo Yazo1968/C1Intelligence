@@ -13,60 +13,13 @@ Both governing workstreams are fully executed:
 - `C1_MULTIAGENT_ARCHITECTURE_PLAN.md` v1.0 — all six phases complete
 
 What remains falls into three categories:
-1. Small deferred tasks — actionable now, no prerequisites missing
-2. External dependency items — blocked on Supabase platform upgrade
-3. Phase 2 product features — larger scope, require separate planning
-4. Security hardening — low urgency, non-blocking
+1. External dependency items — blocked on Supabase platform upgrade
+2. Phase 2 product features — larger scope, require separate planning
+3. Security hardening — low urgency, non-blocking
 
 ---
 
-## Category 1 — Actionable Now
-
-These were deferred during the build for stated reasons. All conditions
-are now met. Recommended execution order: 1 → 2 → 3 → 4.
-
----
-
-### Item 2 — Document download endpoint
-
-**Priority:** HIGH
-**Agent:** API Engineer (backend + frontend)
-**Effort:** Medium — one API endpoint, one frontend button
-**Condition met:** "After Phase D" — Phase D is complete. `storage_path`
-column exists on `documents` table and is populated on upload.
-
-**The problem:**
-Users can upload documents but cannot download the originals. The file
-is stored in Supabase Storage at `{project_id}/{document_id}/{filename}`
-in the `document-originals` bucket. There is no API endpoint or
-frontend control to retrieve it.
-
-**What to build:**
-
-*API Engineer (backend) — new endpoint:*
-```
-GET /projects/{project_id}/documents/{document_id}/download
-```
-- Verify project access (RLS)
-- Retrieve `storage_path` from `documents` table
-- Generate a signed URL from Supabase Storage (short-lived, e.g. 60 seconds)
-- Return the signed URL in the response
-- The signed URL redirects to the actual file
-
-*API Engineer (frontend):*
-- Add a download icon/button to each row in `DocumentTable.tsx`
-- On click: call the download endpoint, open the signed URL in a new tab
-
-**Files:** `src/api/routes/documents.py`, `src/api/schemas.py`,
-`frontend/src/components/documents/DocumentTable.tsx`,
-`frontend/src/api/documents.ts`
-
-**Commit protocol:** Backend and frontend each committed separately after
-individual QG PASS.
-
----
-
-## Category 2 — External Dependency
+## Category 1 — External Dependency
 
 Blocked on a Supabase platform upgrade. No action possible until the
 dependency resolves.
@@ -97,7 +50,7 @@ USING hnsw (embedding vector_cosine_ops);
 
 ---
 
-## Category 3 — Phase 2 Product Features
+## Category 2 — Phase 2 Product Features
 
 These are larger-scope features that require separate planning sessions.
 None are blocked on technical prerequisites — they are product decisions.
@@ -173,7 +126,7 @@ project document management system rather than manual upload.
 
 ---
 
-## Category 4 — Security Hardening
+## Category 3 — Security Hardening
 
 Non-blocking. Acceptable in current state for a known frontend
 deployment. Address in a dedicated hardening session.
@@ -212,7 +165,6 @@ affected function to add the search path constraint.
 
 | # | Item | Category | Priority | Effort | Prerequisite |
 |---|---|---|---|---|---|
-| 2 | Document download endpoint | Actionable now | HIGH | Medium | None |
 | 5 | HNSW/IVFFlat vector index | External dependency | — | Small | pgvector upgrade |
 | 6 | Party ID resolution | Phase 2 | — | Medium-large | Parties API |
 | 7 | Cross-specialist contradiction detection | Phase 2 | — | Medium | — |

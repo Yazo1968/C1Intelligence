@@ -635,6 +635,25 @@ saving on cache hits. Cache lifetime: 5 minutes.
 | Party ID resolution (`issuing_party_id`, `receiving_party_id` always NULL) | Requires parties management API that does not exist | Post-skills workstream |
 | `round_number` column in `query_log` | DB migration required; TODO in `orchestrator.py` | DB Architect micro-session after skills complete |
 | Cross-specialist contradiction detection | `contradiction_cross.py` returns `[]` | AGENT_PLAN Phase 7 |
+
+---
+
+## Session — Item 2 from C1_REMAINING_WORK.md — ✅ Complete
+
+**Date:** 2026-04-03
+**Active agents:** API Engineer (backend + frontend), Quality Guardian
+**Quality Guardian:** PASS on both commits individually + independent verification by session coordinator
+
+**Item 2 — Document download endpoint:**
+- `src/api/schemas.py` — added `DocumentDownloadResponse` (download_url, filename, expires_in)
+- `src/api/routes/documents.py` — added `GET /{document_id}/download` endpoint; registered before `GET /{document_id}` to prevent FastAPI path parameter capture; generates 60-second signed URL from `document-originals` Supabase Storage bucket; returns 404 if `storage_path` is NULL
+- `frontend/src/api/types.ts` — added `DocumentDownloadResponse` interface
+- `frontend/src/api/documents.ts` — added `getDocumentDownloadUrl` function
+- `frontend/src/components/documents/DocumentTable.tsx` — added `DownloadButton` component with loading state; download column added to table; button renders only for `status === 'STORED'` rows; opens signed URL in new tab
+- Commits: `1fa4f33` (backend), `c786183` (frontend)
+
+**C1_REMAINING_WORK.md after this session:** Category 1 (Actionable Now) is empty.
+Next priority: Category 3 security hardening (Items 11, 12) or Category 2 Phase 2 features — requires Yasser's direction.
 | Approval workflows | Phase 2 feature | Phase 2 |
 | Five user roles and authority matrix | Phase 2 feature | Phase 2 |
 | Document control system integration | Phase 2 feature | Phase 2 |
