@@ -19,7 +19,7 @@ import json
 from src.clients import get_anthropic_client
 from src.config import CLAUDE_MODEL
 from src.logging_config import get_logger
-from src.agents.models import SpecialistFindings
+from src.agents.models import EvidenceRecord, LayerRetrievalStatus, SpecialistFindings
 from src.agents.skill_loader import SkillLoader
 from src.agents.specialist_config import SpecialistConfig
 from src.agents.tools import TOOL_DEFINITIONS, execute_tool
@@ -120,6 +120,9 @@ class BaseSpecialist:
     def __init__(self, config: SpecialistConfig) -> None:
         self._config = config
         self._skill_loader = SkillLoader()
+        self._grounding_schema: dict | None = (
+            self._skill_loader.load_grounding_schema(config.domain)
+        )
 
     @property
     def domain(self) -> str:
@@ -404,7 +407,7 @@ class BaseSpecialist:
             sources_used = []
             flagged = []
 
-        return SpecialistFindings(
+        findings = SpecialistFindings(
             domain=self._config.domain,
             findings=findings_text,
             confidence=confidence,
@@ -413,6 +416,7 @@ class BaseSpecialist:
             round_number=self._config.round_assignment,
             flagged_contradictions=flagged,
         )
+        return self._validate_evidence_and_cap_confidence(findings)
 
     def _error_findings(
         self, message: str, tools_called: list[str]
@@ -427,3 +431,146 @@ class BaseSpecialist:
             round_number=self._config.round_assignment,
             flagged_contradictions=[],
         )
+
+    def _parse_evidence_declaration(self, findings_text: str) -> EvidenceRecord:
+        """
+        Parse the Evidence Declaration block from the specialist's findings text.
+
+        Looks for a '### Evidence Declaration' section and extracts the
+        layer retrieval status fields. Returns a default EvidenceRecord
+        (all NOT_RETRIEVED) if the block is absent or unparseable.
+        """
+        import re
+
+        record = EvidenceRecord()
+
+        match = re.search(
+            r"###\s+Evidence Declaration\s*\n(.*?)(?=\n###|\Z)",
+            findings_text,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if not match:
+            return record
+
+        block = match.group(1)
+
+        def _extract(pattern: str) -> str | None:
+            m = re.search(pattern, block, re.IGNORECASE)
+            return m.group(1).strip() if m else None
+
+        def _parse_status(raw: str | None) -> LayerRetrievalStatus:
+            if raw is None:
+                return LayerRetrievalStatus.NOT_RETRIEVED
+            upper = raw.upper()
+            if upper.startswith("YES"):
+                return LayerRetrievalStatus.RETRIEVED
+            if upper.startswith("PARTIAL"):
+                return LayerRetrievalStatus.PARTIAL
+            return LayerRetrievalStatus.NOT_RETRIEVED
+
+        # Layer 2b
+        record.layer2b_status = _parse_status(
+            _extract(r"Layer 2b retrieved:\s*\[?([^\]\n]+)\]?")
+        )
+        l2b_src = _extract(r"Layer 2b source:\s*\[?([^\]\n]+)\]?")
+        if l2b_src and "NOT RETRIEVED" not in l2b_src.upper():
+            record.layer2b_source = l2b_src
+
+        # Layer 2a
+        l2a_raw = _extract(r"Layer 2a retrieved:\s*\[?([^\]\n]+)\]?")
+        if l2a_raw and "NOT APPLICABLE" in l2a_raw.upper():
+            record.layer2a_status = LayerRetrievalStatus.NOT_RETRIEVED
+        else:
+            record.layer2a_status = _parse_status(l2a_raw)
+        l2a_src = _extract(r"Layer 2a source:\s*\[?([^\]\n]+)\]?")
+        if l2a_src and "NOT RETRIEVED" not in l2a_src.upper() and "NOT APPLICABLE" not in l2a_src.upper():
+            record.layer2a_source = l2a_src
+
+        # Layer 1 primary document
+        l1_primary = _extract(r"Layer 1 primary document:\s*\[?([^\]\n]+)\]?")
+        if l1_primary and "NOT RETRIEVED" not in l1_primary.upper():
+            record.layer1_primary_document = l1_primary
+
+        # Layer 1 amendment document
+        amend_raw = _extract(r"Layer 1 amendment document:\s*\[?([^\]\n]+)\]?")
+        if amend_raw and "NOT RETRIEVED" not in amend_raw.upper() and "NOT APPLICABLE" not in amend_raw.upper():
+            record.layer1_amendment_document_status = LayerRetrievalStatus.RETRIEVED
+        else:
+            record.layer1_amendment_document_status = LayerRetrievalStatus.NOT_RETRIEVED
+
+        # Provisions CANNOT CONFIRM
+        cannot_raw = _extract(r"Provisions CANNOT CONFIRM:\s*\[?([^\]\n]+)\]?")
+        if cannot_raw and cannot_raw.upper() != "NONE":
+            record.provisions_cannot_confirm = [
+                p.strip() for p in cannot_raw.split(",") if p.strip()
+            ]
+
+        return record
+
+    def _apply_confidence_cap(
+        self, findings: SpecialistFindings, cap: str
+    ) -> SpecialistFindings:
+        """
+        Downgrade confidence if it is higher than the cap level.
+
+        Cap order (worst to best): GREY=3, RED=2, AMBER=1, GREEN=0.
+        If current confidence has a lower order number than the cap,
+        downgrade to the cap. RED (conflicting documents) is always
+        preserved at or above AMBER — only a GREY cap overrides RED.
+        """
+        cap_order = {"GREEN": 0, "AMBER": 1, "RED": 2, "GREY": 3}
+        current = findings.confidence
+        if cap_order.get(current, 0) < cap_order.get(cap, 3):
+            logger.warning(
+                "confidence_capped",
+                domain=self._config.domain,
+                original_confidence=current,
+                capped_to=cap,
+            )
+            return findings.model_copy(update={"confidence": cap})
+        return findings
+
+    def _validate_evidence_and_cap_confidence(
+        self, findings: SpecialistFindings
+    ) -> SpecialistFindings:
+        """
+        Parse the Evidence Declaration block and apply confidence caps
+        per the loaded grounding schema.
+
+        Called at the end of _parse_findings(). Returns findings unchanged
+        if no grounding schema is loaded for this domain.
+        """
+        if self._grounding_schema is None:
+            return findings
+
+        evidence = self._parse_evidence_declaration(findings.findings)
+
+        # Cap for missing Layer 2b
+        if (
+            self._grounding_schema.get("layer2b_required")
+            and evidence.layer2b_status == LayerRetrievalStatus.NOT_RETRIEVED
+        ):
+            cap = self._grounding_schema.get("confidence_cap_without_layer2b", "AMBER")
+            findings = self._apply_confidence_cap(findings, cap)
+
+        # Cap for missing amendment document
+        if (
+            self._grounding_schema.get("layer1_amendment_document_required")
+            and evidence.layer1_amendment_document_status
+            == LayerRetrievalStatus.NOT_RETRIEVED
+        ):
+            cap = self._grounding_schema.get(
+                "confidence_cap_without_amendment_document", "GREY"
+            )
+            findings = self._apply_confidence_cap(findings, cap)
+
+        # Cap for missing Layer 2a (when required)
+        if (
+            self._grounding_schema.get("layer2a_required")
+            and evidence.layer2a_status == LayerRetrievalStatus.NOT_RETRIEVED
+        ):
+            cap = self._grounding_schema.get("confidence_cap_without_layer2a", "AMBER")
+            findings = self._apply_confidence_cap(findings, cap)
+
+        findings = findings.model_copy(update={"evidence_record": evidence})
+        return findings
