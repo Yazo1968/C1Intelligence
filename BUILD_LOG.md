@@ -788,3 +788,29 @@ for retrieval performance.
 removed entirely. One category remains: Phase 2 product features (4 items).
 | Duplicate `## Executive Summary` header in response output | `build_response_text` emits `## Executive Summary` then the generated summary begins with `## EXECUTIVE SUMMARY` — cosmetic double header | LOW — housekeeping session |
 | Section 7 (Claims domain) internal sub-section numbering | SKILLS_STANDARDS.md v1.3 — Section 7 (renamed from 6) internal sub-sections still numbered 6.1–6.5 | LOW — cosmetic; fix in next SKILLS_STANDARDS update |
+
+---
+
+## Session — Platform Identity Overhaul — ✅ Complete
+
+**Date:** 2026-04-03
+
+CLAUDE.md rewritten v1.0 — universal construction intelligence platform,
+three-layer warehouse (Layer 1/2a/2b), grounding principle, pointer to
+C1_MASTER_PLAN.md.
+
+docs/C1_MASTER_PLAN.md created v1.0 — six phases: (1) prompts.py
+form-agnostic rewrite, (2) c1-skill-authoring rebuilt, (3) SKILLS_STANDARDS.md
+lightweight, (4) all 20 skill files rebuild, (5) code enforcement,
+(6) product features.
+
+skills/c1-skill-authoring/ rebuilt — five files, three-layer warehouse,
+fully form-agnostic. warehouse_retrieval.md replaces fidic_framework.md.
+
+docs/SKILLS_STANDARDS.md v2.0 — lightweight 104 lines, four
+warehouse-grounding principles, operational guidance in skill.
+
+Archived: C1_INTELLIGENCE_GROUNDING_PLAN.md, C1_PHASE2_PLAN.md,
+C1_REMAINING_WORK.md.
+
+Next session: Phase 1 — src/agents/prompts.py form-agnostic rewrite.
