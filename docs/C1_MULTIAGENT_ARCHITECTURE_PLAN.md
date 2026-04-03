@@ -402,7 +402,7 @@ All existing 6 FIDIC reference documents tagged as `2b`,
 - 22 SME skill files across 4 domains: Legal (5), Claims (5),
   Schedule & Programme (6), Technical & Construction (6) — all
   authored against SKILLS_STANDARDS.md v1.3
-- Migration 001–011 applied
+- Migration 001–013 applied
 
 ### Needs building (this plan)
 - Three-tier orchestration architecture
@@ -544,25 +544,15 @@ and committed to `skills/smes/legal/`. Commit: `8bccc5b`
 
 **Prerequisite:** Phase B complete
 
-#### Task C.1 — Financial orchestrator implementation
+#### Task C.1 — Financial orchestrator implementation ✅ COMPLETE
 
-**Agent:** Agent Orchestrator
+No code change required — financial domain fully wired in Phase A.
+Commit: `ac87569` (directive file only)
 
-Add financial as a full Tier 1 orchestrator:
-- New `SpecialistConfig` entry with tier=1
-- Directive file: `skills/orchestrators/financial/directive.md`
-- Invokes Schedule SME for EVM data
-- Invokes Commercial orchestrator output as financial input
-- Produces: budget vs actual, EVM metrics, cash flow, financial
-  exposure quantification
+#### Task C.2 — Financial orchestrator directive file ✅ COMPLETE
 
-#### Task C.2 — Financial orchestrator directive file
-
-**Agent:** Yasser + Strategic Partner (knowledge authorship)
-
-Write `skills/orchestrators/financial/directive.md` defining the
-CFO/project controller role, EVM output format, financial reporting
-standard.
+`skills/orchestrators/financial/directive.md` created (109 lines).
+Commit: `ac87569`
 
 ---
 
@@ -570,27 +560,16 @@ standard.
 
 **Prerequisite:** Phase C complete
 
-#### Task D.1 — Risk mode flag and framing
+#### Task D.1 — Risk mode flag and framing ✅ COMPLETE
 
-**Agent:** Agent Orchestrator
+`risk_mode: bool = False` added to `QueryRequest` and `SubmitQueryRequest`.
+`_RISK_FRAMING_DIRECTIVE` constant added to orchestrator.py.
+Commit: `6d1fcc9`
 
-Add `risk_mode: bool` to `SubmitQueryRequest` schema.
-When `risk_mode=True`:
-- Each Tier 1 orchestrator receives an additional risk-framing
-  directive in its system prompt
-- The risk directive instructs them to frame findings as risk
-  exposures with likelihood, impact, and severity rating
-- Synthesis layer assembles output as a risk register when
-  risk_mode is True
+#### Task D.2 — Frontend risk report trigger ✅ COMPLETE
 
-#### Task D.2 — Frontend risk report trigger
-
-**Agent:** API Engineer (frontend)
-
-Add a "Risk Report" button/toggle to the query interface.
-Sets `risk_mode=True` on submission.
-Renders risk register format in output (table: ID, domain,
-description, likelihood, impact, rating, action).
+Risk Report toggle added to `QueryInput.tsx` (amber checkbox).
+`submitQuery` sends `risk_mode` in body. Commit: `560c962`
 
 ---
 
@@ -598,39 +577,22 @@ description, likelihood, impact, rating, action).
 
 **Prerequisite:** Phase A complete (can run in parallel with B, C, D)
 
-#### Task E.1 — Migration: layer_type and jurisdiction columns
+#### Task E.1 — Migration 012: layer_type column ✅ COMPLETE
 
-**Agent:** DB Architect (Claude can apply via Supabase MCP)
+Applied via Supabase MCP. `layer_type` column added to `reference_documents`.
+All 6 FIDIC books tagged `2b / international`.
 
-```sql
-ALTER TABLE reference_documents
-ADD COLUMN layer_type TEXT NOT NULL DEFAULT '2b'
-  CHECK (layer_type IN ('2a', '2b'));
+#### Task E.2 — Update ingest_reference.py CLI ✅ COMPLETE
 
-ALTER TABLE reference_documents
-ADD COLUMN jurisdiction TEXT;
+`--layer` flag added (choices: `2a`, `2b`, default: `2b`).
+`layer_type` written to insert dict. Commit: `047ac02`
 
--- Tag existing FIDIC books
-UPDATE reference_documents
-SET layer_type = '2b', jurisdiction = 'international';
-```
+#### Task E.3 — Update retrieval RPC functions ✅ COMPLETE
 
-#### Task E.2 — Update ingest_reference.py CLI
-
-**Agent:** Ingestion Engineer
-
-Add `--layer` flag (`2a` or `2b`) and `--jurisdiction` flag to
-`scripts/ingest_reference.py`.
-Populate `layer_type` and `jurisdiction` columns on ingestion.
-
-#### Task E.3 — Update retrieval to pass layer context
-
-**Agent:** Ingestion Engineer
-
-The RPC functions currently search all reference_chunks.
-Add optional `p_layer_type` and `p_jurisdiction` parameters.
-Tier 1 orchestrators can specify which layer to retrieve from —
-Legal retrieves L2b (FIDIC), also L2a (DOA policies).
+Migration 013 applied via Supabase MCP. Both reference search RPC
+functions updated with optional `p_layer_type` and `p_jurisdiction`
+parameters (NULL = no filter). Migration file:
+`supabase/migrations/013_layer2_retrieval_filters.sql`. Commit: `d09076d`
 
 ---
 
