@@ -638,6 +638,27 @@ saving on cache hits. Cache lifetime: 5 minutes.
 
 ---
 
+## Session — Items 11, 12 from C1_REMAINING_WORK.md — ✅ Complete
+
+**Date:** 2026-04-03
+**Active agents:** API Engineer (Item 11), DB Architect (Item 12), Quality Guardian
+**Quality Guardian:** PASS on both commits
+
+**Item 11 — CORS tightening:**
+- `src/api/main.py` — allow_methods changed from ["*"] to ["GET", "POST", "DELETE", "OPTIONS"]; allow_headers changed from ["*"] to ["Authorization", "Content-Type"]
+- Commit: `cb21aec`
+
+**Item 12 — RPC function search_path:**
+- `supabase/migrations/015_rpc_search_path.sql` — created; five functions rewritten with fixed search_path
+- Applied to live Supabase by session coordinator (version 20260403083419)
+- Note: set_updated_at, search_chunks_fulltext, search_chunks_reference_fulltext use SET search_path = public. search_chunks_semantic and search_chunks_reference_semantic use SET search_path = public, extensions (pgvector <=> operator lives in extensions schema on Supabase — applying public-only caused operator resolution failure on first attempt)
+- Commit: `f035f63` (SQL file); corrected and applied to Supabase by session coordinator
+
+**Database state after this session:** 15 migrations applied (001–015).
+**C1_REMAINING_WORK.md after this session:** Security hardening category empty and removed. Remaining: Category 1 (pgvector index, blocked on Supabase upgrade) and Category 2 (Phase 2 product features).
+
+---
+
 ## Session — Item 2 from C1_REMAINING_WORK.md — ✅ Complete
 
 **Date:** 2026-04-03

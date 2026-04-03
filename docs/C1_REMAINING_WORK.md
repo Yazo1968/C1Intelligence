@@ -12,10 +12,9 @@ Both governing workstreams are fully executed:
 - `C1_QUERY_IMPROVEMENT_PLAN.md` v1.3 — all four phases complete
 - `C1_MULTIAGENT_ARCHITECTURE_PLAN.md` v1.0 — all six phases complete
 
-What remains falls into three categories:
+What remains falls into two categories:
 1. External dependency items — blocked on Supabase platform upgrade
 2. Phase 2 product features — larger scope, require separate planning
-3. Security hardening — low urgency, non-blocking
 
 ---
 
@@ -126,41 +125,6 @@ project document management system rather than manual upload.
 
 ---
 
-## Category 3 — Security Hardening
-
-Non-blocking. Acceptable in current state for a known frontend
-deployment. Address in a dedicated hardening session.
-
----
-
-### Item 11 — CORS tightening
-
-**Current state:** `allow_methods=["*"]` and `allow_headers=["*"]`
-in `src/api/main.py`
-
-**What to do:**
-Restrict to: `allow_methods=["GET", "POST", "OPTIONS"]` and
-`allow_headers=["Authorization", "Content-Type"]`
-
-**File:** `src/api/main.py`
-
----
-
-### Item 12 — `function_search_path_mutable` on RPC functions
-
-**Current state:** Pre-existing Supabase security advisory affecting
-all RPC functions across migrations 001, 006, 007, 010, 011, and 013.
-
-**What to do:**
-Add `SET search_path = public` to each affected function definition.
-This is a migration that uses `CREATE OR REPLACE FUNCTION` on each
-affected function to add the search path constraint.
-
-**Affects:** All RPC functions defined in migrations 001, 006, 007,
-010, 011, 013.
-
----
-
 ## Summary Table
 
 | # | Item | Category | Priority | Effort | Prerequisite |
@@ -171,5 +135,3 @@ affected function to add the search path constraint.
 | 8 | Approval workflows | Phase 2 | — | Large | — |
 | 9 | Five user roles and authority matrix | Phase 2 | — | Large | — |
 | 10 | Document control system integration | Phase 2 | — | Large | — |
-| 11 | CORS tightening | Security hardening | LOW | Trivial | — |
-| 12 | `function_search_path_mutable` on RPC functions | Security hardening | LOW | Small | — |

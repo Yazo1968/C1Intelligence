@@ -1,5 +1,8 @@
 -- Migration 015: fix function_search_path_mutable security advisory
--- Adds SET search_path = public to all five affected RPC functions.
+-- Adds SET search_path to all five affected RPC functions.
+-- Vector semantic functions use SET search_path = public, extensions
+-- because Supabase hosts the pgvector <=> operator in the extensions schema.
+-- Fulltext and trigger functions use SET search_path = public.
 -- Function bodies are unchanged — only the search_path setting is added.
 -- Resolves the advisory across migrations 001, 006, 007, 010, 011, and 013.
 
@@ -39,7 +42,7 @@ RETURNS TABLE (
     citation_fields          TEXT[]
 )
 LANGUAGE sql STABLE
-SET search_path = public
+SET search_path = public, extensions
 AS $$
     SELECT
         dc.id,
@@ -128,7 +131,7 @@ RETURNS TABLE (
     jurisdiction          TEXT
 )
 LANGUAGE sql STABLE
-SET search_path = public
+SET search_path = public, extensions
 AS $$
     SELECT
         rc.id,
