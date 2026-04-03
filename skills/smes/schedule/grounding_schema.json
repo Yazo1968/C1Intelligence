@@ -1,0 +1,9 @@
+{
+  "skill_group": "schedule_sme",
+  "layer2b_required": true,
+  "layer2a_required": false,
+  "layer1_amendment_document_required": true,
+  "confidence_cap_without_layer2b": "AMBER",
+  "confidence_cap_without_amendment_document": "GREY",
+  "description": "Schedule SMEs require Layer 2b standard form provisions before characterising time extension mechanisms, agreed damages, or programme obligations. Amendment document required for project-specific dates, rates, and periods."
+}

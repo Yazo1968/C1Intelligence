@@ -1,0 +1,9 @@
+{
+  "skill_group": "legal_orchestrator",
+  "layer2b_required": true,
+  "layer2a_required": false,
+  "layer1_amendment_document_required": true,
+  "confidence_cap_without_layer2b": "AMBER",
+  "confidence_cap_without_amendment_document": "GREY",
+  "description": "Legal orchestrator requires Layer 2b standard form provisions before characterising any contractual framework. Amendment document required to confirm project-specific position."
+}

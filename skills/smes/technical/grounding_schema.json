@@ -1,0 +1,9 @@
+{
+  "skill_group": "technical_sme",
+  "layer2b_required": true,
+  "layer2a_required": false,
+  "layer1_amendment_document_required": false,
+  "confidence_cap_without_layer2b": "AMBER",
+  "confidence_cap_without_amendment_document": "AMBER",
+  "description": "Technical SMEs require Layer 2b standard form provisions for quality, testing, and defects frameworks. Amendment document affects contractual consequence assessment but not the factual record extraction — cap is AMBER not GREY."
+}
