@@ -836,3 +836,34 @@ verified via GitHub API on committed file.
 
 Next session: Phase 2 — rebuild skills/c1-skill-authoring/ (5 files,
 three-layer warehouse, form-agnostic). Prerequisite: Phase 1 ✅
+
+---
+
+## Session — Phase 4: Skill Files Rebuild (17 of 20) — ✅ Partial Complete
+
+**Date:** 2026-04-03
+
+Phase 4 executed across one long session. 17 of 20 skill files rebuilt —
+all orchestrator directives and three SME domains complete. Technical SME
+domain (6 files) written and QG-passed but not committed due to outputs
+mount I/O failure at session end. Technical files to be committed in next
+session.
+
+Orchestrator directives (3): 7514a85, 00f62b6, bf10e37
+Legal SME (5): 2889d9d, 62982ea, 90e10c5, d002235, a732250
+Claims SME (5): af46b5b, fd800e2, 8351df6, 4f1f0f8, 93c6b77
+Schedule SME (6): 99ca558, b054492, 2243719, fad4065, 8452a1d, d1b7bb1
+
+Technical SME (6) — NOT YET COMMITTED:
+skills/smes/technical/design_liability.md
+skills/smes/technical/testing_and_commissioning.md
+skills/smes/technical/specification_compliance.md
+skills/smes/technical/site_execution.md
+skills/smes/technical/ncr_management.md
+skills/smes/technical/rfi_and_submittal_review.md
+
+All rebuilt: FIDIC removed, GCC removed, Evidence Declaration added,
+layer_type Layer 2b retrieval, CANNOT CONFIRM rules, STANDARD FORM NOT
+IN WAREHOUSE consistent throughout.
+
+Next session: rebuild 6 Technical SME files and commit.

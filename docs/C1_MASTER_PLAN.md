@@ -292,7 +292,26 @@ that do not interact with the intelligence layer)
 | `src/agents/prompts.py` | FIDIC hardcoded | Phase 1 ✅ 69966661 |
 | `skills/c1-skill-authoring/` | Wrong — FIDIC-specific | Phase 2 ✅ this session |
 | `docs/SKILLS_STANDARDS.md` | 509 lines, FIDIC-specific | Phase 3 ✅ this session |
-| All 20 skill files | FIDIC-specific | Phase 4 |
+| `skills/orchestrators/legal/directive.md` | FIDIC-specific | Phase 4 ✅ 7514a85 |
+| `skills/orchestrators/commercial/directive.md` | FIDIC-specific | Phase 4 ✅ 00f62b6 |
+| `skills/orchestrators/financial/directive.md` | FIDIC-specific | Phase 4 ✅ bf10e37 |
+| `skills/smes/legal/contract_assembly.md` | FIDIC-specific | Phase 4 ✅ 2889d9d |
+| `skills/smes/legal/engineer_identification.md` | FIDIC-specific | Phase 4 ✅ 62982ea |
+| `skills/smes/legal/entitlement_basis.md` | FIDIC-specific | Phase 4 ✅ 90e10c5 |
+| `skills/smes/legal/key_dates_and_securities.md` | FIDIC-specific | Phase 4 ✅ d002235 |
+| `skills/smes/legal/notice_and_instruction_compliance.md` | FIDIC-specific | Phase 4 ✅ a732250 |
+| `skills/smes/claims/dispute_resolution_procedure.md` | FIDIC-specific | Phase 4 ✅ af46b5b |
+| `skills/smes/claims/disruption.md` | FIDIC-specific | Phase 4 ✅ fd800e2 |
+| `skills/smes/claims/eot_quantification.md` | FIDIC-specific | Phase 4 ✅ 8351df6 |
+| `skills/smes/claims/notice_compliance.md` | FIDIC-specific | Phase 4 ✅ 4f1f0f8 |
+| `skills/smes/claims/prolongation_cost.md` | FIDIC-specific | Phase 4 ✅ 93c6b77 |
+| `skills/smes/schedule/acceleration.md` | FIDIC-specific | Phase 4 ✅ 99ca558 |
+| `skills/smes/schedule/critical_path_analysis.md` | FIDIC-specific | Phase 4 ✅ b054492 |
+| `skills/smes/schedule/delay_identification.md` | FIDIC-specific | Phase 4 ✅ 2243719 |
+| `skills/smes/schedule/evm_and_cost_reporting.md` | FIDIC-specific | Phase 4 ✅ fad4065 |
+| `skills/smes/schedule/programme_assessment.md` | FIDIC-specific | Phase 4 ✅ 8452a1d |
+| `skills/smes/schedule/time_at_large.md` | FIDIC-specific | Phase 4 ✅ d1b7bb1 |
+| `skills/smes/technical/*.md` (6 files) | FIDIC-specific | Phase 4 — next session |
 | `src/agents/models.py` | Missing EvidenceRecord | Phase 5 |
 | `src/agents/base_specialist.py` | No validation | Phase 5 |
 | `src/agents/base_orchestrator.py` | No validation | Phase 5 |
