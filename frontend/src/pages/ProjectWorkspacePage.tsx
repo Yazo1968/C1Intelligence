@@ -5,13 +5,15 @@ import { DocumentTable } from '../components/documents/DocumentTable';
 import { DocumentUploadForm } from '../components/documents/DocumentUploadForm';
 import { QueryInput } from '../components/query/QueryInput';
 import { QueryResponse } from '../components/query/QueryResponse';
+import { Round0Card } from '../components/query/Round0Card';
 import { ContradictionAlert } from '../components/query/ContradictionAlert';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Spinner } from '../components/ui/Spinner';
 import { listDocuments } from '../api/documents';
-import { submitQuery, getQueryStatus, getContradictions } from '../api/queries';
+import { assessQuery, submitQuery, getQueryStatus, getContradictions } from '../api/queries';
 import { listProjects } from '../api/projects';
 import type { DocumentResponse, QueryResponseSchema, ContradictionResponse, ProjectResponse } from '../api/types';
+import type { Round0Assessment } from '../api/queries';
 
 const QUERY_POLL_INTERVAL_MS = 5_000;
 const QUERY_POLL_MAX_MS = 15 * 60 * 1_000; // 15 minutes
@@ -32,6 +34,11 @@ export function ProjectWorkspacePage() {
   const [queryStatusMessage, setQueryStatusMessage] = useState<string | null>(null);
   const queryPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const queryPollStartRef = useRef<number>(0);
+
+  // Round 0 assessment state
+  const [round0Assessment, setRound0Assessment] = useState<Round0Assessment | null>(null);
+  const lastQueryTextRef = useRef<string>('');
+  const lastRiskModeRef = useRef<boolean>(false);
 
   // Contradictions state
   const [contradictions, setContradictions] = useState<ContradictionResponse[]>([]);
@@ -84,7 +91,30 @@ export function ProjectWorkspacePage() {
     if (activeTab === 'contradictions') fetchContradictions();
   }, [activeTab, fetchContradictions]);
 
-  const handleQuery = async (queryText: string, riskMode: boolean = false) => {
+  const handleAssess = async (queryText: string, riskMode: boolean = false) => {
+    if (!projectId) return;
+    setQueryError(null);
+    setQueryResponse(null);
+    setRound0Assessment(null);
+    setQueryLoading(true);
+    setQueryStatusMessage('Assessing query...');
+    stopQueryPolling();
+    lastQueryTextRef.current = queryText;
+    lastRiskModeRef.current = riskMode;
+
+    try {
+      const result = await assessQuery(projectId, queryText, riskMode);
+      setRound0Assessment(result);
+      setQueryLoading(false);
+      setQueryStatusMessage(null);
+    } catch (err) {
+      setQueryError(err instanceof Error ? err.message : 'Assessment failed');
+      setQueryLoading(false);
+      setQueryStatusMessage(null);
+    }
+  };
+
+  const handleQuery = async (queryText: string, riskMode: boolean = false, domains?: string[]) => {
     if (!projectId) return;
     setQueryError(null);
     setQueryResponse(null);
@@ -93,14 +123,12 @@ export function ProjectWorkspacePage() {
     stopQueryPolling();
 
     try {
-      const res = await submitQuery(projectId, queryText, riskMode);
+      const res = await submitQuery(projectId, queryText, riskMode, domains);
       const queryId = res.query_id;
       setQueryStatusMessage('Analysing documents across specialist domains...');
 
-      // Start polling
       queryPollStartRef.current = Date.now();
       queryPollRef.current = setInterval(async () => {
-        // Stop after 15 minutes
         if (Date.now() - queryPollStartRef.current > QUERY_POLL_MAX_MS) {
           stopQueryPolling();
           setQueryLoading(false);
@@ -111,7 +139,6 @@ export function ProjectWorkspacePage() {
 
         try {
           const statusRes = await getQueryStatus(projectId, queryId);
-
           if (statusRes.status === 'COMPLETE' && statusRes.response) {
             stopQueryPolling();
             setQueryResponse(statusRes.response);
@@ -157,7 +184,20 @@ export function ProjectWorkspacePage() {
         {/* Query Tab */}
         {activeTab === 'query' && (
           <div className="space-y-5">
-            <QueryInput onSubmit={handleQuery} loading={queryLoading} />
+            <QueryInput onSubmit={handleAssess} loading={queryLoading} />
+
+            {round0Assessment && !queryResponse && (
+              <Round0Card
+                assessment={round0Assessment}
+                loading={queryLoading}
+                onRunAnalysis={(domains) => {
+                  handleQuery(lastQueryTextRef.current, lastRiskModeRef.current, domains);
+                }}
+                onRunAll={() => {
+                  handleQuery(lastQueryTextRef.current, lastRiskModeRef.current);
+                }}
+              />
+            )}
 
             {queryLoading && queryStatusMessage && (
               <div className="flex items-center gap-2 text-sm text-navy-700">
