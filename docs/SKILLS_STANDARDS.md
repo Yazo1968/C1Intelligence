@@ -1,7 +1,7 @@
 # C1 — Skills Standards and Requirements
 ## Governing Reference for All Agent Skill File Authorship
 
-**Version:** 1.2
+**Version:** 1.3
 **Status:** Active — Governing Document
 **Location:** `docs/SKILLS_STANDARDS.md`
 **Applies to:** All six domain specialists — Legal & Contractual, Commercial & Financial, Schedule & Programme, Technical & Design, Claims & Disputes, Governance & Compliance
@@ -241,7 +241,101 @@ The output format defined in Section 3.7 of the skill file must produce findings
 
 ---
 
-## 6. Claims & Disputes Domain: Specific Standards
+## 6. Warehouse-Grounding Principles — Mandatory for All Skill Files
+
+These four principles apply to every skill file across every domain.
+They supersede any earlier guidance where a conflict exists. They
+are not optional — a skill file that violates any of these principles
+fails the quality gate regardless of its domain content quality.
+
+### 6.1 No Assumption, Extrapolation, or Inference
+
+A skill file must not instruct the agent to assume, extrapolate,
+infer, or supply any data, value, or fact that is not present in
+the retrieved documents from the two-layer warehouse.
+
+**The agent's role is that of a court expert:** it presents facts
+in the light of documents, standards, and established professional
+practice. It does not insert its own projections, calculations, or
+assessments beyond what the retrieved evidence supports.
+
+If a required document is not in the warehouse: the correct output
+is CANNOT ASSESS — not an estimate, not an approximation, not an
+application of a standard form default.
+
+Every value, date, period, amount, percentage, and threshold that
+appears in an output must be traceable to a specific retrieved
+document with a stated reference. The output format for every skill
+file must include a **Documents Not Retrieved** section that lists
+every document the analysis depended on that was not found.
+
+### 6.2 Contract-Type Distinction — Always Explicit
+
+Every skill file must clearly distinguish between:
+
+**(a) Contract-type-agnostic items:** Requirements, checks, and
+flags that apply regardless of which FIDIC book governs or which
+edition is in use.
+
+**(b) Contract-type-specific items:** Requirements, clause references,
+procedural steps, and entitlement frameworks that differ by FIDIC
+book (Red, Yellow, Silver) or by edition (1999, 2017).
+
+This distinction must be stated explicitly in the skill file — in
+the header, in the workflow steps, and in the classification rules.
+Steps that are contract-type-specific must be labelled as such.
+The agent must not apply Red Book provisions to a Silver Book
+project or 2017 provisions to a 1999 project.
+
+### 6.3 Layer 1 and Layer 2 Retrieval — Always Distinguished
+
+Every skill file must explicitly distinguish between:
+
+**(a) Layer 1 — project documents:** The documents uploaded for
+this specific project (contracts, notices, correspondence, reports,
+programmes, claims). All project-specific facts come from Layer 1.
+
+**(b) Layer 2 — reference standards:** FIDIC General Conditions,
+applicable law, professional standards (SCL Protocol, AACE, IFRS).
+Layer 2 provides the interpretive and analytical framework.
+
+The correct retrieval sequence is always:
+1. Retrieve the relevant Layer 2 standard text to establish the
+   baseline (what does the standard form say?)
+2. Retrieve the Layer 1 Particular Conditions to confirm whether
+   the standard form has been amended (what did this project agree?)
+3. Apply the Layer 1 position — not the Layer 2 default
+
+**If the Particular Conditions are not retrieved from Layer 1:**
+The agent must not apply the Layer 2 standard form text as if it
+governs this project. The correct output is CANNOT CONFIRM the
+applicable term — and the agent must state explicitly that the
+Particular Conditions were not found and that the analysis cannot
+proceed for any step that depends on them.
+
+### 6.4 CANNOT ASSESS Is the Opening State
+
+The agent starts from zero evidence and builds only from what it
+retrieves. CANNOT ASSESS is not a fallback for when things go wrong
+— it is the correct and complete output for any step where the
+required document has not been retrieved.
+
+The skill file must never instruct the agent to proceed past a
+missing document by applying a default, making an assumption, or
+inferring from context. If a document is missing:
+- State it is missing
+- State which analysis steps cannot proceed as a result
+- Call tools to search before concluding the document is absent
+- If still not found after tool search: output CANNOT ASSESS for
+  all dependent steps and list the missing document in the
+  Documents Not Retrieved section
+
+A CANNOT ASSESS output for a well-defined reason is a higher-quality
+forensic output than a finding based on an assumed or inferred value.
+
+---
+
+## 7. Claims & Disputes Domain: Specific Standards
 
 Claims & Disputes is the most forensically sensitive domain. It requires additional standards beyond the general requirements above.
 
@@ -342,33 +436,33 @@ Summary: [two to three sentences maximum]
 
 ---
 
-## 7. Validation Gate
+## 8. Validation Gate
 
 Before any skill file set is deployed to production, it must pass the following validation tests. These tests apply to every domain — the specific scenarios differ but the structure is the same.
 
-### 7.1 Positive Detection Test
+### 8.1 Positive Detection Test
 
 Given a document set containing a known condition that the skill is designed to detect, the specialist must correctly identify and flag the condition. Pass criteria: condition identified, source document cited, classification correct.
 
-### 7.2 Contradiction Detection Test
+### 8.2 Contradiction Detection Test
 
 Given a document set containing a known contradiction between two documents, the specialist must detect and surface it with both source documents identified. Pass criteria: contradiction flagged, both documents cited, both values stated.
 
-### 7.3 Negative Test
+### 8.3 Negative Test
 
 Given a document set that does not contain the condition the skill detects, the specialist must not fabricate a finding. Pass criteria: relevant section states the condition was not found.
 
-### 7.4 Insufficient Context Test
+### 8.4 Insufficient Context Test
 
 Given a document set where a key document is missing, the specialist must call the appropriate tool before concluding, and flag the absence if the search returns nothing. Pass criteria: tool call evidenced in `tools_called`; absence flagged in output.
 
-### 7.5 Validation Minimum
+### 8.5 Validation Minimum
 
 A minimum of five test scenarios per domain, covering at least one of each test type above. Scenarios must be defined before skill authorship begins.
 
 ---
 
-## 8. Skill Sequencing and Dependencies
+## 9. Skill Sequencing and Dependencies
 
 Some specialists depend on the outputs of others. Skill files must reflect these dependencies in their Pre-Flight Check (Section 3.2).
 
@@ -389,7 +483,7 @@ The authorship sequence is:
 
 ---
 
-## 9. Skill File Maintenance
+## 10. Skill File Maintenance
 
 Skill files are updated when:
 - A real user query produces a weak or incorrect response traceable to a gap in the skill file
@@ -403,11 +497,11 @@ All updates must be logged in `BUILD_LOG.md` with: the query or event that trigg
 
 ---
 
-## 10. Document Control
+## 11. Document Control
 
 | Field | Value |
 |---|---|
-| Version | 1.2 — FIDIC scope expanded to Red, Yellow, and Silver Books across all domains; book-level differences table added to Section 5.3; Claims section 6.1 updated |
+| Version | 1.3 — Section 6 added: Warehouse-Grounding Principles (four mandatory principles for all skill files); existing sections 6–10 renumbered to 7–11; version bump |
 | Date | March 2026 |
 | Location | `docs/SKILLS_STANDARDS.md` |
 | Updated when | Standard revised, new domain added, or validation practice updated |
