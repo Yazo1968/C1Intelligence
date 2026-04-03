@@ -420,6 +420,92 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 
 ---
 
+## C1_MULTIAGENT_ARCHITECTURE_PLAN Phase B — Skill Migration and SME Skill Files — ✅ Complete
+
+**Date:** April 2026
+**Active agent:** Yasser (domain expert) + Strategic Partner (knowledge authorship)
+**Quality Guardian:** PASS on all skill files — reviewed against SKILLS_STANDARDS.md v1.3
+**Governing document:** docs/C1_MULTIAGENT_ARCHITECTURE_PLAN.md v1.0
+
+**Task B.1 — Legal SME skill files (migrate existing).**
+Five existing Legal skill files confirmed in `skills/smes/legal/` from Task A.1.
+All five redrafted in this phase against SKILLS_STANDARDS.md v1.3 warehouse-grounding
+principles (Section 6). Commit: `8bccc5b`
+- `contract_assembly.md` — FIDIC book/edition confirmation gate, Layer 1/Layer 2
+  retrieval separation, CANNOT ASSESS as opening state, Documents Not Retrieved section
+- `engineer_identification.md` — contract administrator identity from retrieved documents
+  only, split-role confirmation from retrieved appointment documents, independence position
+  from retrieved PC only
+- `notice_and_instruction_compliance.md` — notice period from retrieved PC only (no defaults),
+  awareness date independently verified from contemporaneous records, time bar calculation
+  requires both confirmed inputs
+- `entitlement_basis.md` — entitlement clause confirmed from retrieved PC before any
+  assessment, event classification from retrieved PC provision only, proof elements from
+  retrieved evidence not claim assertions
+- `key_dates_and_securities.md` — all dates from retrieved Contract Data with source cited,
+  no LD calculation without all confirmed inputs, security adequacy only if both bond amount
+  and required percentage are in retrieved documents
+
+**Task B.2 — Claims & Disputes SME skill files.** Commit: `8bccc5b`
+Five skill files created in `skills/smes/claims/`:
+- `notice_compliance.md` — notice period from retrieved PC, awareness date from
+  contemporaneous records, time bar CANNOT CALCULATE if either input unconfirmed
+- `eot_quantification.md` — entitlement event list from retrieved PC, baseline programme
+  required before analysis, methodology identified from retrieved documents not assumed
+- `prolongation_cost.md` — cost entitlement basis from retrieved PC, each head assessed
+  against retrieved records, no formula verification without retrieved audited accounts
+- `disruption.md` — causation from retrieved documents only, measured mile requires
+  retrieved baseline and disrupted period records, global claim assessed against warehouse
+  records
+- `dispute_resolution_procedure.md` — mechanism from retrieved PC (not assumed), all
+  periods from retrieved Contract Data, NOD timeliness CANNOT CONFIRM if Contract Data
+  not retrieved
+
+**Task B.3 — Schedule & Programme SME skill files.** Commit: `efdb009`
+Six skill files created in `skills/smes/schedule/`:
+- `programme_assessment.md` — submission requirements from retrieved Contract Data,
+  acceptance status from retrieved response letter only, no default applied
+- `critical_path_analysis.md` — critical path from retrieved CPM programme, float
+  ownership from retrieved PC, delay impact from retrieved programme update at event date
+- `delay_identification.md` — entitlement event list from retrieved PC before any
+  classification, contemporaneous records required for event identification
+- `acceleration.md` — directed vs constructive identified from retrieved documents,
+  all three constructive acceleration conditions from retrieved documents, costs from
+  retrieved records
+- `time_at_large.md` — prevention principle from retrieved documents only, LD rate and
+  cap from retrieved Contract Data, legal conclusion flagged as requiring legal advice
+- `evm_and_cost_reporting.md` — EVM metrics extracted from retrieved reports (not
+  calculated), BAC from retrieved budget document, AC cross-verified against retrieved
+  payment certificates
+
+**Task B.4 — Technical & Construction SME skill files.** Commit: `cca32c2`
+Six skill files created in `skills/smes/technical/`:
+- `design_liability.md` — design responsibility from retrieved PC and confirmed book
+  type, standard of care from retrieved PC, decennial liability flagged only where
+  governing law confirmed as UAE/Saudi/Qatar AND structural defect evidenced
+- `specification_compliance.md` — specification requirement from retrieved spec,
+  test result from retrieved certificate, both required before compliance assessment
+- `rfi_and_submittal_review.md` — response period from retrieved PC/Contract Data
+  (no default), delay impact requires retrieved programme, variation risk from
+  retrieved RFI response content
+- `ncr_management.md` — close-out from retrieved close-out record (log status not
+  sufficient), pattern from multiple retrieved instances, DNP vs construction phase
+  NCRs separated by confirmed TOC date
+- `site_execution.md` — factual record from retrieved site diaries, method statement
+  compliance from retrieved approved method statement, resource figures from retrieved
+  reports
+- `testing_and_commissioning.md` — test results from retrieved certificates, TOC
+  mechanism from retrieved PC, DNP calculation only from confirmed TOC date and
+  confirmed DNP period
+
+**Quality standards applied across all skill files (SKILLS_STANDARDS.md v1.3 Section 6):**
+- No assumption, extrapolation, or inference of any value not in retrieved documents
+- Contract-type-specific vs contract-type-agnostic items labelled in every workflow step
+- Layer 1 (project documents) and Layer 2 (reference standards) explicitly distinguished
+- CANNOT ASSESS is the opening state — not a fallback
+
+---
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |
@@ -435,3 +521,4 @@ Built: `DOMAIN_TO_CONFIG_KEY` mapping, Round 1 parallel dispatch via `ThreadPool
 | CORS `allow_methods`/`allow_headers` tightening | `allow_methods=["*"]` and `allow_headers=["*"]` in `src/api/main.py` are acceptable for a known frontend but candidates for tightening | Future hardening session (not Phase A scope) |
 | `function_search_path_mutable` on all RPC functions | Pre-existing Supabase security advisory affecting all 7 RPC functions across migrations 001, 006, and 007 — not introduced by Phase C1 | Future hardening session |
 | Duplicate `## Executive Summary` header in response output | `build_response_text` emits `## Executive Summary` then the generated summary begins with `## EXECUTIVE SUMMARY` — cosmetic double header | LOW — housekeeping session |
+| Section 7 (Claims domain) internal sub-section numbering | SKILLS_STANDARDS.md v1.3 — Section 7 (renamed from 6) internal sub-sections still numbered 6.1–6.5 | LOW — cosmetic; fix in next SKILLS_STANDARDS update |
