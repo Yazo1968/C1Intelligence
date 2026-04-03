@@ -2,18 +2,18 @@
 
 **Skill type:** Contract-type-agnostic
 The methodology for identifying and assessing the critical path
-applies regardless of FIDIC book or edition. The contractual
-significance of the critical path (in EOT entitlement, float
-ownership, and LD enforcement) is book-specific and must be
-confirmed from retrieved Particular Conditions.
+applies regardless of standard form or version. The contractual
+significance of the critical path (in time extension entitlement,
+float ownership, and agreed damages enforcement) is contract-specific
+and must be confirmed from retrieved amendment documents.
 **Layer dependency:**
 - Layer 1 — project documents: baseline programme (CPM network);
-  programme updates; as-built programme; Particular Conditions
-  (float ownership clause if any); Contract Data; progress reports
-  and site records (to verify actual critical path performance)
-- Layer 2 — reference standards: SCL Protocol 2nd Edition 2017
-  (float and critical path principles); AACE RP 29R-03 (schedule
-  analysis methodology)
+  programme updates; as-built programme; amendment document (float
+  ownership clause if any); Contract Data; progress reports and
+  site records (to verify actual critical path performance)
+- Layer 2b — reference standards: SCL Protocol 2nd Edition 2017
+  (float and critical path principles, if ingested); AACE RP 29R-03
+  (schedule analysis methodology, if ingested)
 **Domain:** Schedule & Programme SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
@@ -24,8 +24,8 @@ confirmed from retrieved Particular Conditions.
 Apply when a query requires identification of the critical path,
 assessment of float consumption, assessment of whether a delay
 event affected the critical path, or analysis of whether a claimed
-EOT is supported by demonstrated critical path impact. Apply as
-a supporting analysis within delay_identification and
+time extension is supported by demonstrated critical path impact.
+Apply as a supporting analysis within delay_identification and
 eot_quantification assessments.
 
 ---
@@ -48,8 +48,8 @@ State CANNOT PERFORM critical path analysis. Do not proceed.
 Flag the dependency on programme_assessment.
 
 From the invoking orchestrator extract:
-- Confirmed FIDIC book and edition
-- Particular Conditions float ownership clause (if identified)
+- Confirmed standard form and version
+- Amendment document float ownership clause (if identified)
 - Time for Completion as confirmed from retrieved Contract Data
 
 ### Layer 1 documents to retrieve (project-specific)
@@ -61,7 +61,7 @@ Call `search_chunks` and `get_related_documents` to retrieve:
 - As-built programme (if submitted)
 - Progress reports for the period covering the claimed delay events
 - Site diaries or daily reports corroborating actual progress
-- The Particular Conditions — float ownership clause if any
+- The amendment document — float ownership clause if any
 
 **If no CPM programme has been retrieved:**
 State CANNOT ASSESS the critical path. A critical path analysis
@@ -74,18 +74,25 @@ The critical path is dynamic — it must be assessed from the
 programme update current at the time of the delay event, not
 from the baseline alone.
 
-### Layer 2 documents to retrieve (reference standards)
+### Layer 2b documents to retrieve (reference standards)
 
-Call `search_chunks` to retrieve from Layer 2:
-- SCL Protocol 2nd Edition 2017 — float principles (Core Principle 6)
-  and critical path analysis guidance
-- AACE RP 29R-03 — schedule analysis methodology relevant to
-  the methodology identified from the retrieved documents
+Call `search_chunks` with `layer_type = '2b'` to retrieve:
+- SCL Protocol 2nd Edition 2017 — float principles and critical
+  path analysis guidance (search by subject matter: "float shared
+  resource critical path SCL Protocol")
+- AACE RP 29R-03 — schedule analysis methodology (search by subject
+  matter: "AACE schedule analysis delay methodology")
 
 **Purpose:** To apply the correct interpretive framework to float
 and critical path findings. The float position in the retrieved
-Particular Conditions (Layer 1) takes precedence over the SCL
-Protocol default where the two conflict.
+amendment document (Layer 1) takes precedence over the SCL Protocol
+default where the two conflict.
+
+**If Layer 2b references are not retrieved:**
+State CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE for the
+applicable methodology standards. Apply the methodology identified
+from the retrieved analysis documents and note that Layer 2b
+confirmation is absent.
 
 ---
 
@@ -98,7 +105,7 @@ From the retrieved baseline programme (CPM network):
 - Identify the activities on the critical path (zero or negative
   total float)
 - Identify near-critical activities (total float within a threshold
-  relevant to the project duration — assess from the programme)
+  relevant to the project duration)
 - State the critical path sequence from start to completion
 - Confirm that the critical path runs to the contractual completion
   date as confirmed from the retrieved Contract Data
@@ -110,50 +117,51 @@ links): state CANNOT IDENTIFY CRITICAL PATH and flag.
 ### Step 2 — Assess float on affected activities
 *Contract-type-agnostic*
 
-For the activities identified as relevant to the query or delay
-claim, from the retrieved programme:
+For the activities relevant to the query or delay claim, from the
+retrieved programme:
 - State the total float and free float on each activity
-- Identify whether the claimed delay event affects an activity
-  with zero float (critical), positive float (non-critical), or
-  negative float (already delayed)
+- Identify whether the claimed delay event affects an activity with
+  zero float (critical), positive float (non-critical), or negative
+  float (already delayed)
 
 ### Step 3 — Confirm float ownership position
 *Contract-type-specific*
 
-From the retrieved Particular Conditions:
+From the retrieved amendment document:
 - Is there an express float ownership clause? Extract it.
 - Does it allocate float to the Contractor, to the Employer, or
   treat it as a shared resource?
 
-**The float position to apply is the one in the retrieved
-Particular Conditions.** If no express float clause is found
-AND the Particular Conditions have been fully retrieved: note
-that no express provision was found and the shared resource
-principle appears to apply — citing the PC as the source of
-that finding. If the Particular Conditions have not been
-retrieved: state CANNOT CONFIRM the float ownership position.
+**The float position to apply is the one in the retrieved amendment
+document.** If no express float clause is found AND the amendment
+document has been fully retrieved: note that no express provision
+was found and the shared resource principle appears to apply —
+citing the amendment document as the source of that finding. If the
+amendment document has not been retrieved: state CANNOT CONFIRM
+the float ownership position.
 
-Under the SCL Protocol (Layer 2), absent express contractual
-provision, float is a shared resource — neither party owns it.
-Apply this only where confirmed from the retrieved PC (or the
-PC has been retrieved and contains no express float clause).
+Where the SCL Protocol has been retrieved from Layer 2b: apply its
+float principles as confirmed from the retrieved Protocol. Apply
+only where confirmed from the retrieved amendment document (or the
+amendment document has been retrieved and contains no express float
+clause).
 
 ### Step 4 — Assess critical path impact of the claimed delay events
 *Contract-type-agnostic*
 
 For each delay event in the claim or query context:
 - Identify the activities affected from the retrieved programme
-- Assess whether those activities are on the critical path at
-  the time of the event — from the retrieved programme update
-  current at the time of the event (not the baseline alone)
-- Assess whether the event consumed float or extended the
-  critical path
+- Assess whether those activities are on the critical path at the
+  time of the event — from the retrieved programme update current
+  at the time of the event (not the baseline alone)
+- Assess whether the event consumed float or extended the critical
+  path
 
 **Critical path impact must be demonstrated from the retrieved
 programme update — not from the baseline programme alone.**
 If the programme update for the relevant period has not been
-retrieved: state CANNOT VERIFY critical path impact at the
-time of the event from warehouse documents.
+retrieved: state CANNOT VERIFY critical path impact at the time
+of the event from warehouse documents.
 
 ### Step 5 — Assess critical path shift
 *Contract-type-agnostic*
@@ -176,16 +184,15 @@ documents.
 Where multiple delay events affect the critical path in the same
 period:
 - Identify all concurrent events from the retrieved documents
-- Identify which events are Employer-caused and which are
-  Contractor-caused (from the retrieved claim documents and
-  site records)
+- Identify which events are employer-caused and which are
+  contractor-caused (from the retrieved claim documents and site
+  records)
 - State the concurrent period and the overlapping events
 
-**Do not classify events as Employer-caused or Contractor-caused
+**Do not classify events as employer-caused or contractor-caused
 without retrieved evidence for each event.** If the causation
-of a concurrent event cannot be confirmed from retrieved
-documents: state CANNOT CONFIRM causation for [event] from
-retrieved documents.
+of a concurrent event cannot be confirmed from retrieved documents:
+state CANNOT CONFIRM causation for [event] from retrieved documents.
 
 ---
 
@@ -195,16 +202,15 @@ retrieved documents.
 
 Delay event affects a critical path activity confirmed from
 retrieved programme update → CRITICAL PATH IMPACT DEMONSTRATED
-— proceed with EOT entitlement assessment
 
 Delay event affects non-critical activity with available float →
 NO CRITICAL PATH IMPACT AT EVENT DATE — float absorbed but no
-EOT entitlement unless float is subsequently exhausted
+time extension entitlement unless float is subsequently exhausted
 
-Delay event affects non-critical activity AND float is
-subsequently exhausted in the retrieved programme updates →
-CRITICAL PATH IMPACT AFTER FLOAT EXHAUSTION — flag; state when
-the activity became critical and the float exhaustion date
+Delay event affects non-critical activity AND float is subsequently
+exhausted in the retrieved programme updates → CRITICAL PATH IMPACT
+AFTER FLOAT EXHAUSTION — flag; state when the activity became
+critical and the float exhaustion date
 
 Critical path impact cannot be verified (programme update not
 retrieved for the delay period) →
@@ -212,21 +218,20 @@ CANNOT VERIFY CRITICAL PATH IMPACT FROM WAREHOUSE DOCUMENTS
 
 **Float ownership:**
 
-Express clause in retrieved PC allocating float → apply the PC
-provision; state source
-No express clause in retrieved PC AND PC fully retrieved →
-SHARED RESOURCE PRINCIPLE APPLIES — cite PC as source of
-confirmation of absence
-PC not retrieved → CANNOT CONFIRM float ownership
+Express clause in retrieved amendment document allocating float →
+apply the amendment provision; state source
+No express clause in retrieved amendment document AND document fully
+retrieved → SHARED RESOURCE PRINCIPLE APPLIES — cite amendment
+document as source of confirmation of absence
+Amendment document not retrieved → CANNOT CONFIRM float ownership
 
 **Concurrent delay:**
 
-Both Employer-caused and Contractor-caused events on critical
-path in same period, both evidenced in retrieved documents →
+Both employer-caused and contractor-caused events on critical path
+in same period, both evidenced in retrieved documents →
 CONCURRENT DELAY IDENTIFIED — state events, period, and sources
 One or more concurrent events cannot be confirmed from retrieved
 documents → POSSIBLE CONCURRENT DELAY — state what is evidenced
-and what cannot be confirmed
 
 ---
 
@@ -246,14 +251,15 @@ completion schedule"
 **Look for:** The as-built programme for critical path verification
 
 **Signal:** Float ownership clause referenced in claim or
-correspondence but PC not yet retrieved
-**Action:** `search_chunks` with query "float ownership Contractor
-Employer particular conditions clause"; `get_document` on PC ID
+correspondence but amendment document not yet retrieved
+**Action:** `search_chunks` with query "float ownership contractor
+employer amendment conditions clause"; `get_document` on
+amendment document ID
 **Look for:** Any express float ownership provision
 
-**Signal:** Layer 2 SCL Protocol float principles not retrieved
-**Action:** `search_chunks` with query "SCL Protocol float critical
-path shared resource"
+**Signal:** Layer 2b SCL Protocol float principles not retrieved
+**Action:** `search_chunks` with `layer_type = '2b'` and query
+"SCL Protocol float critical path shared resource"
 **Look for:** SCL Protocol core principle on float
 
 ---
@@ -268,12 +274,11 @@ path shared resource"
    state that the critical path status at the time of the event
    cannot be confirmed from warehouse documents.
 
-3. **Float consumed by Contractor risk events before or during the
+3. **Float consumed by contractor risk events before or during the
    claimed delay period** — flag; state the float position at the
-   time of the Employer delay event from retrieved programme updates.
+   time of the employer delay event from retrieved programme updates.
 
-4. **Critical path shift identified — activities not on baseline
-   critical path became critical** — flag; state when the shift
+4. **Critical path shift identified** — flag; state when the shift
    occurred and which activities are affected, from retrieved
    programme updates.
 
@@ -289,6 +294,16 @@ path shared resource"
 ```
 ## Critical Path Analysis
 
+### Evidence Declaration
+Layer 2b retrieved: [YES / NO / PARTIAL]
+Layer 2b source: [standard or methodology name — or NOT RETRIEVED]
+Layer 2b provisions retrieved: [description — or NONE]
+Layer 2a retrieved: [YES / NO / NOT APPLICABLE]
+Layer 2a source: [policy name — or NOT RETRIEVED / NOT APPLICABLE]
+Layer 1 primary document: [name and reference — or NOT RETRIEVED]
+Layer 1 amendment document: [name — or NOT RETRIEVED / NOT APPLICABLE]
+Provisions CANNOT CONFIRM: [list — or NONE]
+
 ### Documents Retrieved (Layer 1)
 [List every document retrieved with reference numbers and dates.]
 
@@ -296,9 +311,10 @@ path shared resource"
 [List every document required but not found. State which steps
 are affected.]
 
-### Layer 2 Reference Retrieved
-[State whether SCL Protocol and AACE RP 29R-03 were retrieved.
-If not: state analytical knowledge applied.]
+### Layer 2b Reference Retrieved
+[State whether SCL Protocol and AACE RP 29R-03 were retrieved from
+Layer 2b. If not: state CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE and list
+which analysis steps are affected.]
 
 ### Baseline Critical Path
 Baseline programme retrieved: [YES — reference / NOT FOUND — CANNOT PROCEED]
@@ -309,10 +325,11 @@ Critical path runs to contractual completion date: [YES / NO — state
 discrepancy / CANNOT CONFIRM — Contract Data not retrieved]
 
 ### Float Position
-Float ownership clause in retrieved PC: [YES — describe and source /
-NOT FOUND IN RETRIEVED PC / CANNOT CONFIRM — PC not retrieved]
-Applicable position: [PC provision / SHARED RESOURCE PRINCIPLE —
-PC retrieved, no express clause / CANNOT CONFIRM]
+Float ownership clause in retrieved amendment document: [YES — describe
+and source / NOT FOUND IN RETRIEVED DOCUMENT / CANNOT CONFIRM —
+amendment document not retrieved]
+Applicable position: [amendment document provision / SHARED RESOURCE
+PRINCIPLE — document retrieved, no express clause / CANNOT CONFIRM]
 
 ### Critical Path Impact Assessment
 
@@ -359,28 +376,27 @@ or critical path principle from this section without first confirming
 the applicable position from retrieved project documents.*
 
 **SCL Protocol float principles — analytical reference:**
-Core Principle 6 of the SCL Protocol 2nd Edition 2017 states that
-float is a shared resource — neither party is entitled to use it
-to the exclusion of the other, absent express contractual provision.
-A Contractor cannot claim an EOT for a period that would only
-consume float. An Employer cannot use float to resist an EOT for
-a genuine Employer delay event. Retrieve the Protocol from Layer 2
-and check the retrieved Particular Conditions for any express float
-clause before applying this principle.
+The SCL Protocol states that float is a shared resource — neither
+party is entitled to use it to the exclusion of the other, absent
+express contractual provision. A Contractor cannot claim a time
+extension for a period that would only consume float. An Employer
+cannot use float to resist a time extension for a genuine employer
+delay event. Retrieve the Protocol from Layer 2b and check the
+retrieved amendment document for any express float clause before
+applying this principle.
 
 **Dynamic critical path — analytical reference:**
 The critical path is not static. As the project progresses and
 float is consumed, non-critical activities can become critical.
 A delay event that had no critical path impact at the baseline
-stage may become critical later if intervening events consumed the
-float. This is why the programme update current at the time of the
-delay event — not the baseline — is the correct reference for
-assessing critical path impact.
+stage may become critical later if intervening events consumed
+the float. This is why the programme update current at the time
+of the delay event — not the baseline — is the correct reference
+for assessing critical path impact.
 
 **Near-critical activities — analytical reference:**
 Activities with low positive float are at risk of becoming critical
 if delays occur. On complex projects, near-critical activities
-(typically those with total float below a project-specific threshold)
 require the same attention as critical activities in delay analysis.
 The threshold is a matter of professional judgement applied to the
 project — it is not a fixed number.
