@@ -708,6 +708,32 @@ The contradiction still surfaces correctly in the query response text.
 **C1_REMAINING_WORK.md after this session:** Item 7 removed. Remaining Phase 2
 items: Party ID resolution, approval workflows, user roles, document control
 integration.
+
+---
+
+## Session — UI Housekeeping: domain labels + Contradictions tab fix — ✅ Complete
+
+**Date:** 2026-04-03
+**Active agent:** API Engineer, Quality Guardian
+**Quality Guardian:** PASS on both commits + independently verified
+
+**Commit 1 — Domain label map corrections (`20ea713`):**
+- `SpecialistFindingCard.tsx` — domainLabels replaced with config-key-based
+  map (legal/commercial/financial). Previous map used full domain names which
+  never matched SpecialistFindings.domain. All stale entries removed.
+- `QueryResponse.tsx` — domainLabels corrected for domains_engaged display.
+  Added missing financial_reporting entry. Removed stale schedule_programme,
+  technical_design, claims_disputes, governance_compliance.
+- `AuditLogTable.tsx` — same correction. Three entries only.
+
+**Commit 2 — Contradictions tab fix (`f38e61a`):**
+- `ContradictionAlert.tsx` — value boxes now conditional on hasValues.
+  When value_a/value_b are empty, shows document references as plain labels
+  with the description. Handles both query-time contradictions (with values)
+  and stored flags (description only).
+- `ProjectWorkspacePage.tsx` — Contradictions tab now resolves document_a_id
+  and document_b_id to filenames using the documents array already in state.
+  Falls back to first 8 chars of UUID if document not found.
 | Document control system integration | Phase 2 feature | Phase 2 |
 | Document download endpoint | Deferred from Phase D | After Phase D |
 | CORS `allow_methods`/`allow_headers` tightening | `allow_methods=["*"]` and `allow_headers=["*"]` in `src/api/main.py` are acceptable for a known frontend but candidates for tightening | Future hardening session (not Phase A scope) |
