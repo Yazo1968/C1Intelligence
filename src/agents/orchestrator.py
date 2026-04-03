@@ -564,8 +564,6 @@ def build_response_text(
 
     # --- Executive Summary ---
     executive_summary = _generate_executive_summary(findings, confidence)
-    sections.append("## Executive Summary")
-    sections.append("")
     sections.append(executive_summary)
     sections.append("")
     sections.append(f"**Overall Confidence:** {confidence.value}")
