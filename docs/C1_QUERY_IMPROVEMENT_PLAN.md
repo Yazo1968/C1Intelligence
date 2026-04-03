@@ -1,6 +1,6 @@
 # C1 Intelligence — Query Pipeline Improvement Plan
 
-**Version:** 1.2
+**Version:** 1.3
 **Date:** April 2026
 **Status:** Active
 **Owner:** Yasser (Product Owner) — Strategic Partner (Claude)
@@ -248,7 +248,10 @@ Run a query. Confirm superscript numbers appear at citation points in text, foot
 
 ---
 
-### Task 3.1 — Backend Round 0 classifier
+### Task 3.1 — Backend Round 0 classifier ✅ COMPLETE
+
+**Commit:** `0a9886f`
+**What was done:** `assess_query()` function added to `orchestrator.py`. Single Claude API call returns `Round0Assessment` with domain relevance (PRIMARY/RELEVANT/NOT_APPLICABLE) and executive brief. New synchronous `POST /projects/{id}/query/assess` endpoint added to `queries.py`. `DomainRecommendation` and `Round0Assessment` dataclasses added to `models.py`. `DomainRecommendationSchema` and `Round0AssessmentResponse` Pydantic models added to `schemas.py`. Three active Tier 1 domains assessed: `legal_contractual`, `commercial_financial`, `financial_reporting`.
 
 **Agent:** Agent Orchestrator + API Engineer
 **Files:** `src/agents/orchestrator.py`, `src/api/routes/queries.py`, `src/api/schemas.py`
@@ -281,7 +284,10 @@ New endpoint: `POST /projects/{id}/query/assess` — synchronous, fast.
 
 ---
 
-### Task 3.2 — Frontend Round 0 display with domain selection
+### Task 3.2 — Frontend Round 0 display with domain selection ✅ COMPLETE
+
+**Commit:** `9373fd4`
+**What was done:** `assessQuery()` function added to `queries.ts`. `Round0Card.tsx` component created (147 lines) — executive brief, document list, domain grid with PRIMARY/RELEVANT/NOT_APPLICABLE badges, checkbox selection, Run Analysis (selected domains) and Run All buttons. `ProjectWorkspacePage.tsx` updated: two-step flow with `handleAssess` → Round0Card → `handleQuery`; `lastQueryTextRef` and `lastRiskModeRef` store state for callbacks; `submitQuery` updated to accept optional `domains` parameter.
 
 **Agent:** API Engineer (frontend)
 **Files:** `frontend/src/pages/ProjectWorkspacePage.tsx`, new `Round0Card` component
@@ -297,7 +303,10 @@ New endpoint: `POST /projects/{id}/query/assess` — synchronous, fast.
 
 ---
 
-### Task 3.3 — Backend full query with domain filter
+### Task 3.3 — Backend full query with domain filter ✅ COMPLETE
+
+**Commit:** `7c3faf1`
+**What was done:** `domains: list[str] | None = None` added to `QueryRequest` and `SubmitQueryRequest`. Domain filter applied in `process_query` after routing: requested domains mapped through `DOMAIN_TO_CONFIG_KEY`, `round_1_keys` filtered to intersection. `domain_filter` added to routing log. `domains` passed from API body to `QueryRequest`.
 
 **Agent:** Agent Orchestrator
 **Files:** `src/agents/orchestrator.py`, `src/api/routes/queries.py`, `src/api/schemas.py`
@@ -319,7 +328,10 @@ Extend `SubmitQueryRequest` with optional `domains: list[str] | None`. Orchestra
 
 ---
 
-### Task 4.1 — Implement prompt caching in base_specialist
+### Task 4.1 — Implement prompt caching in base_specialist and base_orchestrator ✅ COMPLETE
+
+**Commit:** `7c3faf1`
+**What was done:** `system` parameter in `messages.create` call_kwargs wrapped in cache_control block in both `base_specialist.py` and `base_orchestrator.py`. Format: `[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]`. Cache lifetime 5 minutes. 90% cost saving on cache hits for all Tier 1 orchestrator and Tier 2 SME calls.
 
 **Agent:** Agent Orchestrator
 **Files:** `src/agents/base_specialist.py` — the `messages.create` call only
@@ -349,10 +361,10 @@ Log cache usage on every API call. Confirm `cache_read_input_tokens > 0` in Rail
 | 2 | 2.2 Upgrade system prompt | Agent Orchestrator | ✅ Complete | `7c2a461` |
 | 2 | 2.3 Output quality review | Yasser | ✅ Complete | — |
 | 2 | 2.4 Footnote/superscript citation rendering | API Engineer (frontend) | ✅ Complete | `310de5d` |
-| 3 | 3.1 Round 0 classifier backend | Agent Orchestrator + API Engineer | 🔴 Pending 2.4 | — |
-| 3 | 3.2 Round 0 frontend | API Engineer (frontend) | 🔴 Pending 3.1 | — |
-| 3 | 3.3 Domain filter in full query | Agent Orchestrator | 🔴 Pending 3.2 | — |
-| 4 | 4.1 Prompt caching | Agent Orchestrator | 🔴 Pending Phase 3 | — |
+| 3 | 3.1 Round 0 classifier backend | Agent Orchestrator + API Engineer | ✅ Complete | `0a9886f` |
+| 3 | 3.2 Round 0 frontend | API Engineer (frontend) | ✅ Complete | `9373fd4` |
+| 3 | 3.3 Domain filter in full query | Agent Orchestrator | ✅ Complete | `7c3faf1` |
+| 4 | 4.1 Prompt caching | Agent Orchestrator | ✅ Complete | `7c3faf1` |
 
 ---
 
@@ -370,4 +382,4 @@ Log cache usage on every API call. Confirm `cache_read_input_tokens > 0` in Rail
 
 ---
 
-*Document Control: Version 1.2 — April 2026 — Tasks 1.4, 1.5, and 2.4 marked complete with commits; Task 1.5 (citation_fields + chunk index removal) added; defects table updated; Phases 1 and 2 now fully complete.*
+*Document Control: Version 1.3 — April 2026 — Phases 3 and 4 marked complete; Tasks 3.1–3.3 and 4.1 recorded with commits. All four phases now complete.*
