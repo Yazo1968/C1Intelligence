@@ -58,6 +58,12 @@ export interface DocumentUploadResponse {
   message: string | null;
 }
 
+export interface DocumentDownloadResponse {
+  download_url: string;
+  filename: string;
+  expires_in: number;
+}
+
 export interface DocumentStatusResponse {
   document_id: string;
   status: 'QUEUED' | 'EXTRACTING' | 'CLASSIFYING' | 'STORED' | 'FAILED';

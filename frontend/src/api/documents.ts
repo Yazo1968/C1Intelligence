@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { DocumentResponse, DocumentStatusResponse, DocumentUploadResponse } from './types';
+import type { DocumentDownloadResponse, DocumentResponse, DocumentStatusResponse, DocumentUploadResponse } from './types';
 
 export function listDocuments(projectId: string): Promise<DocumentResponse[]> {
   return apiClient.get<DocumentResponse[]>(`/projects/${projectId}/documents`);
@@ -24,4 +24,13 @@ export function uploadDocument(
   if (opts?.user_selected_type_id != null) formData.append('user_selected_type_id', String(opts.user_selected_type_id));
   if (opts?.upload_notes) formData.append('upload_notes', opts.upload_notes);
   return apiClient.postFormData<DocumentUploadResponse>(`/projects/${projectId}/documents`, formData);
+}
+
+export function getDocumentDownloadUrl(
+  projectId: string,
+  docId: string,
+): Promise<DocumentDownloadResponse> {
+  return apiClient.get<DocumentDownloadResponse>(
+    `/projects/${projectId}/documents/${docId}/download`,
+  );
 }

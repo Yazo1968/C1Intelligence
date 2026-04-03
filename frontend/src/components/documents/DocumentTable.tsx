@@ -1,6 +1,43 @@
+import { useState, useCallback } from 'react';
 import { DocumentStatusBadge } from './DocumentStatusBadge';
 import { EmptyState } from '../ui/EmptyState';
+import { getDocumentDownloadUrl } from '../../api/documents';
 import type { DocumentResponse } from '../../api/types';
+
+function DownloadButton({ projectId, docId }: { projectId: string; docId: string }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleDownload = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await getDocumentDownloadUrl(projectId, docId);
+      window.open(result.download_url, '_blank');
+    } catch {
+      // silent — user can retry
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId, docId]);
+
+  return (
+    <button
+      onClick={handleDownload}
+      disabled={loading}
+      className="p-1 rounded text-gray-400 hover:text-navy-900 hover:bg-gray-100 transition-colors disabled:opacity-40"
+      title="Download original file"
+      aria-label="Download original file"
+    >
+      {loading ? (
+        <div className="w-4 h-4 border border-gray-300 border-t-navy-900 rounded-full animate-spin" />
+      ) : (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+      )}
+    </button>
+  );
+}
 
 interface DocumentTableProps {
   documents: DocumentResponse[];
@@ -27,7 +64,8 @@ export function DocumentTable({ documents, loading }: DocumentTableProps) {
             <th className="pb-2 pr-4 font-medium text-gray-500 text-xs uppercase tracking-wider">Tier</th>
             <th className="pb-2 pr-4 font-medium text-gray-500 text-xs uppercase tracking-wider">Status</th>
             <th className="pb-2 pr-4 font-medium text-gray-500 text-xs uppercase tracking-wider">Date</th>
-            <th className="pb-2 font-medium text-gray-500 text-xs uppercase tracking-wider">Reference</th>
+            <th className="pb-2 pr-4 font-medium text-gray-500 text-xs uppercase tracking-wider">Reference</th>
+            <th className="pb-2 font-medium text-gray-500 text-xs uppercase tracking-wider">Download</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -53,7 +91,14 @@ export function DocumentTable({ documents, loading }: DocumentTableProps) {
               <td className="py-2.5 pr-4 text-gray-500 whitespace-nowrap">
                 {doc.document_date ? new Date(doc.document_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
               </td>
-              <td className="py-2.5 text-gray-500 font-mono text-xs">{doc.document_reference_number ?? '—'}</td>
+              <td className="py-2.5 pr-4 text-gray-500 font-mono text-xs">{doc.document_reference_number ?? '—'}</td>
+              <td className="py-2.5">
+                {doc.status === 'STORED' ? (
+                  <DownloadButton projectId={doc.project_id} docId={doc.id} />
+                ) : (
+                  <span className="text-gray-300">—</span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
