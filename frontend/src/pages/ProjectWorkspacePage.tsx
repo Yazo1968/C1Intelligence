@@ -84,7 +84,7 @@ export function ProjectWorkspacePage() {
     if (activeTab === 'contradictions') fetchContradictions();
   }, [activeTab, fetchContradictions]);
 
-  const handleQuery = async (queryText: string) => {
+  const handleQuery = async (queryText: string, riskMode: boolean = false) => {
     if (!projectId) return;
     setQueryError(null);
     setQueryResponse(null);
@@ -93,7 +93,7 @@ export function ProjectWorkspacePage() {
     stopQueryPolling();
 
     try {
-      const res = await submitQuery(projectId, queryText);
+      const res = await submitQuery(projectId, queryText, riskMode);
       const queryId = res.query_id;
       setQueryStatusMessage('Analysing documents across specialist domains...');
 

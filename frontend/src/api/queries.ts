@@ -1,8 +1,15 @@
 import { apiClient } from './client';
 import type { QueryAcceptedResponse, QueryStatusResponse, QueryLogEntry, ContradictionResponse } from './types';
 
-export function submitQuery(projectId: string, queryText: string): Promise<QueryAcceptedResponse> {
-  return apiClient.post<QueryAcceptedResponse>(`/projects/${projectId}/query`, { query_text: queryText });
+export function submitQuery(
+  projectId: string,
+  queryText: string,
+  riskMode: boolean = false
+): Promise<QueryAcceptedResponse> {
+  return apiClient.post<QueryAcceptedResponse>(`/projects/${projectId}/query`, {
+    query_text: queryText,
+    risk_mode: riskMode,
+  });
 }
 
 export function getQueryStatus(projectId: string, queryId: string): Promise<QueryStatusResponse> {
