@@ -555,6 +555,54 @@ documents, all Layer 2b international.
 
 ---
 
+## C1_MULTIAGENT_ARCHITECTURE_PLAN Phase F + C1_QUERY_IMPROVEMENT_PLAN Phases 3 & 4 — ✅ Complete
+
+**Date:** April 2026
+**Governing documents:** docs/C1_MULTIAGENT_ARCHITECTURE_PLAN.md v1.0,
+docs/C1_QUERY_IMPROVEMENT_PLAN.md v1.3
+
+**Task 3.1 — Round 0 backend classifier.** Commit: `0a9886f`
+`assess_query()` function added to `orchestrator.py`. Retrieval + single Claude
+API call returns `Round0Assessment` with PRIMARY/RELEVANT/NOT_APPLICABLE per
+domain and a 2-sentence executive brief. Synchronous `POST /query/assess`
+endpoint added. `DomainRecommendation` and `Round0Assessment` dataclasses added
+to `models.py`. `DomainRecommendationSchema` and `Round0AssessmentResponse`
+added to `schemas.py`. Graceful fallback on Claude API failure.
+
+**Task 3.2 — Round 0 frontend.** Commit: `9373fd4`
+`assessQuery()` in `queries.ts`. `Round0Card.tsx` (147 lines): executive brief,
+document list, domain grid with relevance badges, checkbox selection, Run
+Analysis and Run All buttons. `ProjectWorkspacePage.tsx` updated to two-step
+flow: `handleAssess` → Round0Card → `handleQuery`. Query text and risk mode
+stored in refs for Round0Card callbacks. `submitQuery` updated to accept
+optional `domains` parameter.
+
+**Task 3.3 — Domain filter in full query.** Commit: `7c3faf1`
+`domains: list[str] | None = None` added to `QueryRequest` and
+`SubmitQueryRequest`. Domain filter applied in `process_query` before
+round_1_keys dispatch. Backward compatible — absent = all domains activated.
+
+**Task 4.1 — Prompt caching.** Commit: `7c3faf1`
+`cache_control: ephemeral` applied to system prompt in `messages.create` in
+both `base_orchestrator.py` and `base_specialist.py`. 90% input token cost
+saving on cache hits. Cache lifetime: 5 minutes.
+
+**Both active workstreams are now fully complete:**
+- C1_QUERY_IMPROVEMENT_PLAN.md v1.3: all four phases complete (Tasks 1.1–4.1)
+- C1_MULTIAGENT_ARCHITECTURE_PLAN.md v1.0: all six phases complete (A–F)
+
+**Final platform state:**
+- 3 Tier 1 orchestrators: Legal, Commercial, Financial (with directive files)
+- 4 Tier 2 SME domains: Legal (5 skills), Claims (5 skills), Schedule (6 skills),
+  Technical (6 skills) — 22 skill files total
+- 13 Supabase migrations applied (001–013)
+- Layer 2 warehouse: 6 FIDIC books, 1,917 chunks, tagged 2b/international
+- Risk mode available on all queries
+- Round 0 triage on every query submission
+- Prompt caching on all agent calls
+
+---
+
 ## Deferred Items
 
 | Item | Reason deferred | When to address |
