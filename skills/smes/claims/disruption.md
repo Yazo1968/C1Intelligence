@@ -2,22 +2,23 @@
 
 **Skill type:** Mixed
 - Contract-type-specific: entitlement basis and recoverable heads
-  depend on which FIDIC sub-clause applies — differs by book and
-  edition; Particular Conditions amendments are project-specific
+  depend on which provision applies under the confirmed standard form
+  — differs by standard form and version; amendment provisions are
+  project-specific
 - Contract-type-agnostic: the methodology for measuring productivity
   loss (measured mile, industry study, global claim) applies
   regardless of contract type; the evidential requirements apply
   regardless of contract type
 **Layer dependency:**
 - Layer 1 — project documents: disruption claim submission;
-  Particular Conditions (entitlement clause, definition of Cost);
+  amendment document (entitlement clause, definition of cost);
   contemporaneous records (labour returns, daily reports, quantity
-  records); instructions or RFIs causing the disruption; payment
-  certificates
-- Layer 2 — reference standards: FIDIC entitlement sub-clause for
-  the confirmed book and edition; SCL Protocol 2nd Edition 2017
-  (disruption methodology framework); AACE RP 29R-03 (if referenced
-  in the claim)
+  records); instructions or correspondence causing the disruption;
+  payment certificates
+- Layer 2b — reference standards: entitlement provision for the
+  confirmed standard form and version; SCL Protocol 2nd Edition 2017
+  (disruption methodology framework, if ingested); AACE RP 29R-03
+  (if referenced in the claim)
 **Domain:** Claims & Disputes SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
@@ -25,10 +26,10 @@
 
 ## When to apply this skill
 
-Apply when retrieved chunks contain a disruption claim, a loss of
+Apply when retrieved documents contain a disruption claim, a loss of
 productivity claim, a measured mile analysis, a labour inefficiency
 claim, or a query about whether reduced productivity is recoverable.
-Apply when retrieved chunks reference acceleration without a formal
+Apply when retrieved documents reference acceleration without a formal
 acceleration instruction — this may indicate constructive acceleration
 arising from disruption.
 
@@ -41,39 +42,39 @@ arising from disruption.
 Read the invoking orchestrator findings and notice_compliance findings.
 
 From the invoking orchestrator extract:
-- Confirmed FIDIC book and edition
+- Confirmed standard form and version
 - The entitlement basis established from retrieved documents — the
-  sub-clause under which the disruption is claimed and whether it
-  provides for Cost (or Cost plus Profit)
+  provision under which the disruption is claimed and whether it
+  provides for cost (or cost plus profit)
 
 **Disruption is distinct from prolongation.** Prolongation covers
 time-related costs of being on site longer than planned. Disruption
 covers loss of productivity during the works — additional resources
-used for the same scope due to Employer interference, without
+used for the same scope due to employer interference, without
 necessarily additional time. Assess separately.
 
 From notice_compliance:
 - Time bar status — if POTENTIALLY TIME-BARRED: flag at the start
 
-**If book type is UNCONFIRMED:** State CANNOT CONFIRM entitlement
+**If standard form is UNCONFIRMED:** State CANNOT CONFIRM entitlement
 basis. Do not proceed with entitlement assessment.
 
 ### Layer 1 documents to retrieve (project-specific)
 
 Call `search_chunks` and `get_related_documents` to retrieve:
 - The disruption claim submission
-- The Particular Conditions — entitlement clause and definition of Cost
+- The amendment document — entitlement clause and definition of cost
 - Contemporaneous records for both the disrupted and any claimed
   undisrupted (baseline) periods:
   - Labour returns and timesheets
   - Daily site diaries
   - Quantity records (output per trade per period)
   - Supervision or foreman reports recording productivity issues
-- Instructions, RFIs, or correspondence from the Engineer cited as
-  causing the disruption
+- Instructions, correspondence, or RFIs from the employer or contract
+  administrator cited as causing the disruption
 - Any industry productivity study referenced in the claim
 
-**If the Particular Conditions are not retrieved:**
+**If the amendment document is not retrieved:**
 State CANNOT CONFIRM entitlement basis or cost recoverability.
 Do not proceed with entitlement assessment.
 
@@ -86,18 +87,23 @@ every head of claim.
 State CANNOT VERIFY the measured mile analysis — there is no
 independently confirmed undisrupted baseline.
 
-### Layer 2 documents to retrieve (reference standards)
+### Layer 2b documents to retrieve (reference standards)
 
-Call `search_chunks` to retrieve from Layer 2:
-- The FIDIC entitlement sub-clause for the confirmed book and edition
-  under which the disruption is claimed
+Call `search_chunks` with `layer_type = '2b'` to retrieve:
+- The entitlement provision for the confirmed standard form under
+  which the disruption is claimed (search by subject matter:
+  "employer risk event entitlement cost disruption productivity")
 - SCL Protocol 2nd Edition 2017 guidance on disruption (if available
-  in Layer 2)
+  in Layer 2b)
 
-**Purpose:** To establish the standard FIDIC entitlement baseline
-and the SCL Protocol framework for methodology assessment. The
-entitlement terms to apply are always those in the retrieved
-Particular Conditions.
+**Purpose:** To establish the standard form entitlement baseline and
+the SCL Protocol framework for methodology assessment. The entitlement
+terms to apply are always those in the retrieved amendment document.
+
+**If the governing standard form is not retrieved from Layer 2b:**
+State CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE for the
+entitlement provisions. Do not describe the provisions from training
+knowledge.
 
 ---
 
@@ -115,18 +121,15 @@ analyses.
 ### Step 2 — Confirm entitlement basis
 *Contract-type-specific*
 
-From the retrieved Particular Conditions:
-- Identify the sub-clause cited as the entitlement basis
-- Confirm whether it provides for Cost, or Cost plus Profit
-- Confirm whether the disruption events qualify under that clause
+From the retrieved amendment document:
+- Identify the provision cited as the entitlement basis
+- Confirm whether it provides for cost, or cost plus profit
+- Confirm whether the disruption events qualify under that provision
 
-**Disruption is not expressly provided for as a standalone head in
-FIDIC.** It is claimed under the same Employer Risk Event clauses
-as EOT and prolongation cost. The qualifying events in the retrieved
-Particular Conditions govern — not the General Conditions standard
-list without confirmation.
+Retrieve the applicable provision from Layer 2b to establish the
+standard form baseline; then apply the amendment document version.
 
-If the Particular Conditions have not been retrieved: state CANNOT
+If the amendment document has not been retrieved: state CANNOT
 CONFIRM entitlement basis. Do not classify any event as qualifying.
 
 ### Step 3 — Identify and assess the disruption events
@@ -134,16 +137,17 @@ CONFIRM entitlement basis. Do not classify any event as qualifying.
 
 For each disruption event claimed:
 - Identify the event from the retrieved claim document
-- Identify the Employer instruction, RFI, or action cited as the cause
-- Retrieve that instruction or RFI from the warehouse — confirm it
-  exists and predates the disruption period
+- Identify the employer instruction, correspondence, or action
+  cited as the cause
+- Retrieve that instruction or correspondence from the warehouse —
+  confirm it exists and predates the disruption period
 - Identify the work activity or trade affected
 - Identify the period of disruption
 
-**Do not characterise an event as an Employer-caused disruption
+**Do not characterise an event as employer-caused disruption
 without retrieving the instruction or correspondence that caused it.**
 If the causal document is not in the warehouse: state CANNOT CONFIRM
-the Employer cause from retrieved documents.
+the employer cause from retrieved documents.
 
 ### Step 4 — Assess the productivity measurement methodology
 *Contract-type-agnostic*
@@ -162,7 +166,7 @@ From retrieved documents assess:
 - Is the baseline from the same project, same trade, and comparable
   conditions? State the basis for this from retrieved documents.
 - Is the productivity metric consistent and stated in the retrieved
-  claim (e.g. cubic metres per labour hour)?
+  claim?
 - Are both the baseline and disrupted period productivity rates
   supported by retrieved labour returns and quantity records?
 
@@ -170,12 +174,12 @@ If the baseline period records have not been retrieved: state CANNOT
 VERIFY the measured mile — there is no independently confirmed
 undisrupted productivity rate from the warehouse.
 
-**(b) Industry productivity studies (e.g. MCAA, AACE, CII):**
-Identify the specific study and factors cited in the retrieved
-claim document. Note that these studies reflect North American or
-European norms. From retrieved documents: is there any project-specific
+**(b) Industry productivity studies:**
+Identify the specific study and factors cited in the retrieved claim
+document. From retrieved documents: is there any project-specific
 adjustment stated in the claim? If not: flag that the factors have
-been applied without GCC-specific adjustment — state this limitation.
+been applied without project-specific adjustment — state this
+limitation from the retrieved claim.
 
 **(c) Global disruption claim:**
 If the claim is presented as a global claim without individual
@@ -195,17 +199,17 @@ For each disruption event, causation must be established from
 retrieved documents — not assumed from the claim submission.
 
 From retrieved documents assess:
-- Is there a demonstrable causal link between the retrieved Employer
+- Is there a demonstrable causal link between the retrieved employer
   instruction/event and the productivity reduction in the retrieved
   records?
 - Does the baseline period (if retrieved) exclude periods affected
-  by Contractor inefficiency, learning curve, or weather?
-- Has the claim addressed the Contractor's own contribution to any
+  by contractor inefficiency, learning curve, or weather?
+- Has the claim addressed the contractor's own contribution to any
   productivity loss?
 
 **Do not characterise causation as established without retrieved
-evidence.** If the causal link is not evidenced in retrieved documents:
-state CANNOT ESTABLISH CAUSATION FROM RETRIEVED DOCUMENTS.
+evidence.** If the causal link is not evidenced in retrieved
+documents: state CANNOT ESTABLISH CAUSATION FROM RETRIEVED DOCUMENTS.
 
 ### Step 6 — Assess the quantum
 *Contract-type-agnostic*
@@ -227,12 +231,12 @@ warehouse documents.
 
 From retrieved documents, assess whether the following conditions
 are all present:
-- An EOT was claimed and denied or not responded to within the
-  period in the retrieved Contract Data
-- The Contractor gave notice of acceleration and its cost —
-  retrieve this notice
-- Acceleration measures were implemented — retrieve evidence
-  of additional resources or extended hours
+- A time extension was claimed and denied or not responded to within
+  the period in the retrieved Contract Data
+- The contractor gave notice of acceleration and its cost — retrieve
+  this notice
+- Acceleration measures were implemented — retrieve evidence of
+  additional resources or extended hours
 
 **Only flag constructive acceleration if all three conditions are
 evidenced in retrieved documents.** If the evidence is partial:
@@ -244,19 +248,19 @@ state which conditions are evidenced and which are not.
 
 **Entitlement basis:**
 
-Disruption events qualify under retrieved PC entitlement clause →
-ENTITLEMENT BASIS CONFIRMED — proceed with methodology and quantum
-Disruption events do not qualify under retrieved PC → OUT OF SCOPE
-under retrieved clause — flag
-PC not retrieved → CANNOT CONFIRM ENTITLEMENT BASIS
+Disruption events qualify under retrieved amendment document
+entitlement provision → ENTITLEMENT BASIS CONFIRMED — proceed
+with methodology and quantum
+Disruption events do not qualify under retrieved provision →
+OUT OF SCOPE under retrieved provision — flag
+Amendment document not retrieved → CANNOT CONFIRM ENTITLEMENT BASIS
 
 **Causation:**
 
-Causal link between Employer event and productivity loss evidenced
+Causal link between employer event and productivity loss evidenced
 in retrieved documents → CAUSATION EVIDENCED FROM RETRIEVED DOCUMENTS
-Productivity reduction present but causal link not evidenced in
-retrieved documents → CAUSATION NOT ESTABLISHED FROM RETRIEVED
-DOCUMENTS — flag; state what evidence would be needed
+Productivity reduction present but causal link not evidenced →
+CAUSATION NOT ESTABLISHED FROM RETRIEVED DOCUMENTS — flag
 Mixed causation evidenced → CAUSATION PARTIAL — flag; state the
 mixed causation from retrieved documents
 
@@ -272,26 +276,25 @@ Global claim presented AND records from both disrupted and undisrupted
 periods are in the warehouse → METHODOLOGY WEAKNESS — flag; state
 the available records
 Global claim AND no undisrupted baseline period exists in the
-warehouse → LAST RESORT METHODOLOGY — flag the limitation; note
-that the aggregate must be verified from records
+warehouse → LAST RESORT METHODOLOGY — flag the limitation
 
 **Constructive acceleration:**
 
 All three conditions evidenced in retrieved documents →
 POSSIBLE CONSTRUCTIVE ACCELERATION — flag; state the conditions
 evidenced
-Partial conditions only → INSUFFICIENT EVIDENCE FOR CONSTRUCTIVE
-ACCELERATION FROM RETRIEVED DOCUMENTS — state what is evidenced
+Partial conditions only → INSUFFICIENT EVIDENCE FROM RETRIEVED
+DOCUMENTS — state what is evidenced
 
 ---
 
 ## When to call tools
 
-**Signal:** Disruption claim references Employer instructions or RFIs
-as the cause but these have not been retrieved
-**Action:** `search_chunks` with query "[instruction or RFI reference]
-[date range]"; `get_related_documents` with document types
-"Engineer's Instruction", "RFI"
+**Signal:** Disruption claim references employer instructions or
+correspondence as the cause but these have not been retrieved
+**Action:** `search_chunks` with query "[instruction or correspondence
+reference] [date range]"; `get_related_documents` with document types
+"Engineer's Instruction", "RFI", "Variation Order"
 **Look for:** The causal document — confirm it exists and predates
 the disruption period
 
@@ -305,16 +308,16 @@ covering the baseline period
 
 **Signal:** Industry study referenced but the specific study or
 factors not identified in the retrieved claim
-**Action:** `search_chunks` with query "productivity factor MCAA
-AACE CII inefficiency table"
+**Action:** `search_chunks` with query "productivity factor inefficiency
+study table"
 **Look for:** The specific study reference and the factors applied
 
-**Signal:** Constructive acceleration suspected — EOT claimed but
-no response retrieved
-**Action:** `get_related_documents` with document type "Engineer's
-Determination"; `search_chunks` with query "extension of time
-response determination [claim reference]"
-**Look for:** Whether EOT was responded to and any acceleration notice
+**Signal:** Constructive acceleration suspected — time extension
+claimed but no response retrieved
+**Action:** `get_related_documents` with document type "Determination";
+`search_chunks` with query "time extension response [claim reference]"
+**Look for:** Whether the time extension was responded to and any
+acceleration notice
 
 ---
 
@@ -328,14 +331,19 @@ response determination [claim reference]"
    retrieved records** — state the available records and the
    methodology weakness.
 
-3. **Industry study factors applied without GCC-specific adjustment**
-   — state this limitation from the retrieved claim document.
+3. **Industry study factors applied without project-specific
+   adjustment** — state this limitation from the retrieved claim
+   document.
 
 4. **Causation not established for a material head from retrieved
    documents** — state what evidence would be required.
 
 5. **Possible constructive acceleration evidenced in retrieved
    documents** — state the conditions evidenced and their implication.
+
+6. **Governing standard not retrieved from Layer 2b** — flag when
+   the entitlement provisions could not be retrieved; state what
+   standard would need to be ingested.
 
 ---
 
@@ -344,6 +352,16 @@ response determination [claim reference]"
 ```
 ## Disruption Assessment
 
+### Evidence Declaration
+Layer 2b retrieved: [YES / NO / PARTIAL]
+Layer 2b source: [standard form name — or NOT RETRIEVED]
+Layer 2b provisions retrieved: [description — or NONE]
+Layer 2a retrieved: [YES / NO / NOT APPLICABLE]
+Layer 2a source: [policy name — or NOT RETRIEVED / NOT APPLICABLE]
+Layer 1 primary document: [name and reference — or NOT RETRIEVED]
+Layer 1 amendment document: [name — or NOT RETRIEVED / NOT APPLICABLE]
+Provisions CANNOT CONFIRM: [list — or NONE]
+
 ### Documents Retrieved (Layer 1)
 [List every document retrieved with reference numbers and dates.]
 
@@ -351,18 +369,20 @@ response determination [claim reference]"
 [List every document required but not found. State which steps
 are affected.]
 
-### Layer 2 Reference Retrieved
-[State whether the entitlement clause and SCL Protocol were retrieved
-from Layer 2. If not: state analytical knowledge applied.]
+### Layer 2b Reference Retrieved
+[State whether the entitlement provision and SCL Protocol were
+retrieved from Layer 2b. If not: state CANNOT CONFIRM —
+STANDARD FORM NOT IN WAREHOUSE and list which analysis steps
+are affected.]
 
 ### Notice Position
 [From notice_compliance findings — time bar caveat if applicable]
 
 ### Entitlement Basis
-FIDIC book and edition: [from orchestrator findings]
-Entitlement clause: [from retrieved PC / CANNOT CONFIRM]
-Cost recoverable: [YES — clause / NO / CANNOT CONFIRM]
-Profit recoverable: [YES / NO — Cost only / CANNOT CONFIRM]
+Standard form: [from orchestrator findings]
+Entitlement provision: [from retrieved amendment document / CANNOT CONFIRM]
+Cost recoverable: [YES — provision / NO / CANNOT CONFIRM]
+Profit recoverable: [YES / NO — cost only / CANNOT CONFIRM]
 
 ### Disruption Event Register
 
@@ -388,7 +408,7 @@ Quantum verifiable from retrieved documents: [amount / CANNOT VERIFY — reason]
 Finding: [from retrieved documents only]
 
 ### Constructive Acceleration
-EOT claimed and denied/not responded to: [YES — source / NO / CANNOT CONFIRM]
+Time extension claimed and denied/not responded to: [YES — source / NO / CANNOT CONFIRM]
 Acceleration notice issued: [YES — reference / NOT FOUND]
 Acceleration measures evidenced: [YES — source / NOT FOUND]
 Assessment: [POSSIBLE CONSTRUCTIVE ACCELERATION — conditions evidenced /
@@ -413,24 +433,24 @@ verifying inputs from retrieved project records.*
 **SCL Protocol 2017 — disruption principles (analytical reference):**
 Contemporaneous records are essential for disruption claims. The
 measured mile is the preferred methodology. Global disruption claims
-are treated with caution and require the Contractor to demonstrate
+are treated with caution and require the contractor to demonstrate
 it was impossible to link individual causes to individual effects.
 Industry study factors are corroborating evidence only — not a
 substitute for project-specific records. Retrieve the Protocol
-from Layer 2 to apply these principles.
+from Layer 2b to apply these principles.
 
 **Measured mile requirements — analytical reference:**
 The baseline must be genuinely undisrupted — excluding learning
-curve, mobilisation, weather, or Contractor inefficiency periods.
+curve, mobilisation, weather, or contractor inefficiency periods.
 The comparison must be like-for-like — same trade, same work type,
 comparable conditions. The productivity metric must be consistent
 and objectively measurable. Both baseline and disrupted period records
 must be retrieved before the measured mile can be verified.
 
-**GCC-specific productivity factors — analytical reference:**
-GCC projects are affected by extreme summer heat (mandatory rest
-periods in UAE), high labour turnover, mixed-nationality workforces,
-and Ramadan working patterns. Industry study factors that do not
-account for these conditions face challenge in GCC arbitration.
-These are contextual flags — apply to the methodology identified
-from retrieved documents only.
+**Industry productivity studies — analytical reference:**
+Industry studies provide productivity impact factors for common
+disruption causes (stacking of trades, overtime, changes, etc.).
+These studies are based on data from particular markets and conditions.
+Application without project-specific adjustment may face challenge.
+Identify the specific study from the retrieved claim documents and
+assess whether any adjustment is documented.
