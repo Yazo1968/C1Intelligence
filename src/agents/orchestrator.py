@@ -238,12 +238,15 @@ def process_query(request: QueryRequest) -> QueryResponse:
     # ------------------------------------------------------------------
     # Step 6: Cross-specialist contradiction pass (stub — Phase 5)
     # ------------------------------------------------------------------
-    cross_specialist_contradictions = cross_specialist_contradiction_pass(all_findings)
+    cross_specialist_contradictions = cross_specialist_contradiction_pass(
+        anthropic_client, all_findings
+    )
 
     # ------------------------------------------------------------------
     # Step 7: Detect document contradictions (Claude)
     # ------------------------------------------------------------------
     contradictions = detect_contradictions(anthropic_client, all_findings)
+    contradictions = contradictions + cross_specialist_contradictions
 
     # ------------------------------------------------------------------
     # Step 8: Write contradiction flags (non-blocking)
