@@ -39,6 +39,6 @@ export async function updateGovernanceEvent(
 ): Promise<GovernanceEventResponse> {
   return apiClient.patch<GovernanceEventResponse>(
     `/projects/${projectId}/governance/events/${eventId}`,
-    update as Record<string, unknown>,
+    update as unknown as Record<string, unknown>,
   );
 }
