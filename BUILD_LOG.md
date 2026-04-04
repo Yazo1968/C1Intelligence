@@ -989,3 +989,33 @@ No code changes this session. No migrations. Plan is in discussion — execution
 - Supabase: bkkujtvhdbroieffhfok (EU West 1)
 - 18 migrations applied (001–018)
 - 15 tables
+
+---
+
+## Session — April 2026 (Phase 6, Compliance Feature — Tasks 6.4–6.5 + Session Close)
+
+**Commits this session:**
+- e6be53e — docs: CLAUDE.md corrected migration count to 18 and table count to 15
+- f2fd798 — docs: C1_MASTER_PLAN.md Phase 6 Compliance Feature progress updated
+- 26dbf39 — docs: BUILD_LOG.md session close Phase 6 Tasks 6.1–6.3
+- 18448da — feat: governance API — 5 endpoints, schemas, CORS PATCH
+- 3f64c9b — feat: governance frontend — GovernancePanel, event log, readiness indicator, sidebar tab
+
+**Completed:**
+- Task 6.4: 5 governance API endpoints (run, status, events, update event, create event); PATCH added to CORS; 6 governance schemas added to schemas.py
+- Task 6.5: GovernancePanel component (readiness card, event log table, confirm/flag actions); governance.ts API client; patch method on apiClient; Governance tab in Sidebar; GovernancePage rendered in ProjectWorkspacePage
+
+**Phase 6 — Compliance Feature: COMPLETE**
+All tasks complete: 6.1 (Migration 018), 6.2 (Compliance SME skills), 6.3 (orchestrator updates), 6.4 (API), 6.5 (Frontend).
+
+**Database state at session close:**
+- Supabase: bkkujtvhdbroieffhfok (EU West 1)
+- 18 migrations applied (001–018)
+- 15 tables
+
+**Platform state at session close:**
+- 26 skill files (3 orchestrator directives + 23 SME skills)
+- Legal orchestrator renamed Legal & Compliance
+- Compliance SME: 6 skill files under skills/smes/compliance/
+- Governance API: 5 endpoints live on Railway
+- Governance frontend: live on Vercel
