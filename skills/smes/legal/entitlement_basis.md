@@ -203,7 +203,8 @@ If a contract administrator determination has been retrieved:
 - Is the contract administrator's position consistent with the
   retrieved clause text?
 - Does the determination reveal any employer consent issues (from
-  engineer_identification findings)?
+  party_and_role_identification findings — who held the contract
+  administrator role on the determination date)?
 
 If no determination has been retrieved after searching:
 State CANNOT ASSESS the contract administrator's position on entitlement.
