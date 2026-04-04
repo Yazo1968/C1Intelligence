@@ -44,8 +44,8 @@ From the invoking orchestrator extract:
 - Confirmed standard form and version
 - Programme submission requirements as confirmed from retrieved
   amendment document and Contract Data
-- Contract administrator identity (from engineer_identification
-  findings)
+- Contract administrator identity (from party_and_role_identification
+  findings — the Compliance SME owns all party and role identification)
 
 **If standard form is UNCONFIRMED:** Proceed with programme retrieval
 and assessment but flag that the acceptance mechanism and submission
