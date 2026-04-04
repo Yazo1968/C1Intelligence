@@ -277,6 +277,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
     # Step 11: Write audit log (must succeed)
     # ------------------------------------------------------------------
     all_citations = _collect_all_citations(all_findings)
+    all_evidence_records = _collect_evidence_records(all_findings)
 
     round_number_to_log: int | None = max((f.round_number for f in all_findings), default=None)
     audit_log_id = write_audit_log(
@@ -290,6 +291,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
         document_ids=document_ids,
         citations=all_citations,
         round_number=round_number_to_log,
+        evidence_records=all_evidence_records or None,
     )
 
     # ------------------------------------------------------------------
@@ -805,3 +807,26 @@ def _collect_all_citations(findings: list[SpecialistFindings]) -> list[SourceCit
                     )
 
     return citations
+
+
+def _collect_evidence_records(findings: list[SpecialistFindings]) -> list[dict]:
+    """
+    Collect serialised EvidenceRecord dicts from all specialist findings.
+    Only includes findings that have an evidence_record populated.
+    """
+    records: list[dict] = []
+    for f in findings:
+        if f.evidence_record is not None:
+            records.append({
+                "domain": f.domain,
+                "layer2b_status": f.evidence_record.layer2b_status.value,
+                "layer2b_source": f.evidence_record.layer2b_source,
+                "layer2a_status": f.evidence_record.layer2a_status.value,
+                "layer2a_source": f.evidence_record.layer2a_source,
+                "layer1_primary_document": f.evidence_record.layer1_primary_document,
+                "layer1_amendment_document_status": (
+                    f.evidence_record.layer1_amendment_document_status.value
+                ),
+                "provisions_cannot_confirm": f.evidence_record.provisions_cannot_confirm,
+            })
+    return records

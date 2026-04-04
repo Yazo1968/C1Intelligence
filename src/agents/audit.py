@@ -65,6 +65,7 @@ def write_audit_log(
     document_ids: list[uuid.UUID],
     citations: list[SourceCitation],
     round_number: int | None = None,
+    evidence_records: list[dict] | None = None,
 ) -> uuid.UUID:
     """
     Write an immutable entry to the query_log table.
@@ -87,6 +88,7 @@ def write_audit_log(
         "document_ids_at_query_time": [str(d) for d in document_ids],
         "citations": citations_json,
         "round_number": round_number,
+        "evidence_records": evidence_records,
     }
 
     try:
