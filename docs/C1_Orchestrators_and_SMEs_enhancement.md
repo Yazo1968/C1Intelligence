@@ -1,6 +1,6 @@
 # C1 Intelligence — Orchestrators and SMEs Enhancement Plan
 
-**Version:** 2.1
+**Version:** 2.3
 **Date:** April 2026
 **Status:** Active
 **Author:** Strategic Partner (Claude) — based on independent expert examination
@@ -24,13 +24,22 @@ The plan is structured in two parts:
 - **Part B** — Architectural restructure: dissolution of the Claims SME as a
   standalone domain and redistribution of its skills — and the backend code
   that routes to them — into the domains where they analytically belong.
+- **Part C** — Assessment quality improvements to two Delay and Cost Analytics
+  SME skills, ensuring the delay assessment output is forensically complete
+  for boards, dispute panels, and forensic experts.
+- **Part D** — Three new Financial SME skill files covering project finance
+  assessment: cost control adequacy, contingency management, and lender/funder
+  compliance. These skills are drafted by the Strategic Partner (Claude chat),
+  not Claude Code, for the reasons stated in the Part D section.
 
-Parts A and B form a single coherent execution sequence. Part A must be
-complete before Part B begins. Several Part A tasks were revised from their
-original form to avoid creating content that Part B would immediately
-supersede.
+Parts A, B, C, and D form a single coherent execution sequence. Part A must be
+complete before Part B begins. Parts C and D execute after Part B is
+structurally settled. The governing documents (CLAUDE.md, C1_MASTER_PLAN.md)
+are updated last, after all parts are complete. Several Part A tasks were
+revised from their original form to avoid creating content that Part B would
+immediately supersede.
 
-**Total tasks: 22. Total commits: 22 (one per task, with one approved
+**Total tasks: 29. Total commits: 29 (one per task, with one approved
 exception noted at A6.1).**
 
 ---
@@ -1061,7 +1070,7 @@ new domain names, dissolved Claims SME, and addition of synthesis_directive.md.
 **Commit:** `docs: C1_MASTER_PLAN.md — record Enhancement Plan as completed workstream`
 
 **QG criteria:** Master plan accurately reflects all Enhancement Plan changes.
-All 22 tasks documented with commit references.
+All 29 tasks documented with commit references.
 
 ---
 
@@ -1076,36 +1085,503 @@ on non-FIDIC projects. Record in BUILD_LOG.md as a known backlog item.
 
 ---
 
+## Part C — Assessment Quality: Delay Analysis Methodology and Classification
+
+### Context
+
+C1 does not conduct delay analysis — it assesses submitted delay analysis.
+The distinction is the same as between drafting a contract and auditing one:
+the assessor does not produce the document, but must know precisely what a
+sound document looks like to identify where the submission falls short.
+
+Two targeted improvements are needed to ensure the delay assessment is
+forensically complete for the platform's target audience — boards, lenders,
+auditors, and dispute resolution professionals:
+
+1. The current methodology assessment step identifies what methodology was
+   used and whether its data requirements were met. It does not assess whether
+   the methodology was the **right choice** for the project conditions — which
+   is the critical auditor judgment. An assessor must be able to state: "You
+   used Impacted As-Planned on a complex project with concurrent events. That
+   methodology cannot isolate causation here. A more appropriate methodology
+   given the available records would have been TIA."
+
+2. The current delay classification uses contractual risk allocation
+   terminology (Employer Risk Event / Neutral Event / Contractor Risk Event).
+   Boards, dispute panels, and forensic experts use the four-way forensic
+   classification (Excusable Compensable / Excusable Non-Compensable /
+   Non-Excusable / Concurrent). The platform must output both, bridged
+   explicitly. The forensic classification is not a replacement — it is the
+   industry-standard label for the same finding expressed in terms the
+   target audience uses.
+
+Both are targeted edits to two existing skill files. No new skills. No
+restructure. No code changes.
+
+---
+
+### Task C1 — Add methodology appropriateness assessment to `eot_quantification.md`
+
+**File:** `skills/smes/schedule/eot_quantification.md`
+
+**Changes required:**
+
+1. **Step 5 — Assess the delay analysis methodology**: after the per-methodology
+   data requirement assessment blocks, add a methodology appropriateness
+   sub-step that applies regardless of which methodology was identified:
+
+   > **Assess methodology appropriateness for project conditions:**
+   >
+   > After confirming whether data requirements are met, assess whether the
+   > methodology was appropriate for this project — not just whether it was
+   > applied. Assess against the following factors from the retrieved documents:
+   >
+   > *Concurrent delay:* If the retrieved records evidence concurrent delay
+   > events, assess whether the chosen methodology can isolate causation between
+   > them. As-Planned vs As-Built and Impacted As-Planned cannot isolate
+   > causation where concurrent events are present. Flag this directly and state
+   > what methodology would have been more appropriate given the retrieved records.
+   >
+   > *Record quality:* Assess whether the project's retrievable records are
+   > consistent with the requirements of the chosen methodology. A methodology
+   > requiring frequent programme updates cannot be properly applied if only
+   > the baseline programme is in the warehouse.
+   >
+   > *Project complexity:* If the retrieved documents indicate a complex project
+   > — multiple concurrent events, overlapping critical paths, or significant
+   > programme revisions — assess whether the chosen methodology is appropriate
+   > for that complexity.
+   >
+   > State the appropriateness finding explicitly:
+   > "[Methodology] is [APPROPRIATE / NOT APPROPRIATE] for the project
+   > conditions evidenced in the retrieved documents."
+   > If not appropriate: "A more appropriate methodology given the available
+   > records would have been [X] because [specific reason from retrieved
+   > documents]."
+
+2. **Named methodology list**: add As-Built Critical Path as a named methodology
+   alongside the existing five:
+
+   > *As-Built Critical Path:* reconstructs a schedule exclusively from actual
+   > progress records to identify the real critical path as executed — not the
+   > planned or submitted path. Requires comprehensive as-built data from site
+   > diaries, progress reports, and record drawings. From retrieved documents:
+   > verify whether the as-built data in the warehouse is sufficient in detail
+   > and completeness to support this reconstruction, and whether the claimed
+   > critical path reflects the actual construction sequence evidenced in
+   > retrieved records.
+
+**Commit:** `fix: eot_quantification — add methodology appropriateness assessment and As-Built Critical Path`
+
+**QG criteria:** Step 5 contains the methodology appropriateness sub-step
+after the per-methodology blocks. All five original methodologies plus
+As-Built Critical Path named. Appropriateness output explicitly required
+(APPROPRIATE / NOT APPROPRIATE) with reasoning. Governing footer intact.
+
+---
+
+### Task C2 — Add forensic four-way classification to `delay_identification.md`
+
+**File:** `skills/smes/schedule/delay_identification.md`
+
+**Changes required:**
+
+1. **Step 4** (currently "Assess excusable vs compensable distinction"):
+   expand to formally establish the four-way forensic classification alongside
+   the existing contractual classification, bridging the two explicitly:
+
+   > **Four-way forensic classification** (alongside contractual classification):
+   >
+   > The four-way forensic classification is the standard used by dispute panels,
+   > arbitrators, and forensic experts. Apply it to each event alongside the
+   > contractual classification and bridge them explicitly — the forensic
+   > classification is the industry-standard label for the same finding:
+   >
+   > — **Excusable Compensable:** event caused by an employer risk event under
+   > the retrieved amendment document; entitles the contractor to both time
+   > extension and cost. Contractual equivalent: Employer Risk Event.
+   >
+   > — **Excusable Non-Compensable:** event caused by a neutral event (force
+   > majeure, adverse weather, or equivalent neutral category under the retrieved
+   > amendment document); entitles the contractor to time extension but not cost.
+   > Contractual equivalent: Neutral Event.
+   >
+   > — **Non-Excusable:** event caused by or attributable to the contractor;
+   > no entitlement to time extension or cost. Contractual equivalent:
+   > Contractor Risk Event.
+   >
+   > — **Concurrent:** employer-caused and contractor-caused delays overlap on
+   > the critical path during the same period; entitlement depends on governing
+   > law, contract terms, and the concurrent delay principles retrieved from
+   > Layer 2b. This is a distinct classification — not a sub-category of the
+   > others.
+   >
+   > Do not apply the forensic classification without first establishing the
+   > contractual classification from the retrieved amendment document. The
+   > forensic classification is derived from the contractual classification —
+   > never applied independently.
+
+2. **Delay Event Register** in the output format: add a Forensic classification
+   column. Replace the current register header and example row:
+
+   ```
+   | # | Event description | Period | Duration | Contemporaneous evidence | Classification | Entitlement | Source |
+   | 1 | [description] | [dates] | [days] | [EVIDENCED / NOT VERIFIED] | [ER/Neutral/CR/CANNOT CLASSIFY] | [Time+Cost / Time only / Nil / CANNOT CONFIRM] | [docs] |
+   ```
+
+   With:
+
+   ```
+   | # | Event description | Period | Duration | Contemporaneous evidence | Contractual classification | Forensic classification | Entitlement | Source |
+   | 1 | [description] | [dates] | [days] | [EVIDENCED / NOT VERIFIED] | [ER/Neutral/CR/CANNOT CLASSIFY] | [Ex.Comp / Ex.Non-Comp / Non-Ex / Concurrent / CANNOT CLASSIFY] | [Time+Cost / Time only / Nil / CANNOT CONFIRM] | [docs] |
+   ```
+
+3. **Findings by Delay Event**: add a Forensic classification line after the
+   existing Classification line:
+
+   > Forensic classification: [EXCUSABLE COMPENSABLE / EXCUSABLE NON-COMPENSABLE /
+   > NON-EXCUSABLE / CONCURRENT / CANNOT CLASSIFY]
+   > Forensic classification basis: [derived from contractual classification /
+   > CANNOT CLASSIFY — contractual classification not established]
+
+**Commit:** `fix: delay_identification — add forensic four-way classification alongside contractual classification`
+
+**QG criteria:** Step 4 formally establishes the four-way forensic
+classification bridged to the contractual classification. Delay Event Register
+has the Forensic classification column. Findings by Delay Event includes the
+forensic classification line with CANNOT CLASSIFY fallback. All four
+categories defined with their contractual equivalents. Governing footer intact.
+
+---
+
+## Part D — Financial SME Skills (New Domain)
+
+### Context
+
+The Financial & Reporting Orchestrator operates as a financial reporting
+reader — it extracts metrics from retrieved documents and flags discrepancies.
+That level of analysis is correct for the platform's purpose.
+
+However, three areas material to the platform's primary audience (lenders,
+boards, auditors, investors) are not covered anywhere in the current
+architecture:
+
+**1. Cost control adequacy and cost-at-completion credibility**
+The Financial orchestrator extracts the EAC from retrieved EVM reports. It
+does not assess whether that EAC is credible — whether the cost-to-complete
+estimate is realistic given actual burn rate, committed-but-not-yet-incurred
+costs, open variations, and remaining scope. An auditor does not just read the
+EAC; they challenge it. That challenge capability is absent.
+
+**2. Contingency management**
+Contingency drawdown appears as a line item in the financial risk exposure
+section of the orchestrator's output. There is no structured assessment of
+whether drawdown is being governed responsibly, whether remaining contingency
+is adequate relative to known and probable risks, or whether the contingency
+governance framework is functioning.
+
+**3. Lender and funder compliance**
+The Financial orchestrator mentions lender and investor reporting as a scope
+item but coverage is surface level — extract reported metrics, flag
+discrepancies with underlying records. Financial covenant compliance,
+drawdown condition evidencing, and LTA (Lender's Technical Advisor) reporting
+obligation fulfilment are entirely absent. These are the specific instruments
+lenders use and the platform's output quality standard names lenders as a
+primary audience.
+
+None of this overlaps with existing coverage. The Commercial orchestrator
+handles the commercial position; the Financial orchestrator handles financial
+performance reporting; the Compliance SME handles internal DOA compliance.
+The three gaps above are genuinely unaddressed.
+
+### Resolution
+
+Add three Financial SME skill files under a new `skills/smes/financial/`
+directory. The Financial orchestrator delegates to these SMEs for queries
+with a financial controls, contingency, or lender compliance dimension —
+following the same delegation pattern as the Legal orchestrator delegates to
+its Legal SMEs.
+
+A `grounding_schema.json` is created for the new domain. Code wiring
+(specialist_config.py update for the new financial SME domain entry) is
+addressed in Task D5.
+
+### Execution model — Strategic Partner drafts, Claude Code commits
+
+**Part D tasks are not executed by Claude Code from a specification.**
+They are executed by the Strategic Partner (Claude chat) at execution time.
+
+**Reason:** These are new skill files requiring nuanced domain authorship —
+construction project finance, cost management standards, lender/funder
+frameworks. The Strategic Partner reads the c1-skill-authoring references,
+applies construction finance domain knowledge, and drafts each skill file in
+full. Claude Code, executing from a task description alone, would produce
+lower-quality skill content for a specialist domain of this complexity.
+
+**Protocol for each Part D task:**
+1. Strategic Partner reads `skills/c1-skill-authoring/SKILL.md` and all
+   four reference files (`grounding_protocol.md`, `warehouse_retrieval.md`,
+   `output_formats.md`, `validation_scenarios.md`)
+2. Strategic Partner drafts the complete skill file content in the chat
+   session and writes the file to the cloned repo using `bash_tool`
+3. Strategic Partner confirms compliance with all four authoring principles
+   before producing the commit prompt
+4. Claude Code executes a minimal prompt: `git add [file] && git commit -m
+   "[message]" && git push` — no authoring judgment required
+
+Yasser approves each completed draft before the commit prompt is executed.
+QG PASS is confirmed by Strategic Partner via GitHub API before moving to
+the next task.
+
+---
+
+### Task D1 — Draft and create `cost_control_assessment.md`
+
+**File:** `skills/smes/financial/cost_control_assessment.md` (new file)
+**Author:** Strategic Partner (Claude chat)
+**Skill type:** Mixed
+- Contract-type-agnostic: the assessment framework for cost control
+  adequacy, EAC credibility, and cost reporting quality applies regardless
+  of contract form
+- Contract-type-specific: the cost reporting obligations and format
+  requirements differ by contract and Layer 2b standard; the contractual
+  definition of cost governs what is recoverable
+
+**Scope of assessment (to be built into the skill):**
+- WBS and cost coding structure — is the cost breakdown adequate to
+  support meaningful cost control and reporting?
+- Committed vs incurred vs forecast — does the cost report distinguish
+  between committed costs (contracted but not yet paid), incurred costs
+  (paid), and forecast costs (estimated to complete)?
+- EAC and cost-to-complete credibility — does the forecast completion cost
+  reflect the actual burn rate, open variations, known risks, and remaining
+  scope — or is it a carry-forward of the original budget?
+- Cost report frequency and recency — is the cost reporting current?
+- Variance explanation — are significant variances from budget explained
+  with specific, retrieved source documents?
+- CANNOT CONFIRM rules — if cost reports are absent or incomplete, state
+  which assessments cannot be made and what documents are missing
+
+**Invoked by:** Financial orchestrator
+**Layer dependency:** Layer 1 (cost reports, budget documents, payment
+certificates, variation orders); Layer 2a (internal financial reporting
+policies if ingested); Layer 2b (applicable financial standards if ingested)
+
+**Commit:** `feat: add cost_control_assessment SME skill — Financial domain`
+
+**QG criteria:** Full skill structure per c1-skill-authoring/SKILL.md.
+Evidence Declaration in output format. CANNOT CONFIRM rules present.
+Governing footer present. No hardcoded figures or contract-form assumptions.
+
+---
+
+### Task D2 — Draft and create `contingency_management_assessment.md`
+
+**File:** `skills/smes/financial/contingency_management_assessment.md`
+(new file)
+**Author:** Strategic Partner (Claude chat)
+**Skill type:** Contract-type-agnostic
+The framework for assessing contingency management applies regardless of
+contract form. The contractual provisions governing contingency authority
+are retrieved from Layer 2a (internal DOA) and Layer 2b.
+
+**Scope of assessment (to be built into the skill):**
+- Contingency baseline — what was the approved contingency allowance and
+  what is its source document?
+- Drawdown history — what has been drawn against contingency, for what
+  reasons, approved by whom? Is the drawdown consistent with the DOA
+  framework retrieved from Layer 2a?
+- Remaining contingency adequacy — does the remaining contingency balance
+  appear adequate relative to the known risks in retrieved risk register
+  documents and open variations? State as an observation from retrieved
+  documents — do not calculate risk-weighted exposure
+- Governance — are contingency drawdowns being approved at the correct
+  authority level under the retrieved DOA framework? This links to the
+  Compliance SME (doa_compliance.md) for any specific transaction requiring
+  authority confirmation
+- Trend assessment — is the drawdown rate accelerating? State from
+  retrieved documents only
+- CANNOT CONFIRM rules — if risk register or DOA framework not retrieved,
+  state which assessments are affected
+
+**Invoked by:** Financial orchestrator
+**Layer dependency:** Layer 1 (contingency drawdown records, risk register,
+cost reports); Layer 2a (DOA framework, contingency governance policy);
+Layer 2b (applicable standards if ingested)
+
+**Commit:** `feat: add contingency_management_assessment SME skill — Financial domain`
+
+**QG criteria:** Full skill structure per c1-skill-authoring/SKILL.md.
+Evidence Declaration in output format. Explicit link to Compliance SME
+for DOA authority confirmation. CANNOT CONFIRM rules present.
+Governing footer present.
+
+---
+
+### Task D3 — Draft and create `lender_and_funder_compliance.md`
+
+**File:** `skills/smes/financial/lender_and_funder_compliance.md` (new file)
+**Author:** Strategic Partner (Claude chat)
+**Skill type:** Contract-type-agnostic for the assessment framework;
+contract-type-specific for the contractual reporting obligations
+
+**Scope of assessment (to be built into the skill):**
+- Lender/funder identification — identify from retrieved documents which
+  lenders or funders have monitoring rights over this project and under
+  what instrument
+- LTA reporting obligations — what does the financing agreement require
+  in terms of LTA reports: frequency, content, sign-off requirements?
+  Retrieve from Layer 1 financing documents
+- LTA report status — have the required LTA reports been produced at the
+  required frequency? Retrieve and assess from the warehouse
+- Financial covenant compliance — identify the financial covenants from
+  retrieved financing documents (e.g. debt service cover ratio, loan-to-
+  value, completion date covenant). For each covenant: state the threshold
+  from retrieved documents, state the project's current position from
+  retrieved financial data, assess compliance. CANNOT CONFIRM if covenant
+  terms or current financial data not retrieved
+- Drawdown conditions — for projects with staged drawdowns, assess whether
+  the conditions for the next drawdown are evidenced in the retrieved
+  documents (practical completion certificate, insurance confirmation,
+  technical approval)
+- Reporting discrepancies — flag any discrepancy between what is reported
+  to lenders in retrieved LTA or investor reports and what the underlying
+  project records show
+- CANNOT CONFIRM rules — financing agreements and LTA terms may not be
+  in the warehouse; state clearly what cannot be assessed and what documents
+  would be needed
+
+**Invoked by:** Financial orchestrator
+**Layer dependency:** Layer 1 (financing agreements, LTA reports, covenant
+compliance certificates, drawdown notices, completion certificates);
+Layer 2a (internal financial reporting policies); Layer 2b (applicable
+financial reporting standards if ingested)
+
+**Commit:** `feat: add lender_and_funder_compliance SME skill — Financial domain`
+
+**QG criteria:** Full skill structure per c1-skill-authoring/SKILL.md.
+Evidence Declaration in output format. Covenant assessment explicitly
+requires retrieved threshold values — no assumed thresholds.
+CANNOT CONFIRM rules present. Governing footer present.
+
+---
+
+### Task D4 — Create `grounding_schema.json` for Financial SME domain
+
+**File:** `skills/smes/financial/grounding_schema.json` (new file)
+**Author:** Strategic Partner (Claude chat)
+
+**Content:**
+```json
+{
+  "skill_group": "financial_sme",
+  "layer2b_required": false,
+  "layer2a_required": true,
+  "layer1_amendment_document_required": false,
+  "confidence_cap_without_layer2a": "AMBER",
+  "description": "Financial SMEs require Layer 2a internal policies and DOA
+  frameworks before assessing contingency governance or authority compliance.
+  Layer 1 cost reports, financing agreements, and LTA reports are the primary
+  evidence base. Layer 2b financial reporting standards improve assessment
+  quality when ingested but are not required to proceed."
+}
+```
+
+**Note:** `layer2a_required: true` is the distinguishing characteristic of
+this schema. Unlike the Legal, Schedule, and Technical SMEs which require
+Layer 2b standard form provisions, the Financial SMEs depend primarily on
+Layer 2a internal policies (DOA framework, financial reporting policies)
+for governance compliance assessments.
+
+**Commit:** `feat: add grounding_schema.json for Financial SME domain`
+
+**QG criteria:** Valid JSON. `layer2a_required: true` correctly set.
+Description accurately reflects the three Financial SME skills.
+
+---
+
+### Task D5 — Code wiring for Financial SME domain
+
+**File:** `src/agents/specialist_config.py`
+**Author:** Claude Code (standard task — no authoring judgment required)
+
+**Change required:**
+
+Add a Financial SME entry to `SPECIALIST_CONFIGS`:
+
+```python
+"financial_sme": SpecialistConfig(
+    domain="financial_sme",
+    tier=2,
+    round_assignment=2,
+    max_tool_rounds=3
+),
+```
+
+This loads skills from `skills/smes/financial/` (the skill_loader will find
+no `orchestrators/financial_sme/` directory and fall through to `smes/
+financial_sme/` — note: directory must be named `financial_sme` to match,
+OR the directory stays as `financial` and a legacy path is used).
+
+**Implementation note:** At execution time, the Strategic Partner will
+confirm the exact directory naming and loading path before issuing this
+task to Claude Code. The domain name in specialist_config must match
+the directory name used for the skill files. If the files are placed at
+`skills/smes/financial/`, the domain key must be `"financial"` — but this
+conflicts with the existing Tier 1 `"financial"` entry. The resolution
+(separate directory name `financial_sme`, or merging into the orchestrator
+directory) will be confirmed at that point.
+
+Also update the Financial orchestrator directive (`skills/orchestrators/
+financial/directive.md`) to add a Financial SME delegation section,
+specifying when to invoke each of the three new skills.
+
+**Commit:** `feat: code wiring for Financial SME domain — specialist_config and orchestrator directive`
+
+**QG criteria:** Financial SME domain loadable. Skill_loader confirmed to
+find the three skill files. Financial orchestrator directive contains
+delegation instructions for all three skills.
+
+---
+
 ## Complete Execution Sequence
 
-22 tasks in execution order. Each requires Yasser's approval before starting.
+29 tasks in execution order. Each requires Yasser's approval before starting.
 Each requires QG PASS before the next begins. **Tasks B2–B_code3 must execute
-in a single uninterrupted session (see Broken Window Rule).**
+in a single uninterrupted session (see Broken Window Rule). Part D tasks are
+executed by Strategic Partner — see Part D execution model.**
 
-| Order | Task | File(s) | Type | Notes |
-|---|---|---|---|---|
-| 1 | A1.1 | notice_and_instruction_compliance.md | Fix | Critical — broken reference |
-| 2 | A1.2 | entitlement_basis.md | Fix | Critical — broken reference |
-| 3 | A1.3 | key_dates_and_securities.md | Fix | Critical — broken reference |
-| 4 | A1.4 | programme_assessment.md | Fix | Critical — broken reference |
-| 5 | A3.1 | commercial/directive.md | Fix | Structural — quick |
-| 6 | A4.1 | claims/README.md | Fix | Minimal — retirement in B4 |
-| 7 | A2.1 | notice_and_instruction_compliance.md + notice_compliance.md | Fix | Must precede B3 move |
-| 8 | A7.1 | governance_establishment.md | Fix | Independent |
-| 9 | A8.1 | evm_and_cost_reporting.md | Fix | Independent |
-| 10 | A6.1 | All 23 SME files | Fix | Approved exception — must precede B2/B3 |
-| 11 | A5.1 | synthesis_directive.md | Create | New file — Part A complete |
-| 12 | B1 | 6 schedule skill headers | Update | Rename domain before files arrive |
-| 13 | B2 | eot_quantification, prolongation_cost, disruption | Move | git mv — BEGIN broken window session |
-| 14 | B3 | notice_compliance, dispute_resolution_procedure | Move | git mv |
-| 15 | B4 | claims/README.md | Retire | After moves confirmed |
-| 16 | B_schema | claims + schedule grounding_schema.json | Update/Delete | — |
-| 17 | B5 | All 3 orchestrator directives | Update | After all moves confirmed; absorbs A2.2 |
-| 18 | B_code1 | specialist_config.py | Fix | Remove claims entry |
-| 19 | B_code2 | prompts.py | Fix | Remove claims_disputes from ALL_DOMAINS and router prompt |
-| 20 | B_code3 | orchestrator.py | Fix | Remove claims routing — END broken window session |
-| 21 | B6 | CLAUDE.md | Update | After all structural changes |
-| 22 | B7 | docs/C1_MASTER_PLAN.md | Update | Final — closes the workstream |
+| Order | Task | File(s) | Executor | Type | Notes |
+|---|---|---|---|---|---|
+| 1 | A1.1 | notice_and_instruction_compliance.md | Claude Code | Fix | Critical — broken reference |
+| 2 | A1.2 | entitlement_basis.md | Claude Code | Fix | Critical — broken reference |
+| 3 | A1.3 | key_dates_and_securities.md | Claude Code | Fix | Critical — broken reference |
+| 4 | A1.4 | programme_assessment.md | Claude Code | Fix | Critical — broken reference |
+| 5 | A3.1 | commercial/directive.md | Claude Code | Fix | Structural — quick |
+| 6 | A4.1 | claims/README.md | Claude Code | Fix | Minimal — retirement in B4 |
+| 7 | A2.1 | notice_and_instruction_compliance.md + notice_compliance.md | Claude Code | Fix | Must precede B3 move |
+| 8 | A7.1 | governance_establishment.md | Claude Code | Fix | Independent |
+| 9 | A8.1 | evm_and_cost_reporting.md | Claude Code | Fix | Independent |
+| 10 | A6.1 | All 23 SME files | Claude Code | Fix | Approved exception — must precede B2/B3 |
+| 11 | A5.1 | synthesis_directive.md | Claude Code | Create | New file — Part A complete |
+| 12 | B1 | 6 schedule skill headers | Claude Code | Update | Rename domain before files arrive |
+| 13 | B2 | eot_quantification, prolongation_cost, disruption | Claude Code | Move | git mv — BEGIN broken window session |
+| 14 | B3 | notice_compliance, dispute_resolution_procedure | Claude Code | Move | git mv |
+| 15 | B4 | claims/README.md | Claude Code | Retire | After moves confirmed |
+| 16 | B_schema | claims + schedule grounding_schema.json | Claude Code | Update/Delete | — |
+| 17 | B5 | All 3 orchestrator directives | Claude Code | Update | After all moves confirmed; absorbs A2.2 |
+| 18 | B_code1 | specialist_config.py | Claude Code | Fix | Remove claims entry |
+| 19 | B_code2 | prompts.py | Claude Code | Fix | Remove claims_disputes from ALL_DOMAINS and router prompt |
+| 20 | B_code3 | orchestrator.py | Claude Code | Fix | Remove claims routing — END broken window session |
+| 21 | C1 | eot_quantification.md | Claude Code | Fix | Methodology appropriateness + As-Built Critical Path |
+| 22 | C2 | delay_identification.md | Claude Code | Fix | Forensic four-way classification |
+| 23 | D1 | cost_control_assessment.md | Strategic Partner | Create | Full skill draft — SP reads c1-skill-authoring first |
+| 24 | D2 | contingency_management_assessment.md | Strategic Partner | Create | Full skill draft |
+| 25 | D3 | lender_and_funder_compliance.md | Strategic Partner | Create | Full skill draft |
+| 26 | D4 | financial/grounding_schema.json | Strategic Partner | Create | SP drafts, Claude Code commits |
+| 27 | D5 | specialist_config.py + financial/directive.md | Claude Code | Fix | Code wiring — loading path confirmed at execution time |
+| 28 | B6 | CLAUDE.md | Claude Code | Update | After all parts complete |
+| 29 | B7 | docs/C1_MASTER_PLAN.md | Claude Code | Update | Final — closes the workstream |
 
 **Ordering rationale:**
 - 1–4: Critical broken references — fix before any Legal domain query runs
@@ -1116,26 +1592,31 @@ in a single uninterrupted session (see Broken Window Rule).**
 - 11: New file — Part A closes cleanly
 - 12: Domain label renamed before incoming files arrive
 - 13–20: Single session — file moves, schema, orchestrators, code all resolved without interruption
-- 21–22: Governing documents always last
+- 21–22: Part C skill content improvements — structure settled, before governing documents
+- 23–27: Part D new Financial SME skills — Strategic Partner drafts in sequence, code wiring last
+- 28–29: Governing documents always last — updated with the complete final state of all four parts
 
 ---
 
 ## End State
 
-After all 22 tasks complete and are verified:
+After all 29 tasks complete and are verified:
 
-**Skill file inventory (27 files):**
+**Skill file inventory (31 files):**
 - 3 orchestrator directives + 1 synthesis directive
 - Legal SME: 7 skills
-- Delay and Cost Analytics SME: 9 skills (complete unbroken chain)
+- Delay and Cost Analytics SME: 9 skills (complete unbroken chain, forensically complete assessment)
 - Technical SME: 6 skills (unchanged)
 - Compliance SME: 6 skills (unchanged)
+- Financial SME: 3 skills (new domain — cost control, contingency, lender compliance)
 
-**Backend domain routing (5 active domains):**
+**Backend domain routing (5 active domains + 1 new Financial SME domain):**
 `legal_contractual` → `legal` | `commercial_financial` → `commercial` |
 `financial_reporting` → `financial` | `schedule_programme` → `schedule` |
 `technical_construction` → `technical`
 (claims_disputes removed from ALL_DOMAINS and DOMAIN_TO_CONFIG_KEY)
+Financial SME domain: loaded by Financial orchestrator delegation — not
+router-accessible directly.
 
 **Continuous analytical chain — Delay and Cost Analytics SME:**
 ```
@@ -1145,6 +1626,22 @@ Programme Assessment → Delay Identification → Critical Path Analysis
 ```
 One domain. No artificial boundary.
 
+**Delay assessment quality:**
+- `eot_quantification.md`: assesses whether methodology was applied correctly
+  AND whether it was the right choice for project conditions. As-Built
+  Critical Path included as a named methodology.
+- `delay_identification.md`: outputs both contractual classification and the
+  standard forensic four-way classification (Excusable Compensable /
+  Excusable Non-Compensable / Non-Excusable / Concurrent), bridged explicitly.
+
+**Project finance assessment (new):**
+- `cost_control_assessment.md`: EAC credibility, committed vs incurred vs
+  forecast cost tracking, cost control system adequacy.
+- `contingency_management_assessment.md`: drawdown governance, remaining
+  adequacy relative to known risks, DOA compliance link.
+- `lender_and_funder_compliance.md`: covenant compliance, drawdown conditions,
+  LTA reporting obligations, reported vs actual discrepancies.
+
 **All 8 expert examination issues resolved.**
 
 ---
@@ -1153,8 +1650,8 @@ One domain. No artificial boundary.
 
 | Field | Value |
 |---|---|
-| Version | 2.1 |
+| Version | 2.3 |
 | Date | April 2026 |
 | Status | Active |
-| Supersedes | Enhancement Plan v1.0, v2.0 |
+| Supersedes | Enhancement Plan v1.0, v2.0, v2.1, v2.2 |
 | Location | `docs/C1_Orchestrators_and_SMEs_enhancement.md` |
