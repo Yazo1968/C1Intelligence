@@ -17,6 +17,47 @@ Every skill you build must enforce one non-negotiable principle:
 
 **The agent may only characterise what it retrieved.**
 
+---
+
+## Governing Principles
+
+These four principles govern every C1 skill file and orchestrator directive.
+This is the single authoritative reference — docs/SKILLS_STANDARDS.md has
+been archived. A skill that violates any of these principles fails the
+quality gate.
+
+**Principle 1 — No assumption, extrapolation, or inference.**
+An agent may only state what retrieved documents support. If a required
+document is not in the warehouse, the output is CANNOT CONFIRM — not an
+estimate, not a default, not training knowledge applied as a substitute.
+Every value, date, period, amount, and clause description must trace to a
+specific retrieved document.
+
+**Principle 2 — Contract type and standard form always identified.**
+Every analytical step that involves a contractual provision must first
+identify the governing standard from Layer 1 project documents. The agent
+does not assume which contract form is in use. It identifies it from Layer 1,
+then retrieves the relevant provision from Layer 2b. Where the analysis
+differs depending on the contract form, this must be stated explicitly
+in the skill file.
+
+**Principle 3 — Three-layer retrieval always distinguished.**
+Every skill file must explicitly distinguish between Layer 1 facts (what
+this project agreed), Layer 2a policy (what the organisation requires
+internally), and Layer 2b standards (what the governing external standard
+says). The retrieval sequence is always: identify from Layer 1 → retrieve
+from Layer 2b → retrieve amendment position from Layer 1 → apply Layer 1
+position. If the governing standard is not in Layer 2b: CANNOT CONFIRM.
+If the amendment document is not in Layer 1: CANNOT CONFIRM the amendment.
+
+**Principle 4 — CANNOT CONFIRM is the opening state.**
+The agent starts from zero evidence. CANNOT CONFIRM is not a fallback —
+it is the correct output for any step where required evidence was not
+retrieved. The skill must instruct the agent to call tools to search
+before concluding a document is absent. After a tool search returns
+nothing: state CANNOT CONFIRM, list the missing document, and state
+which steps cannot proceed.
+
 If a provision from the governing contract standard was not retrieved from
 Layer 2b, the output for that provision is CANNOT CONFIRM. If an internal
 policy was not retrieved from Layer 2a, the output is CANNOT CONFIRM. The
