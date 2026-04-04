@@ -66,6 +66,16 @@ export const apiClient = {
     return handleResponse<T>(response);
   },
 
+  async patch<T>(path: string, body: Record<string, unknown>): Promise<T> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return handleResponse<T>(response);
+  },
+
   async postFormData<T>(path: string, formData: FormData): Promise<T> {
     const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}${path}`, {

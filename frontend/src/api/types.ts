@@ -143,3 +143,52 @@ export interface ApiError {
   document_id?: string;
   query_id?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Governance
+// ---------------------------------------------------------------------------
+
+export interface GovernanceRunResponse {
+  run_id: string;
+  project_id: string;
+  run_type: 'full' | 'incremental';
+  status: string;
+  triggered_at: string;
+}
+
+export interface GovernanceStatusResponse {
+  project_id: string;
+  status: 'not_established' | 'established' | 'stale';
+  last_run_at: string | null;
+  last_run_id: string | null;
+  events_confirmed: number;
+  events_flagged: number;
+  events_inferred: number;
+}
+
+export interface GovernanceEventResponse {
+  id: string;
+  project_id: string;
+  event_type: 'appointment' | 'delegation' | 'termination' | 'replacement' | 'modification' | 'suspension';
+  effective_date: string;
+  end_date: string | null;
+  party_id: string;
+  role: string;
+  appointed_by_party_id: string | null;
+  authority_dimension: 'layer_1' | 'layer_2a' | 'layer_2b';
+  contract_source: string | null;
+  scope: string | null;
+  terminus_node: boolean;
+  source_document_id: string | null;
+  extraction_status: 'confirmed' | 'flagged' | 'inferred';
+  created_at: string;
+}
+
+export interface GovernanceEventUpdateRequest {
+  extraction_status: 'confirmed' | 'flagged' | 'inferred';
+  role?: string;
+  effective_date?: string;
+  end_date?: string;
+  scope?: string;
+  contract_source?: string;
+}

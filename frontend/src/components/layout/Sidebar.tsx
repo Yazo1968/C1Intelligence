@@ -4,6 +4,7 @@ const navItems = [
   { label: 'Documents', tab: 'documents' },
   { label: 'Query', tab: 'query' },
   { label: 'Contradictions', tab: 'contradictions' },
+  { label: 'Governance', tab: 'governance' },
 ];
 
 interface SidebarProps {
