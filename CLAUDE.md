@@ -118,7 +118,9 @@ state. `list_migrations` for applied migrations.
 **Skill authoring:** All skill files authored using `skills/c1-skill-authoring/`.
 Read this skill before building or rebuilding any file under `skills/`.
 
-**Skill files:** 3 orchestrator directives + 17 SME skill files = 20 files total.
+**Skill files:** 3 orchestrator directives + 23 SME skill files = 26 files total.
+Legal orchestrator renamed Legal & Compliance. engineer_identification.md retired.
+6 Compliance SME skill files live under skills/smes/compliance/.
 All require the Evidence Declaration block in their output format.
 
 ---
