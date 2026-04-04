@@ -1,0 +1,11 @@
+{
+  "skill_group": "compliance_sme",
+  "layer2b_required": true,
+  "layer2a_required": true,
+  "layer1_amendment_document_required": false,
+  "confidence_cap_without_layer2b": "AMBER",
+  "confidence_cap_without_layer2a": "AMBER",
+  "governance_event_log_required": true,
+  "confidence_cap_without_governance": "GREY",
+  "description": "Compliance SME requires Layer 2b standard form provisions for role definitions and appointment requirements, and Layer 2a DOA framework for internal authority assessment. Governance event log must be established and user-confirmed before any compliance investigation query proceeds. Without governance: confidence is GREY and investigation cannot proceed. Without Layer 2b: confidence capped at AMBER, role definitions from Layer 1 text only. Without Layer 2a: confidence capped at AMBER, DOA assessment cannot be completed."
+}
