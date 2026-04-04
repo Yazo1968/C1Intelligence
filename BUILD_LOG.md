@@ -937,3 +937,23 @@ Status: COMPLETE
 Commit: d487ffb
 Migration applied: 017_evidence_records — evidence_records JSONB column added to query_log.
 Changes: audit.py write_audit_log() accepts evidence_records parameter. orchestrator.py _collect_evidence_records() helper serialises EvidenceRecord objects. Step 11 passes evidence records to audit log write. GREY path unchanged.
+
+## Session — April 2026 (Phase 6 discussion — Compliance Feature)
+
+Task: Compliance Feature Plan — discussion and drafting
+Status: DRAFT — not approved for execution
+Document: docs/C1_COMPLIANCE_FEATURE_PLAN.md v0.2
+
+Key decisions made this session:
+- Party ID resolution expanded into a full Compliance Feature covering dynamic authority matrix across all three warehouse layers (Layer 1 contractual, Layer 2a internal DOA, Layer 2b statutory)
+- Authority model is an event log (not a snapshot org chart) — appointment, delegation, termination, replacement, modification, suspension events each with source document and effective date
+- Authority structure is a directed graph with downward authority, upward standing, and terminus nodes
+- Governance establishment is a user-triggered prerequisite before compliance-dependent queries
+- Legal orchestrator renamed to Legal & Compliance — synthesises legal SME and Compliance SME outputs via AI (BaseOrchestrator), not client-side code
+- engineer_identification.md retired — party and role identification moves entirely to Compliance SME
+- Compliance SME has 6 skill files: party_and_role_identification, governance_establishment, signatory_validation, doa_compliance, statutory_authority_mapping, compliance_investigation
+- Compliance SME feeds Legal & Compliance (primary), Commercial, Financial, and Technical orchestrators
+- Governance page added to frontend with event log table, trigger button, user review workflow, and governance readiness indicator
+- Org chart visualisation deferred to future phase
+
+No code changes this session. No migrations. Plan is in discussion — execution requires product approval.
