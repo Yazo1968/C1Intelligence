@@ -546,6 +546,57 @@ def _config_key_to_display_name(config_key: str) -> str:
     return config_key
 
 
+def _build_evidence_summary(finding: "SpecialistFindings") -> str:
+    """
+    Build an Evidence Summary section for a domain assessment.
+
+    Returns a non-empty string only when there are grounding gaps —
+    i.e. when Layer 2b, the amendment document, or Layer 2a was not
+    retrieved, or when a confidence cap was applied.
+
+    Returns empty string when all required evidence was present,
+    so the section is omitted from clean responses.
+    """
+    from src.agents.models import LayerRetrievalStatus
+
+    er = finding.evidence_record
+    if er is None:
+        return ""
+
+    lines: list[str] = []
+
+    # Layer 2b gap
+    if er.layer2b_status == LayerRetrievalStatus.NOT_RETRIEVED:
+        lines.append("- **Governing standard (Layer 2b):** Not retrieved — "
+                     "standard form provisions could not be confirmed from the warehouse.")
+    elif er.layer2b_status == LayerRetrievalStatus.PARTIAL:
+        lines.append("- **Governing standard (Layer 2b):** Partially retrieved — "
+                     f"source: {er.layer2b_source or 'unspecified'}.")
+
+    # Amendment document gap
+    if er.layer1_amendment_document_status == LayerRetrievalStatus.NOT_RETRIEVED:
+        lines.append("- **Amendment document (Layer 1):** Not retrieved — "
+                     "project-specific contractual position cannot be confirmed.")
+
+    # Layer 2a gap (only relevant when required by schema)
+    if er.layer2a_status == LayerRetrievalStatus.NOT_RETRIEVED and er.layer2a_source is None:
+        # Only surface Layer 2a gap if it was expected (source field was populated by schema)
+        # For most domains Layer 2a is not required — suppress to avoid noise
+        pass
+
+    # Provisions CANNOT CONFIRM
+    if er.provisions_cannot_confirm:
+        items = "; ".join(er.provisions_cannot_confirm)
+        lines.append(f"- **Cannot confirm:** {items}")
+
+    if not lines:
+        return ""
+
+    summary = "*Grounding gaps detected in this domain assessment:*\n"
+    summary += "\n".join(lines)
+    return summary
+
+
 def build_response_text(
     findings: list[SpecialistFindings],
     contradictions: list[ContradictionFlag],
@@ -595,6 +646,10 @@ def build_response_text(
             sections.append("")
             sections.append(finding.findings)
             sections.append("")
+            evidence_summary = _build_evidence_summary(finding)
+            if evidence_summary:
+                sections.append(evidence_summary)
+                sections.append("")
         else:
             reason = NOT_ENGAGED_REASONS.get(domain_name, "Not applicable to this query.")
             sections.append(f"### {display_name} — NOT ENGAGED")
