@@ -93,6 +93,63 @@ not the user's raw query.
 
 ---
 
+## Compliance SME Invocation
+
+The Financial Orchestrator invokes the Compliance SME for any query that
+requires confirmation of internal DOA compliance or signatory authority
+before a financial assessment can be completed.
+
+**Invoke the Compliance SME when:**
+- The query requires confirmation that a payment certificate, payment
+  approval, or payment instruction was authorised at the correct internal
+  DOA authority level
+- The query requires confirmation that an individual who signed or approved
+  a financial document had authority to do so on the date of signing
+- The query requires confirmation that a contract award, budget approval,
+  or procurement decision was made at the correct authority level under
+  the applicable DOA framework
+- The query requires confirmation that a variation approval with financial
+  value was authorised at the correct DOA level
+
+**How to invoke:**
+Route through `compliance_investigation.md`. Specify the decision type,
+decision value, approver, and date. For DOA compliance queries, route
+specifically through `doa_compliance.md`. The Compliance SME will return
+a finding of DOA COMPLIANT, DOA NON-COMPLIANT, or CANNOT CONFIRM.
+
+**Governance readiness:**
+Before invoking the Compliance SME, check governance readiness:
+- Not established: advise the user that DOA compliance cannot be confirmed
+  until governance is established. Proceed with the financial assessment
+  but qualify every finding that depends on authority confirmation as
+  conditional.
+- Established: proceed.
+- Stale: proceed with warning that DOA compliance findings may be incomplete.
+
+---
+
+## Compliance Integration
+
+When the Compliance SME has been invoked, integrate its findings into the
+financial assessment as follows:
+
+- If DOA COMPLIANT: the financial finding stands as assessed. Note the
+  confirmed authority level in the assessment.
+- If DOA NON-COMPLIANT: qualify the financial finding. A payment, approval,
+  or procurement decision made below the required authority level is a
+  material compliance finding regardless of whether the underlying financial
+  assessment is correct. State which authority condition was not met and
+  what the financial exposure or audit risk is.
+- If AUTHORITY CHALLENGED on a signatory: qualify the financial finding.
+  A payment certificate or financial approval signed by an individual
+  without confirmed authority may be invalid regardless of its financial
+  accuracy. State what authority gap has been identified.
+- If CANNOT CONFIRM: state that the financial finding is conditional on
+  governance confirmation. Identify what DOA framework information or
+  governance event is missing.
+
+---
+
 ## Output Structure
 
 Address the following in order. Omit any section where no relevant
