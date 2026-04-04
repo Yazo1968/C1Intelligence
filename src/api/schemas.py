@@ -157,3 +157,70 @@ class ContradictionResponse(BaseModel):
 # ---------------------------------------------------------------------------
 class HealthResponse(BaseModel):
     status: str = "ok"
+
+
+# ---------------------------------------------------------------------------
+# Governance
+# ---------------------------------------------------------------------------
+class GovernanceRunRequest(BaseModel):
+    run_type: str = Field(default="full", pattern="^(full|incremental)$")
+
+
+class GovernanceRunResponse(BaseModel):
+    run_id: uuid.UUID
+    project_id: uuid.UUID
+    run_type: str
+    status: str
+    triggered_at: datetime
+
+
+class GovernanceStatusResponse(BaseModel):
+    project_id: uuid.UUID
+    status: str  # not_established | established | stale
+    last_run_at: datetime | None
+    last_run_id: uuid.UUID | None
+    events_confirmed: int
+    events_flagged: int
+    events_inferred: int
+
+
+class GovernanceEventResponse(BaseModel):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    event_type: str
+    effective_date: date
+    end_date: date | None
+    party_id: uuid.UUID
+    role: str
+    appointed_by_party_id: uuid.UUID | None
+    authority_dimension: str
+    contract_source: str | None
+    scope: str | None
+    terminus_node: bool
+    source_document_id: uuid.UUID | None
+    extraction_status: str
+    created_at: datetime
+
+
+class GovernanceEventUpdateRequest(BaseModel):
+    extraction_status: str = Field(pattern="^(confirmed|flagged|inferred)$")
+    role: str | None = None
+    effective_date: date | None = None
+    end_date: date | None = None
+    scope: str | None = None
+    contract_source: str | None = None
+
+
+class GovernanceEventCreateRequest(BaseModel):
+    event_type: str = Field(pattern="^(appointment|delegation|termination|replacement|modification|suspension)$")
+    effective_date: date
+    end_date: date | None = None
+    party_id: uuid.UUID
+    role: str
+    appointed_by_party_id: uuid.UUID | None = None
+    authority_dimension: str = Field(pattern="^(layer_1|layer_2a|layer_2b)$")
+    contract_source: str | None = None
+    scope: str | None = None
+    terminus_node: bool = False
+    source_document_id: uuid.UUID | None = None
+    extraction_status: str = Field(default="confirmed", pattern="^(confirmed|flagged|inferred)$")
