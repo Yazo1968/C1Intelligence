@@ -316,6 +316,6 @@ The user review step exists precisely because the Compliance SME cannot
 determine from documents alone whether an inferred event represents a
 real authority act or a misreading of context.
 
-*Governed by SKILLS_STANDARDS.md v2.0. Form-agnostic — applies to any
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to any
 contract form. All characterisations grounded in retrieved warehouse
 documents only.*

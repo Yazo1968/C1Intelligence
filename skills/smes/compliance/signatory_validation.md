@@ -331,6 +331,6 @@ provision in the retrieved standard form — this skill does not
 characterise those consequences. It establishes the factual position;
 legal SMEs draw the legal conclusions.
 
-*Governed by SKILLS_STANDARDS.md v2.0. Form-agnostic — applies to any
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to any
 contract form. All characterisations grounded in retrieved warehouse
 documents only.*

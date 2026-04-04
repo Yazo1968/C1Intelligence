@@ -296,6 +296,6 @@ title means in the context of the applicable standard form. This prevents
 the agent from applying training knowledge about what "Engineer" means
 under FIDIC when the project may use NEC4, JCT, or a bespoke contract.
 
-*Governed by SKILLS_STANDARDS.md v2.0. Form-agnostic — applies to any
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to any
 contract form. All characterisations grounded in retrieved warehouse
 documents only.*

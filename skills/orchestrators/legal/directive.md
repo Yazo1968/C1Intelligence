@@ -234,6 +234,6 @@ characterise from training knowledge. Synthesis of legal and compliance
 findings must be explicit about how they interact — never present them
 as independent parallel assessments.
 
-*Governed by SKILLS_STANDARDS.md v2.0. Form-agnostic — applies to any
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to any
 contract form. All characterisations grounded in retrieved warehouse
 documents only.*

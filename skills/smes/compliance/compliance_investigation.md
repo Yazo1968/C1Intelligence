@@ -361,6 +361,6 @@ instrument. Without the governance event log, any such finding is based
 on assumption, not evidence. The correct output in that case is CANNOT
 CONFIRM with a clear instruction to establish governance first.
 
-*Governed by SKILLS_STANDARDS.md v2.0. Form-agnostic — applies to any
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to any
 contract form. All characterisations grounded in retrieved warehouse
 documents only.*
