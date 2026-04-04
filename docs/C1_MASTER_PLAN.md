@@ -242,7 +242,7 @@ Convert to a lightweight (max 100 lines) human-readable reference that:
 
 ---
 
-## Phase 5 — Code Enforcement: EvidenceRecord and Grounding Schemas
+## Phase 5 — Code Enforcement: EvidenceRecord and Grounding Schemas ✅ COMPLETE
 
 **Priority:** Medium (Phase 4 provides prompt-level guardrails; Phase 5
 makes them code-enforced)
@@ -317,12 +317,14 @@ that do not interact with the intelligence layer)
 | `skills/smes/technical/site_execution.md` | FIDIC-specific | Phase 4 ✅ d38e42e |
 | `skills/smes/technical/specification_compliance.md` | FIDIC-specific | Phase 4 ✅ 83240db |
 | `skills/smes/technical/testing_and_commissioning.md` | FIDIC-specific | Phase 4 ✅ 5fd82b4 |
-| `src/agents/models.py` | Missing EvidenceRecord | Phase 5 |
-| `src/agents/base_specialist.py` | No validation | Phase 5 |
-| `src/agents/base_orchestrator.py` | No validation | Phase 5 |
-| `src/agents/skill_loader.py` | No schema loading | Phase 5 |
-| New `grounding_schema.json` files | Do not exist | Phase 5 |
-| Migration 017 | Does not exist | Phase 5 |
+| `src/agents/models.py` | Missing EvidenceRecord | Phase 5 ✅ d1252e6 |
+| `src/agents/base_specialist.py` | No validation | Phase 5 ✅ 0e69fc6 |
+| `src/agents/base_orchestrator.py` | No validation | Phase 5 ✅ 41b9c84 |
+| `src/agents/skill_loader.py` | No schema loading | Phase 5 ✅ 1aafbcd |
+| New `grounding_schema.json` files | Do not exist | Phase 5 ✅ dcef002 |
+| `src/agents/orchestrator.py` | No evidence surfacing | Phase 5 ✅ 33d3e08 |
+| `src/agents/audit.py` | No evidence_records column | Phase 5 ✅ d487ffb |
+| Migration 017 | Does not exist | Phase 5 ✅ d487ffb (applied) |
 | `docs/C1_REMAINING_WORK.md` | Outdated | Superseded by this plan |
 | `docs/C1_INTELLIGENCE_GROUNDING_PLAN.md` | Symptom-level | Superseded, move to archive |
 | `docs/C1_PHASE2_PLAN.md` | Outdated | Superseded, move to archive |

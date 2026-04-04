@@ -899,3 +899,41 @@ Task: Rebuild skills/smes/technical/testing_and_commissioning.md — form-agnost
 Status: COMPLETE
 Commit: 5fd82b4
 Changes: "Taking-Over Certificate" → "completion certificate". "DNP" → "defects liability period". "Performance Certificate" → "final certificate". Clauses 9, 10, 11 removed, replaced with Layer 2b subject-matter searches. GCC authority inspections section removed. Evidence Declaration block added.
+
+## Session — April 2026 (Phase 5 — Code Enforcement)
+
+Task: Add EvidenceRecord model to src/agents/models.py
+Status: COMPLETE
+Commit: d1252e6
+Changes: LayerRetrievalStatus enum (RETRIEVED/NOT_RETRIEVED/PARTIAL). EvidenceRecord model tracking Layer 2b/2a/1 retrieval status, sources, and provisions_cannot_confirm list. evidence_record field added to SpecialistFindings.
+
+Task: Add load_grounding_schema() to src/agents/skill_loader.py
+Status: COMPLETE
+Commit: 1aafbcd
+Changes: New method loads grounding_schema.json from skill group directory using same resolution order as load(). Returns parsed JSON or None. Non-fatal on absence.
+
+Task: Create grounding_schema.json for all skill groups
+Status: COMPLETE
+Commit: dcef002
+Changes: 7 JSON files created — skills/orchestrators/legal/, commercial/, financial/ and skills/smes/legal/, claims/, schedule/, technical/. Each defines layer2b_required, layer2a_required, layer1_amendment_document_required, and confidence cap rules. Technical SME uses AMBER (not GREY) for missing amendment document.
+
+Task: BaseSpecialist parses Evidence Declaration and caps confidence
+Status: COMPLETE
+Commit: 0e69fc6
+Changes: __init__ loads grounding schema. _parse_findings() passes output through _validate_evidence_and_cap_confidence(). Three new methods: _parse_evidence_declaration() (regex parser), _apply_confidence_cap() (GREY > RED > AMBER > GREEN ordering), _validate_evidence_and_cap_confidence() (orchestrates both).
+
+Task: BaseOrchestrator parses Evidence Declaration and caps confidence
+Status: COMPLETE
+Commit: 41b9c84
+Changes: Identical changes to base_orchestrator.py — grounding schema loaded, _parse_findings() patched, same three new methods added for Tier 1 orchestrators.
+
+Task: Evidence Summary section in query response
+Status: COMPLETE
+Commit: 33d3e08
+Changes: New _build_evidence_summary() function in orchestrator.py. Appended to domain assessment block in build_response_text() only when grounding gaps exist (Layer 2b not retrieved, amendment document not retrieved, or provisions_cannot_confirm populated). Returns empty string on clean responses.
+
+Task: Migration 017 + audit.py + orchestrator.py — evidence_records persisted to query_log
+Status: COMPLETE
+Commit: d487ffb
+Migration applied: 017_evidence_records — evidence_records JSONB column added to query_log.
+Changes: audit.py write_audit_log() accepts evidence_records parameter. orchestrator.py _collect_evidence_records() helper serialises EvidenceRecord objects. Step 11 passes evidence records to audit log write. GREY path unchanged.
