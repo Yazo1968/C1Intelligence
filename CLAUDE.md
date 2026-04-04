@@ -134,6 +134,7 @@ All require the Evidence Declaration block in their output format.
 - Railway Dockerfile builder; `sh -c 'uvicorn src.api.main:app --host 0.0.0.0 --port $PORT'`
 - Railway Pro plan required
 - Vercel Vite/React (NOT Next.js); root dir: `frontend/`
+- Frontend is Vite/React — NOT Next.js. Never add "use client" directives. Never use Next.js APIs, routing, or conventions.
 - CORS locked to `https://c1intelligence.vercel.app`
 - `claude-sonnet-4-6` — no LangChain, no LangGraph, no LlamaIndex
 - `DOMAIN_TO_CONFIG_KEY`: `legal_contractual→legal`, `commercial_financial→commercial`,
