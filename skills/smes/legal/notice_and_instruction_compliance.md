@@ -34,7 +34,11 @@ valid notice.
 ## Before you begin
 
 ### Foundational requirements
-Read contract_assembly and engineer_identification findings first.
+Read contract_assembly findings first. Contract administrator identity
+and notice routing are established by the Compliance SME
+(`party_and_role_identification.md`). Read those findings before
+proceeding if governance has been established; if not, flag that
+notice routing compliance cannot be confirmed.
 
 From contract_assembly extract:
 - Confirmed standard form and version — required before any notice
@@ -42,7 +46,7 @@ From contract_assembly extract:
 - Amendment provisions affecting notice requirements or time bar periods
 - Governing law and jurisdiction
 
-From engineer_identification extract:
+From party_and_role_identification findings extract:
 - Identity of the contract administrator
 - Notice routing — which entity receives which category of notice
 - Split-role pattern (if any)
@@ -128,7 +132,7 @@ Extract from the retrieved contract data. Do not assume any address
 or delivery method.
 
 **(d) Notice recipient:**
-From engineer_identification findings: confirm the entity to whom
+From party_and_role_identification findings: confirm the entity to whom
 notices must be routed under the confirmed standard form and the
 retrieved amendment document.
 
@@ -202,7 +206,7 @@ Common requirements to assess from retrieved documents:
   is present in the retrieved amendment document or standard form
   provision)
 - Delivery method (compare against contract data)
-- Recipient (compare against engineer_identification findings)
+- Recipient (compare against party_and_role_identification findings)
 - Identification of the event (confirm from the notice content)
 - Contractual clause cited (confirm from the notice content)
 
@@ -278,7 +282,7 @@ conclude absence without exhausting search
 Notice addressed to confirmed contract administrator → CORRECT ROUTING
 Notice addressed to incorrect party per confirmed standard form →
 DEFECTIVE — WRONG RECIPIENT — state correct recipient and source
-Recipient cannot be confirmed (engineer_identification findings
+Recipient cannot be confirmed (party_and_role_identification findings
 incomplete) → CANNOT CONFIRM routing compliance
 
 ---
@@ -387,7 +391,7 @@ Notice period: [value from retrieved amendment document and contract
 data / CANNOT CONFIRM — amendment document not retrieved]
 Source: [amendment document reference and clause / NOT RETRIEVED]
 Delivery method required: [from retrieved contract data / CANNOT CONFIRM]
-Notice recipient: [from engineer_identification findings / CANNOT CONFIRM]
+Notice recipient: [from party_and_role_identification findings / CANNOT CONFIRM]
 Formal requirements: [from retrieved amendment document and Layer 2b /
 CANNOT CONFIRM]
 
