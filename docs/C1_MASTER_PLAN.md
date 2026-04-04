@@ -353,3 +353,24 @@ At the close of every session:
 | Version | 1.0 |
 | Date | April 2026 |
 | Supersedes | C1_INTELLIGENCE_GROUNDING_PLAN.md, C1_PHASE2_PLAN.md, C1_REMAINING_WORK.md |
+
+---
+
+## Enhancement Plan — Active Workstream
+
+**Status:** Planned — ready for execution
+**Document:** `docs/C1_Orchestrators_and_SMEs_enhancement.md` v2.3
+**Committed:** 190dfb8
+
+29 tasks across 4 parts. No Phases 1–6 work is changed.
+
+| Part | Scope | Tasks | Executor |
+|---|---|---|---|
+| A | Expert examination remediation — 8 issues | 11 | Claude Code |
+| B | Claims SME dissolution + backend code changes | 9 | Claude Code |
+| C | Delay assessment quality improvements | 2 | Claude Code |
+| D | 3 new Financial SME skills | 5 | Strategic Partner drafts |
+| Governing docs | CLAUDE.md + C1_MASTER_PLAN.md | 2 | Claude Code |
+
+End state: 31 skill files, 4 active SME domains, Claims SME dissolved,
+Financial SME domain added. See Enhancement Plan for full task specs.
