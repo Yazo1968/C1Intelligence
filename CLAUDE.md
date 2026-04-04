@@ -141,14 +141,16 @@ All require the Evidence Declaration block in their output format.
 
 ## Database State
 
-**17 migrations applied (001–017):**
+**18 migrations applied (001–018):**
 - 014: `round_number` in `query_log`
 - 015: `SET search_path` on all 5 RPC functions
 - 016: HNSW halfvec(3072) indexes on `document_chunks` and `reference_chunks`
 - 017: `evidence_records` column on `query_log`; EvidenceRecord schema enforcement
+- 018: `governance_parties`, `governance_events`, `governance_run_log` tables
 
-**12 tables** including `query_jobs`, `reference_documents` (with `layer_type`
-2a/2b + `jurisdiction` columns), `contradiction_flags`.
+**15 tables** including `query_jobs`, `reference_documents` (with `layer_type`
+2a/2b + `jurisdiction` columns), `contradiction_flags`, `governance_parties`,
+`governance_events`, `governance_run_log`.
 
 **4 RPC functions:** `search_chunks_semantic`, `search_chunks_fulltext`,
 `search_chunks_reference_semantic`, `search_chunks_reference_fulltext`
