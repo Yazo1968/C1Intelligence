@@ -428,3 +428,7 @@ indicate contractor culpability for delay; above-programme
 deployment may indicate disruption or acceleration. The forensic
 significance depends on the reason for the deviation, which must
 be established from the retrieved contemporaneous records.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

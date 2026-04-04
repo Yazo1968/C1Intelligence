@@ -410,3 +410,7 @@ Where employer-caused and contractor-caused delays overlap on the
 critical path in the same period, concurrent delay principles apply.
 The concurrent period is determined from the retrieved programme
 records — not from the claim submission.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

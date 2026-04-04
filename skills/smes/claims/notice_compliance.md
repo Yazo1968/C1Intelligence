@@ -444,3 +444,7 @@ vary by governing law. Some legal systems apply time bars strictly;
 others apply good faith or other doctrines that may soften strict
 enforcement. The governing law must be confirmed from the retrieved
 contract documents — do not assume a governing law or its approach.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

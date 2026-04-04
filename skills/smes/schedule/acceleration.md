@@ -442,3 +442,7 @@ acceleration and its cost. All three conditions must be established
 from retrieved documents. Retrieve the Protocol from Layer 2b and
 apply its principles only after confirming them against the
 retrieved contract terms.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

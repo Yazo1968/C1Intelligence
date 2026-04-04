@@ -400,3 +400,7 @@ if delays occur. On complex projects, near-critical activities
 require the same attention as critical activities in delay analysis.
 The threshold is a matter of professional judgement applied to the
 project — it is not a fixed number.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

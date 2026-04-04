@@ -174,3 +174,7 @@ conclusions — refer legal matters to the Legal orchestrator. Every FLAG must
 state its commercial implication in one sentence: what financial exposure, right,
 or obligation does it create? If a provision cannot be confirmed from retrieved
 documents, state CANNOT CONFIRM — do not characterise from training knowledge.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

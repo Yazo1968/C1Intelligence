@@ -416,3 +416,7 @@ liability for defects typically ends (subject to any statutory
 long-stop liability under applicable law). Retrieve the period
 and the defects notification mechanism from Layer 2b and the
 amendment document before applying this framework.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

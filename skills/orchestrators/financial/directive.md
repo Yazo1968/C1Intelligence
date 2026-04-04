@@ -192,3 +192,7 @@ orchestrator. Every FLAG must state its financial implication in
 one sentence: what exposure, risk, or obligation does it create?
 If a figure cannot be confirmed from retrieved documents, state
 CANNOT CONFIRM — do not estimate.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

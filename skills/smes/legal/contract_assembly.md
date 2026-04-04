@@ -440,3 +440,7 @@ a letter of acceptance as the contract formation event; others use a
 signed contract agreement; others use a notice to proceed. The mechanism
 applicable to this project must be confirmed from the retrieved documents.
 Do not assume any formation mechanism.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

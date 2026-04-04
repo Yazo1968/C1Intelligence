@@ -515,3 +515,7 @@ on-demand (callable without proof of breach) or conditional (requiring
 proof of breach before calling). The form is stated in the instrument —
 retrieve from Layer 1 to confirm. Do not assume the form from the
 standard form alone.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

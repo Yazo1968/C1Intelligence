@@ -419,3 +419,7 @@ caused by the other party or is within the specified risk category;
 (c) the impact of the event on the programme; and (d) the quantum of
 the cost claimed. The specific elements required depend on the
 provision — retrieve from Layer 2b before assessing.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

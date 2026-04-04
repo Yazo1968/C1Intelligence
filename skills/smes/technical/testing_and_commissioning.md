@@ -496,3 +496,7 @@ tests, and inspection of completed work. The test requirements —
 scope, pass criteria, witnessing requirements, and the consequence
 of failure — are in the contract specification, the ITP, and the
 amendment document. Retrieve before applying.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

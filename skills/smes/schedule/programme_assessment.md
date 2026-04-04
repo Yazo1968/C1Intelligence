@@ -411,3 +411,7 @@ The formal status determines the strength of the programme as a
 baseline for delay analysis. Some standard forms provide for a
 deemed acceptance mechanism — confirm from the retrieved amendment
 document.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

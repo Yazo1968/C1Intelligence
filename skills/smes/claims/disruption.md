@@ -454,3 +454,7 @@ These studies are based on data from particular markets and conditions.
 Application without project-specific adjustment may face challenge.
 Identify the specific study from the retrieved claim documents and
 assess whether any adjustment is documented.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

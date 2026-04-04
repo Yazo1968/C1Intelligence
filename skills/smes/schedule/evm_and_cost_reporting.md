@@ -404,3 +404,7 @@ contracts mandate specific EVM formats and frequencies; others leave
 EVM as an internal or employer reporting tool. The contractual
 obligation (if any) is always stated in the retrieved contract
 documents — extract from Layer 1.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

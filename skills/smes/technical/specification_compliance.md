@@ -444,3 +444,7 @@ edition) and the test certificate references a different standard,
 the test result cannot be used to confirm specification compliance.
 This is a common quality documentation failure — flag when
 identified from retrieved documents.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

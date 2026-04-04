@@ -445,3 +445,7 @@ risk event list significantly compared to others. Amendment documents
 frequently restrict it further. The applicable risk allocation must
 be retrieved from the governing standard form in Layer 2b and
 confirmed against the amendment document in Layer 1.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

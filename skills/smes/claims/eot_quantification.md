@@ -503,3 +503,7 @@ acceptable for simpler projects. Impacted As-Planned is the least
 defensible — it models delay theoretically without reference to
 as-built records. These assessments apply to the methodology
 identified from the retrieved documents.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

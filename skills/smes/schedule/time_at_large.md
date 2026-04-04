@@ -418,3 +418,7 @@ remedy for late completion. The rate and cap are in the Contract
 Data — always extract from Layer 1. Where time is at large, the
 agreed damages mechanism is suspended and the Contractor's
 obligation is to complete within a reasonable time.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

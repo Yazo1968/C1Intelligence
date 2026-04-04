@@ -498,3 +498,7 @@ may appear in the contract. Where no express period is stated, the
 applicable statutory period under the confirmed governing law applies.
 The governing law must be confirmed from the retrieved contract
 documents — do not assume.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*

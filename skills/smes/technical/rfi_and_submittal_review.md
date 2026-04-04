@@ -432,3 +432,7 @@ the governing standard. An RFI response that relaxes a specification
 requirement without a formal variation instruction is a potential
 variation without proper authority. Flag where this pattern is
 identified in retrieved documents.
+
+*Governed by skills/c1-skill-authoring/SKILL.md. Form-agnostic — applies to
+any contract form. All characterisations grounded in retrieved warehouse
+documents only.*
