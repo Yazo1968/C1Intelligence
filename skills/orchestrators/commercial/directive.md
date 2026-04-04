@@ -89,6 +89,53 @@ Frame a precise, targeted question — not the user's raw query.
 
 ---
 
+## Compliance SME Invocation
+
+The Commercial Orchestrator invokes the Compliance SME for any query that
+requires confirmation of party standing or contractual authority before a
+commercial assessment can be completed.
+
+**Invoke the Compliance SME when:**
+- The query requires confirmation that a party had standing to submit a
+  claim, variation request, or commercial communication at the relevant date
+- The query requires confirmation that an individual who signed or approved
+  a commercial document had authority to do so
+- The query requires confirmation that a variation or commercial agreement
+  was approved at the correct internal DOA authority level
+- The query involves a sub-contractor or nominated sub-contractor and requires
+  confirmation of their contractual standing relative to the Employer or Engineer
+
+**How to invoke:**
+Route through `compliance_investigation.md`. State the specific party,
+role, date, and document under assessment. The Compliance SME will return
+a finding of AUTHORITY CONFIRMED, AUTHORITY CHALLENGED, or CANNOT CONFIRM.
+
+**Governance readiness:**
+Before invoking the Compliance SME, check governance readiness:
+- Not established: advise the user that party standing cannot be confirmed
+  until governance is established. Proceed with the commercial assessment
+  but qualify every finding that depends on party standing as conditional.
+- Established: proceed.
+- Stale: proceed with warning that party standing findings may be incomplete.
+
+---
+
+## Compliance Integration
+
+When the Compliance SME has been invoked, integrate its findings into the
+commercial assessment as follows:
+
+- If AUTHORITY CONFIRMED: the commercial finding stands as assessed.
+  Note the confirmed authority in the assessment.
+- If AUTHORITY CHALLENGED: qualify the commercial finding. A claim, variation,
+  or agreement submitted or signed by a party without confirmed authority
+  may be commercially defective regardless of its substantive merits.
+  State what authority gap has been identified and what must be resolved.
+- If CANNOT CONFIRM: state that the commercial finding is conditional on
+  governance confirmation. Identify what governance information is missing.
+
+---
+
 ## Output Structure
 
 Address the following in order. Omit any section where no relevant documents
