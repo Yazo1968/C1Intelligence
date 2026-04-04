@@ -289,7 +289,7 @@ python scripts/ingest_reference.py \
 ├── BUILD_LOG.md
 ├── docs/
 │   ├── C1_MASTER_PLAN.md             ← Active governing plan
-│   ├── SKILLS_STANDARDS.md           ← Warehouse-grounding principles
+│   ├── archive/SKILLS_STANDARDS.md   ← Archived — principles in c1-skill-authoring
 │   └── archive/                      ← Superseded plans
 ├── skills/
 │   ├── c1-skill-authoring/           ← Skill authorship governance
