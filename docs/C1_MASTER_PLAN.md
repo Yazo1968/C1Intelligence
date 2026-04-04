@@ -276,7 +276,7 @@ that do not interact with the intelligence layer)
 
 | Item | Scope | Notes |
 |---|---|---|
-| Compliance feature | Complete ✅ | Migration 018 ✅ e4c0564. 6 Compliance SME skills ✅. Legal & Compliance orchestrator ✅. Commercial + Financial directives ✅. engineer_identification.md retired ✅. 5 API endpoints ✅ 18448da. Governance frontend ✅ 3f64c9b. |
+| Compliance feature | Complete ✅ | Migration 018 ✅ e4c0564. 6 Compliance SME skills ✅ (rebuilt cb2878d — correct SKILL.md structure and Evidence Declaration format). Legal & Compliance orchestrator ✅ (rebuilt 5aa10b5 — correct mandatory structure). Commercial + Financial directives ✅. engineer_identification.md retired ✅. 5 API endpoints ✅ 18448da. Governance frontend ✅ 3f64c9b. grounding_schema.json for Compliance SME ✅ b763f0a. |
 | Approval workflows | Large | Workflow engine, notifications, DOA enforcement |
 | Five user roles and authority matrix | Large | Read/write/query permissions per role |
 | Document control system integration | Large | Aconex, Docutrack ingestion pipeline |
