@@ -276,7 +276,7 @@ that do not interact with the intelligence layer)
 
 | Item | Scope | Notes |
 |---|---|---|
-| Party ID resolution | Medium | Requires parties management API |
+| Party ID resolution / Compliance feature | Medium–Large | Full feature plan in docs/C1_COMPLIANCE_FEATURE_PLAN.md — in discussion, not yet approved |
 | Approval workflows | Large | Workflow engine, notifications, DOA enforcement |
 | Five user roles and authority matrix | Large | Read/write/query permissions per role |
 | Document control system integration | Large | Aconex, Docutrack ingestion pipeline |
