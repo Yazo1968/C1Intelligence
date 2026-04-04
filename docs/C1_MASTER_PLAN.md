@@ -276,7 +276,7 @@ that do not interact with the intelligence layer)
 
 | Item | Scope | Notes |
 |---|---|---|
-| Compliance feature | Medium–Large | Plan approved. Migration 018 ✅ e4c0564. 6 Compliance SME skills ✅. Legal & Compliance orchestrator ✅. Commercial + Financial directives updated ✅. engineer_identification.md retired ✅. Tasks 6.4 (API) and 6.5 (Frontend) remaining. |
+| Compliance feature | Complete ✅ | Migration 018 ✅ e4c0564. 6 Compliance SME skills ✅. Legal & Compliance orchestrator ✅. Commercial + Financial directives ✅. engineer_identification.md retired ✅. 5 API endpoints ✅ 18448da. Governance frontend ✅ 3f64c9b. |
 | Approval workflows | Large | Workflow engine, notifications, DOA enforcement |
 | Five user roles and authority matrix | Large | Read/write/query permissions per role |
 | Document control system integration | Large | Aconex, Docutrack ingestion pipeline |
