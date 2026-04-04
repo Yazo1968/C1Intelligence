@@ -957,3 +957,35 @@ Key decisions made this session:
 - Org chart visualisation deferred to future phase
 
 No code changes this session. No migrations. Plan is in discussion — execution requires product approval.
+
+---
+
+## Session — April 2026 (Phase 6, Compliance Feature — Tasks 6.1–6.3)
+
+**Commits this session:**
+- 1816bec — docs: CLAUDE.md corrected migration count to 17 post Phase 5
+- e4c0564 — feat: migration 018 — governance_parties, governance_events, governance_run_log
+- 3eae681 — feat: compliance SME skill 1/6 — party_and_role_identification
+- 89d19bc — feat: compliance SME skill 2/6 — governance_establishment
+- 892582c — feat: compliance SME skill 3/6 — signatory_validation
+- af161dd — feat: compliance SME skill 4/6 — doa_compliance
+- 9d4570a — feat: compliance SME skill 5/6 — statutory_authority_mapping
+- 2303947 — feat: compliance SME skill 6/6 — compliance_investigation
+- 65303d8 — feat: legal orchestrator → Legal & Compliance, Compliance SME integrated
+- a919b60 — feat: commercial directive — Compliance SME invocation for party standing
+- 33e9be0 — feat: financial directive — Compliance SME invocation for DOA compliance
+- df3e527 — feat: retire engineer_identification.md — party ID moves to Compliance SME
+
+**Completed:**
+- Task 6.1: Migration 018 — governance_parties, governance_events, governance_run_log (18 migrations total, 15 tables)
+- Task 6.2: All 6 Compliance SME skill files created under skills/smes/compliance/
+- Task 6.3: Legal orchestrator renamed Legal & Compliance with full Compliance SME integration; commercial and financial directives updated; engineer_identification.md retired
+
+**Remaining in Phase 6:**
+- Task 6.4: 5 new governance API endpoints
+- Task 6.5: Governance frontend page + dashboard indicator
+
+**Database state at session close:**
+- Supabase: bkkujtvhdbroieffhfok (EU West 1)
+- 18 migrations applied (001–018)
+- 15 tables
