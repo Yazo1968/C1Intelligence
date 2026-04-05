@@ -184,6 +184,7 @@ class BaseOrchestrator:
         anthropic_client = get_anthropic_client()
         messages: list[dict] = [{"role": "user", "content": user_message}]
         tools_called: list[str] = []
+        raw_sme_outputs: list[dict] = []
         tool_round: int = 0
 
         while tool_round <= self._config.max_tool_rounds:
@@ -245,6 +246,11 @@ class BaseOrchestrator:
                     )
 
                     result = execute_tool(tool_name, tool_input, project_id)
+
+                    # Capture raw SME output before it is synthesised into context
+                    if tool_name == "invoke_sme" and not result.get("error"):
+                        raw_sme_outputs.append(result)
+
                     tool_results.append({
                         "type": "tool_result",
                         "tool_use_id": tool_block.id,
@@ -259,7 +265,7 @@ class BaseOrchestrator:
                 for block in response.content:
                     if hasattr(block, "text"):
                         text_content += block.text
-                return self._parse_findings(text_content, tools_called)
+                return self._parse_findings(text_content, tools_called, raw_sme_outputs)
 
             else:
                 logger.warning(
@@ -273,7 +279,7 @@ class BaseOrchestrator:
                         text_content += block.text
 
                 if text_content:
-                    return self._parse_findings(text_content, tools_called)
+                    return self._parse_findings(text_content, tools_called, raw_sme_outputs)
 
                 return self._error_findings(
                     f"Unexpected stop_reason: {response.stop_reason}",
@@ -341,7 +347,7 @@ class BaseOrchestrator:
         return ", ".join(parts) if parts else "Unknown source"
 
     def _parse_findings(
-        self, text: str, tools_called: list[str]
+        self, text: str, tools_called: list[str], raw_sme_outputs: list[dict]
     ) -> SpecialistFindings:
         """
         Parse the orchestrator's text response into SpecialistFindings.
@@ -385,6 +391,7 @@ class BaseOrchestrator:
             round_number=self._config.round_assignment,
             flagged_contradictions=flagged,
         )
+        findings = findings.model_copy(update={"raw_sme_outputs": raw_sme_outputs})
         return self._validate_evidence_and_cap_confidence(findings)
 
     def _error_findings(
