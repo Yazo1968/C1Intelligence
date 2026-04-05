@@ -180,6 +180,14 @@ class SpecialistFindings(BaseModel):
     tools_called: list[str] = Field(
         default_factory=list, description="Tool names called during this run"
     )
+    raw_sme_outputs: list[dict] = Field(
+        default_factory=list,
+        description=(
+            "Raw SME findings dicts captured from invoke_sme tool results. "
+            "Each dict contains: domain, findings, confidence, sources_used. "
+            "Populated deterministically from tool call results in the agentic loop."
+        ),
+    )
     round_number: int = Field(description="1 or 2")
     flagged_contradictions: list[str] = Field(
         default_factory=list, description="contradiction_flag IDs surfaced"
