@@ -17,23 +17,25 @@ logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # SME query templates
+# Requests JSON-only output — no narrative analysis text.
+# The SME uses its tools to retrieve documents, then outputs structured JSON.
+# JSON-only keeps output well within token limits and avoids delimiter issues.
 # ---------------------------------------------------------------------------
 
 PARTY_ID_QUERY = """
-Execute the party and role identification skill for this project.
+Use your search_chunks and get_document tools to retrieve all project contracts
+and related documents: construction contract, appointment letters, delegation
+letters, letters of award, sub-contract agreements, and any correspondence
+naming parties or roles.
 
-Scan all project documents to identify every organisation and individual,
-resolve aliases, and produce the entity registry as described in your skill file.
+After completing your document retrieval, output ONLY a JSON object in the
+following structure. No other text before or after the JSON.
 
-After your complete analysis text, append EXACTLY the following block.
-Use triple-tilde delimiters exactly as shown. Do not omit this block.
-
-~~~json_registry
 {
   "organisations": [
     {
-      "canonical_name": "Full formal legal name",
-      "aliases": ["Alias 1", "Alias 2"],
+      "canonical_name": "Full formal legal name exactly as in the contract",
+      "aliases": ["Short name", "Abbreviation"],
       "contractual_role": "Role title as it appears in the contract",
       "terminus_node": false,
       "confirmation_status": "confirmed"
@@ -49,105 +51,114 @@ Use triple-tilde delimiters exactly as shown. Do not omit this block.
     }
   ]
 }
-~~~json_registry
 
-Rules for the JSON block:
-- confirmation_status: "confirmed" = explicitly named in a retrieved document;
-  "inferred" = deduced from context without an explicit appointment instrument.
-- terminus_node: true = cannot issue contractually binding instructions downward;
+Rules:
+- confirmation_status: "confirmed" = named explicitly in a retrieved document;
+  "inferred" = deduced from context without a retrieved appointment instrument.
+- terminus_node: true = cannot issue binding instructions downward;
   false = can instruct, delegate, or direct parties below it.
-- Include ALL identified entities — organisations and individuals.
-- If no individuals are identified: use an empty array [].
-- Use only valid JSON. No trailing commas.
+- Include ALL identified entities. If no individuals are found use [].
+- Output valid JSON only. No trailing commas. No markdown. No explanation.
 """
 
 GOVERNANCE_EST_QUERY_TEMPLATE = """
-Execute the governance establishment skill for this project.
+Use your search_chunks and get_document tools to retrieve all project documents
+containing authority events: appointment letters, delegation letters, termination
+notices, replacement notices, letters of award, and any correspondence that
+establishes, changes, or ends a party's authority.
 
-The confirmed entity registry is provided below. Use the canonical names
-exactly as listed to link every authority event to the correct party.
-
-CONFIRMED ENTITY REGISTRY:
+The confirmed entity registry is:
 {entity_registry_text}
 
-Scan all project documents to extract every authority event:
-appointment, delegation, termination, replacement, modification, suspension.
+After completing your document retrieval, output ONLY a JSON object in the
+following structure. No other text before or after the JSON.
 
-After your complete analysis text, append EXACTLY the following block.
-Use triple-tilde delimiters exactly as shown. Do not omit this block.
-
-~~~json_events
 {{
   "events": [
     {{
       "event_type": "appointment",
       "effective_date": "YYYY-MM-DD",
       "end_date": null,
-      "party_canonical_name": "Canonical name matching the entity registry exactly",
+      "party_canonical_name": "Must match a canonical_name from the registry above",
       "role": "The functional role or authority position",
       "appointed_by_canonical_name": null,
       "authority_dimension": "layer_1",
       "contract_source": "Instrument title",
-      "scope": "What the appointment covers or what authority is delegated",
+      "scope": "What the appointment covers",
       "terminus_node": false,
       "extraction_status": "confirmed"
     }}
   ]
 }}
-~~~json_events
 
-Rules for the JSON block:
-- event_type: one of appointment / delegation / termination / replacement /
-  modification / suspension.
+Rules:
+- event_type: appointment / delegation / termination / replacement / modification / suspension
 - effective_date: ISO format YYYY-MM-DD. Use null if unknown.
 - end_date: null if ongoing or not stated.
-- party_canonical_name: MUST match exactly a canonical_name from the entity
-  registry above. Do not invent new names.
-- appointed_by_canonical_name: null if not applicable or not retrieved.
-- authority_dimension: "layer_1" (contractual) / "layer_2a" (internal DOA) /
-  "layer_2b" (statutory).
-- extraction_status: "confirmed" or "inferred".
-- Use only valid JSON. No trailing commas.
+- party_canonical_name: MUST match exactly a canonical_name from the registry.
+- authority_dimension: "layer_1" (contractual) / "layer_2a" (internal DOA) / "layer_2b" (statutory)
+- extraction_status: "confirmed" or "inferred"
+- Output valid JSON only. No trailing commas. No markdown. No explanation.
 """
 
 # ---------------------------------------------------------------------------
 # JSON parsing helpers
 # ---------------------------------------------------------------------------
 
-def _parse_json_block(text: str, delimiter: str) -> dict | None:
+def _extract_json(text: str) -> dict | None:
     """
-    Extract and parse a delimited JSON block from SME output text.
+    Flexibly extract and parse a JSON object from SME output text.
 
-    Looks for content between ~~~{delimiter} ... ~~~{delimiter}.
-    Returns parsed dict or None if not found or invalid JSON.
+    Tries three strategies in order:
+    1. Parse the entire text as JSON (ideal — JSON-only output)
+    2. Find a ```json ... ``` code block (standard backtick markdown)
+    3. Find the first complete top-level JSON object with regex
+
+    Returns parsed dict or None on all failures.
     """
-    pattern = rf"~~~{re.escape(delimiter)}\s*(.*?)\s*~~~{re.escape(delimiter)}"
-    match = re.search(pattern, text, re.DOTALL)
-    if not match:
-        logger.error(
-            "governance_json_block_not_found",
-            delimiter=delimiter,
-            text_length=len(text),
-        )
-        return None
+    # Strategy 1: entire text is JSON
+    stripped = text.strip()
     try:
-        return json.loads(match.group(1))
-    except json.JSONDecodeError as exc:
-        logger.error(
-            "governance_json_parse_failed",
-            delimiter=delimiter,
-            error=str(exc),
-            raw=match.group(1)[:500],
-        )
-        return None
+        result = json.loads(stripped)
+        if isinstance(result, dict):
+            return result
+    except json.JSONDecodeError:
+        pass
+
+    # Strategy 2: ```json ... ``` code block
+    match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', stripped, re.DOTALL)
+    if match:
+        try:
+            result = json.loads(match.group(1))
+            if isinstance(result, dict):
+                return result
+        except json.JSONDecodeError:
+            pass
+
+    # Strategy 3: first top-level { ... } block
+    match = re.search(r'(\{.*\})', stripped, re.DOTALL)
+    if match:
+        try:
+            result = json.loads(match.group(1))
+            if isinstance(result, dict):
+                return result
+        except json.JSONDecodeError:
+            pass
+
+    logger.error(
+        "governance_json_extract_failed",
+        text_length=len(text),
+        text_preview=text[:300],
+    )
+    return None
 
 
 def _parse_date(value: str | None) -> date | None:
     """Parse ISO date string to date object. Returns None if null or unparseable."""
-    if not value or value.lower() in ("null", "unknown", ""):
+    if not value or str(value).lower() in ("null", "unknown", "none", ""):
         return None
     try:
-        return date.fromisoformat(value)
+        return date.fromisoformat(str(value))
     except (ValueError, TypeError):
         return None
 
@@ -161,7 +172,7 @@ def run_party_identification(project_id: str, run_id: str) -> None:
     Phase 1 of the governance execution layer.
 
     Invokes the Compliance SME with the party identification skill.
-    Parses the structured JSON output and writes to governance_parties.
+    Parses the JSON output and writes to governance_parties.
     Updates governance_run_log to parties_identified on success, failed on error.
 
     Called as a FastAPI BackgroundTask from the /run endpoint.
@@ -171,7 +182,6 @@ def run_party_identification(project_id: str, run_id: str) -> None:
     from src.clients import get_supabase_client
 
     supabase = get_supabase_client()
-    now = datetime.now(timezone.utc)
 
     logger.info(
         "governance_phase1_started",
@@ -195,12 +205,17 @@ def run_party_identification(project_id: str, run_id: str) -> None:
             project_id=project_id,
             run_id=run_id,
             confidence=findings.confidence,
+            findings_length=len(findings.findings),
         )
 
-        # Parse JSON registry block from findings text
-        data = _parse_json_block(findings.findings, "json_registry")
+        data = _extract_json(findings.findings)
         if data is None:
-            _mark_run_failed(supabase, run_id, "Phase 1 SME did not produce a parseable JSON registry block.")
+            _mark_run_failed(
+                supabase, run_id,
+                "Phase 1: could not extract JSON from SME output. "
+                f"Output length: {len(findings.findings)}. "
+                f"Preview: {findings.findings[:200]}"
+            )
             return
 
         organisations = data.get("organisations", [])
@@ -213,9 +228,8 @@ def run_party_identification(project_id: str, run_id: str) -> None:
                 run_id=run_id,
             )
 
-        # Write organisations to governance_parties
         for org in organisations:
-            canonical_name = org.get("canonical_name", "").strip()
+            canonical_name = str(org.get("canonical_name", "")).strip()
             if not canonical_name:
                 continue
             try:
@@ -223,7 +237,7 @@ def run_party_identification(project_id: str, run_id: str) -> None:
                     "project_id": project_id,
                     "entity_type": "organisation",
                     "canonical_name": canonical_name,
-                    "aliases": org.get("aliases", []),
+                    "aliases": org.get("aliases") or [],
                     "contractual_role": org.get("contractual_role") or None,
                     "terminus_node": bool(org.get("terminus_node", False)),
                     "confirmation_status": org.get("confirmation_status", "inferred"),
@@ -235,9 +249,8 @@ def run_party_identification(project_id: str, run_id: str) -> None:
                     error=str(exc),
                 )
 
-        # Write individuals to governance_parties
         for ind in individuals:
-            canonical_name = ind.get("canonical_name", "").strip()
+            canonical_name = str(ind.get("canonical_name", "")).strip()
             if not canonical_name:
                 continue
             try:
@@ -245,7 +258,7 @@ def run_party_identification(project_id: str, run_id: str) -> None:
                     "project_id": project_id,
                     "entity_type": "individual",
                     "canonical_name": canonical_name,
-                    "aliases": ind.get("aliases", []),
+                    "aliases": ind.get("aliases") or [],
                     "contractual_role": ind.get("contractual_role") or None,
                     "terminus_node": bool(ind.get("terminus_node", True)),
                     "confirmation_status": ind.get("confirmation_status", "inferred"),
@@ -259,7 +272,6 @@ def run_party_identification(project_id: str, run_id: str) -> None:
 
         total_parties = len(organisations) + len(individuals)
 
-        # Update run_log to parties_identified
         supabase.table("governance_run_log").update({
             "status": "parties_identified",
             "documents_scanned": len(findings.sources_used),
@@ -293,7 +305,7 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
 
     Fetches confirmed parties from governance_parties.
     Invokes the Compliance SME with the governance establishment skill.
-    Parses the structured JSON output and writes to governance_events.
+    Parses the JSON output and writes to governance_events.
     Updates governance_run_log to complete on success, failed on error.
 
     Called as a FastAPI BackgroundTask from the /confirm-parties endpoint.
@@ -311,7 +323,6 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
     )
 
     try:
-        # Fetch all parties (confirmed + inferred — SME needs full picture)
         parties_result = (
             supabase.table("governance_parties")
             .select("id, canonical_name, entity_type, contractual_role, confirmation_status")
@@ -324,7 +335,6 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
             _mark_run_failed(supabase, run_id, "No parties in registry — run Phase 1 first.")
             return
 
-        # Build entity registry text and lookup map
         party_id_map: dict[str, str] = {}
         registry_lines: list[str] = []
         for p in parties:
@@ -355,19 +365,24 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
             project_id=project_id,
             run_id=run_id,
             confidence=findings.confidence,
+            findings_length=len(findings.findings),
         )
 
-        # Parse JSON events block
-        data = _parse_json_block(findings.findings, "json_events")
+        data = _extract_json(findings.findings)
         if data is None:
-            _mark_run_failed(supabase, run_id, "Phase 2 SME did not produce a parseable JSON events block.")
+            _mark_run_failed(
+                supabase, run_id,
+                "Phase 2: could not extract JSON from SME output. "
+                f"Output length: {len(findings.findings)}. "
+                f"Preview: {findings.findings[:200]}"
+            )
             return
 
         events = data.get("events", [])
         written = 0
 
         for event in events:
-            party_name = event.get("party_canonical_name", "").strip()
+            party_name = str(event.get("party_canonical_name", "")).strip()
             party_id = party_id_map.get(party_name)
 
             if not party_id:
@@ -379,21 +394,20 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
                 continue
 
             appointed_by_name = event.get("appointed_by_canonical_name")
-            appointed_by_id = party_id_map.get(appointed_by_name) if appointed_by_name else None
+            appointed_by_id = (
+                party_id_map.get(str(appointed_by_name))
+                if appointed_by_name and str(appointed_by_name).lower() not in ("null", "none", "")
+                else None
+            )
 
             effective_date = _parse_date(event.get("effective_date"))
             end_date = _parse_date(event.get("end_date"))
 
-            if effective_date is None:
-                # Still write the event but flag unknown date
-                logger.warning(
-                    "governance_event_unknown_date",
-                    party=party_name,
-                    event_type=event.get("event_type"),
-                )
-
-            event_type = event.get("event_type", "").strip()
-            valid_types = {"appointment","delegation","termination","replacement","modification","suspension"}
+            event_type = str(event.get("event_type", "")).strip()
+            valid_types = {
+                "appointment", "delegation", "termination",
+                "replacement", "modification", "suspension"
+            }
             if event_type not in valid_types:
                 logger.warning(
                     "governance_event_invalid_type",
@@ -403,8 +417,7 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
                 continue
 
             authority_dimension = event.get("authority_dimension", "layer_1")
-            valid_dimensions = {"layer_1", "layer_2a", "layer_2b"}
-            if authority_dimension not in valid_dimensions:
+            if authority_dimension not in {"layer_1", "layer_2a", "layer_2b"}:
                 authority_dimension = "layer_1"
 
             extraction_status = event.get("extraction_status", "inferred")
@@ -415,10 +428,14 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
                 supabase.table("governance_events").insert({
                     "project_id": project_id,
                     "event_type": event_type,
-                    "effective_date": effective_date.isoformat() if effective_date else datetime.now(timezone.utc).date().isoformat(),
+                    "effective_date": (
+                        effective_date.isoformat()
+                        if effective_date
+                        else datetime.now(timezone.utc).date().isoformat()
+                    ),
                     "end_date": end_date.isoformat() if end_date else None,
                     "party_id": party_id,
-                    "role": event.get("role", "unspecified"),
+                    "role": event.get("role") or "unspecified",
                     "appointed_by_party_id": appointed_by_id,
                     "authority_dimension": authority_dimension,
                     "contract_source": event.get("contract_source") or None,
@@ -435,7 +452,6 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
                     error=str(exc),
                 )
 
-        # Update run_log to complete
         supabase.table("governance_run_log").update({
             "status": "complete",
             "events_extracted": written,
