@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from src.clients import get_supabase_client
 from src.logging_config import get_logger
@@ -46,6 +46,7 @@ async def run_governance(
     project_id: uuid.UUID,
     body: GovernanceRunRequest,
     user_id: AuthenticatedUser,
+    background_tasks: BackgroundTasks,
 ) -> GovernanceRunResponse:
     """
     Trigger governance establishment or incremental refresh for a project.
@@ -77,6 +78,14 @@ async def run_governance(
         )
 
     run = response.data[0]
+
+    # Launch Phase 1 in background
+    from src.agents.governance_runner import run_party_identification
+    background_tasks.add_task(
+        run_party_identification,
+        str(project_id),
+        run["id"],
+    )
 
     logger.info(
         "governance_run_triggered",
@@ -126,6 +135,44 @@ async def get_governance_status(
         )
 
     if not run_result.data:
+        # Check for parties_identified run (Phase 1 complete, awaiting confirmation)
+        try:
+            parties_run_result = (
+                supabase.table("governance_run_log")
+                .select("id, triggered_at")
+                .eq("project_id", str(project_id))
+                .eq("status", "parties_identified")
+                .order("triggered_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+        except Exception:
+            parties_run_result = None
+
+        if parties_run_result and parties_run_result.data:
+            # Count parties extracted so far
+            try:
+                parties_count_result = (
+                    supabase.table("governance_parties")
+                    .select("id", count="exact")
+                    .eq("project_id", str(project_id))
+                    .execute()
+                )
+                parties_count = parties_count_result.count or 0
+            except Exception:
+                parties_count = 0
+
+            return GovernanceStatusResponse(
+                project_id=project_id,
+                status="parties_identified",
+                last_run_at=parties_run_result.data[0]["triggered_at"],
+                last_run_id=uuid.UUID(parties_run_result.data[0]["id"]),
+                events_confirmed=0,
+                events_flagged=0,
+                events_inferred=0,
+                parties_count=parties_count,
+            )
+
         return GovernanceStatusResponse(
             project_id=project_id,
             status="not_established",
@@ -134,6 +181,7 @@ async def get_governance_status(
             events_confirmed=0,
             events_flagged=0,
             events_inferred=0,
+            parties_count=0,
         )
 
     last_run = run_result.data[0]
