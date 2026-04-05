@@ -58,6 +58,87 @@ DOMAIN_TO_CONFIG_KEY: dict[str, str] = {
     "technical_design": "technical",
 }
 
+# Keyword signatures for domain alignment check
+# Conservative — only flag when signal is unambiguous.
+_DOMAIN_CHUNK_KEYWORDS: dict[str, list[str]] = {
+    "schedule_programme": [
+        "programme", "delay", "extension of time", "eot", "critical path",
+        "float", "milestone", "baseline", "as-built", "look-ahead",
+        "prolongation", "disruption", "recovery programme",
+    ],
+    "technical_design": [
+        "specification", "drawing", "rfi", "shop drawing", "bim",
+        "design change", "value engineering", "ncr", "technical",
+        "defect", "snag", "test", "commissioning",
+    ],
+    "legal_contractual": [
+        "notice", "contract", "clause", "condition", "agreement",
+        "entitlement", "dispute", "arbitration", "time bar",
+        "performance bond", "liquidated damages", "force majeure",
+    ],
+    "commercial_financial": [
+        "payment", "variation", "boq", "interim certificate",
+        "retention", "final account", "daywork", "measurement",
+        "cash flow", "cost report", "budget",
+    ],
+    "financial_reporting": [
+        "earned value", "evm", "cpi", "spi", "eac", "etc",
+        "budget vs actual", "cost overrun", "contingency",
+        "financial forecast", "ifrs", "revenue recognition",
+    ],
+}
+
+
+def _check_routing_coverage(
+    domains_engaged: list[str],
+    retrieved_chunks: list[dict],
+) -> list[str]:
+    """
+    Deterministic routing coverage check.
+
+    Scans retrieved chunk content for domain keyword signatures.
+    Returns list of domain names where chunks contain strong domain signals
+    but the domain was not engaged by the router.
+
+    No LLM call. No self-reporting. Uses what was actually retrieved.
+    Returns empty list if no gaps detected or if retrieval is empty.
+    """
+    if not retrieved_chunks:
+        return []
+
+    # Build combined text from all retrieved Layer 1 chunks (not reference docs)
+    layer1_text = " ".join(
+        chunk.get("content", "").lower()
+        for chunk in retrieved_chunks
+        if not chunk.get("is_reference", False)
+    )
+
+    if not layer1_text.strip():
+        return []
+
+    gaps: list[str] = []
+
+    for domain, keywords in _DOMAIN_CHUNK_KEYWORDS.items():
+        if domain in domains_engaged:
+            continue  # already engaged — no gap
+
+        # Count keyword hits
+        hits = sum(1 for kw in keywords if kw in layer1_text)
+
+        # Flag as gap only if strong signal (3+ keyword hits)
+        # Conservative threshold — avoids false positives
+        if hits >= 3:
+            gaps.append(domain)
+            logger.warning(
+                "routing_coverage_gap",
+                domain=domain,
+                keyword_hits=hits,
+                engaged_domains=domains_engaged,
+            )
+
+    return gaps
+
+
 def process_query(request: QueryRequest) -> QueryResponse:
     """
     Full query pipeline (Phase 2 — multi-round):
