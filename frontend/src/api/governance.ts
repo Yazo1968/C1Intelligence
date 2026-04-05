@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import type {
+  GovernancePartyResponse,
   GovernanceRunResponse,
   GovernanceStatusResponse,
   GovernanceEventResponse,
@@ -40,5 +41,33 @@ export async function updateGovernanceEvent(
   return apiClient.patch<GovernanceEventResponse>(
     `/projects/${projectId}/governance/events/${eventId}`,
     update as unknown as Record<string, unknown>,
+  );
+}
+
+export async function listGovernanceParties(
+  projectId: string,
+): Promise<GovernancePartyResponse[]> {
+  return apiClient.get<GovernancePartyResponse[]>(
+    `/projects/${projectId}/governance/parties`,
+  );
+}
+
+export async function updateGovernanceParty(
+  projectId: string,
+  partyId: string,
+  update: { confirmation_status: 'confirmed' | 'flagged' | 'inferred' },
+): Promise<GovernancePartyResponse> {
+  return apiClient.patch<GovernancePartyResponse>(
+    `/projects/${projectId}/governance/parties/${partyId}`,
+    update as unknown as Record<string, unknown>,
+  );
+}
+
+export async function confirmParties(
+  projectId: string,
+): Promise<GovernanceRunResponse> {
+  return apiClient.post<GovernanceRunResponse>(
+    `/projects/${projectId}/governance/confirm-parties`,
+    {},
   );
 }
