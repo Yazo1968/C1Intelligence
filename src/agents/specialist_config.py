@@ -24,6 +24,12 @@ SPECIALIST_CONFIGS: dict[str, SpecialistConfig] = {
     "legal": SpecialistConfig(domain="legal", tier=1, round_assignment=1, max_tool_rounds=3),
     "commercial": SpecialistConfig(domain="commercial", tier=1, round_assignment=1, max_tool_rounds=3),
     "financial": SpecialistConfig(domain="financial", tier=1, round_assignment=1, max_tool_rounds=3),
+    "financial_sme": SpecialistConfig(
+        domain="financial_sme",
+        tier=2,
+        round_assignment=2,
+        max_tool_rounds=3
+    ),
     "schedule": SpecialistConfig(domain="schedule", tier=2, round_assignment=2, max_tool_rounds=3),
     "technical": SpecialistConfig(domain="technical", tier=2, round_assignment=2, max_tool_rounds=3),
 }

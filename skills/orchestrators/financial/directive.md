@@ -91,6 +91,27 @@ not the user's raw query.
 - Cost of defect rectification where a technical assessment
   is required to quantify the remediation scope
 
+**Financial & Accounting SME** — invoke for:
+- Cost control system quality assessment — whether the cost
+  management system is functioning adequately, WBS structure
+  adequacy, committed vs incurred vs forecast distinction,
+  EAC credibility challenge, contingency governance
+  (`cost_control_assessment.md`)
+- Multi-contract account reconciliation — three-way matching
+  across all contract instruments, reconciliation of contract
+  accounts to project cost report, payment authority compliance
+  (`multi_contract_account_reconciliation.md`)
+- Financial reporting compliance — whether required financial
+  reports are present, current, internally consistent with each
+  other, and compliant with contractual obligations, internal
+  policy, and applicable accounting standards
+  (`financial_reporting_compliance.md`)
+
+Do not invoke the Financial & Accounting SME for: extraction of
+specific financial figures (Financial Orchestrator direct scope);
+payment certification compliance (Commercial Orchestrator scope);
+claims quantum (Delay and Cost Analytics SME scope).
+
 ---
 
 ## Compliance SME Invocation
