@@ -1,9 +1,0 @@
-{
-  "skill_group": "claims_sme",
-  "layer2b_required": true,
-  "layer2a_required": false,
-  "layer1_amendment_document_required": true,
-  "confidence_cap_without_layer2b": "AMBER",
-  "confidence_cap_without_amendment_document": "GREY",
-  "description": "Claims SMEs require Layer 2b standard form provisions before characterising notice requirements, entitlement bases, or dispute procedures. Amendment document required to confirm project-specific time bars and procedures."
-}
