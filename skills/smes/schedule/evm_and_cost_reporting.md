@@ -207,6 +207,37 @@ From the retrieved progress reports for the same period:
 **State both documents and their respective positions.**
 Flag any contradiction with both source documents cited.
 
+### Fallback — No EVM Reports in Warehouse
+
+If no EVM report has been retrieved after exhausting tool searches, and
+budget documents, payment certificates, or progress reports with financial
+data ARE retrieved — proceed with a partial financial performance assessment
+using only those documents. Do not calculate EVM metrics.
+
+Extract from retrieved budget documents:
+- Approved budget (BAC equivalent): state value and source
+- Budget breakdown by cost category: state from retrieved documents
+
+Extract from retrieved payment certificates and cost reports:
+- Actual cost to date (AC equivalent): state value and source
+- Certified amount to date: state value and source
+
+Extract from retrieved progress reports:
+- Percentage complete as reported: state value, report date, and source
+
+State explicitly:
+> No formal EVM report was found in the warehouse. This assessment is
+> derived from budget, payment, and progress documents only. EVM metrics
+> (CPI, SPI, EAC, ETC, VAC) cannot be extracted — they have not been
+> reported in the retrieved documents.
+
+Flag: EVM REPORTING NOT FOUND IN WAREHOUSE — list which financial
+documents were retrieved. Set confidence to AMBER.
+
+Do not produce SPI, CPI, EAC, ETC, or VAC values under the fallback
+path. These are extracted metrics — if not in retrieved documents,
+they are not available.
+
 ---
 
 ## Classification and decision rules
