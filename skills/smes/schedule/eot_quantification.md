@@ -217,8 +217,46 @@ Impacted As-Planned: requires baseline programme only — does not
 use as-built records. Flag this methodology on any complex project.
 State that it does not account for actual performance.
 
+*As-Built Critical Path:* reconstructs a schedule exclusively from actual
+progress records to identify the real critical path as executed — not the
+planned or submitted path. Requires comprehensive as-built data from site
+diaries, progress reports, and record drawings. From retrieved documents:
+verify whether the as-built data in the warehouse is sufficient in detail
+and completeness to support this reconstruction, and whether the claimed
+critical path reflects the actual construction sequence evidenced in
+retrieved records.
+
 **If the methodology cannot be identified from retrieved documents:**
 State CANNOT IDENTIFY METHODOLOGY.
+
+**Assess methodology appropriateness for project conditions:**
+
+After confirming whether data requirements are met, assess whether the
+methodology was appropriate for this project — not just whether it was
+applied. Assess against the following factors from the retrieved documents:
+
+*Concurrent delay:* If the retrieved records evidence concurrent delay
+events, assess whether the chosen methodology can isolate causation between
+them. As-Planned vs As-Built and Impacted As-Planned cannot isolate
+causation where concurrent events are present. Flag this directly and state
+what methodology would have been more appropriate given the retrieved records.
+
+*Record quality:* Assess whether the project's retrievable records are
+consistent with the requirements of the chosen methodology. A methodology
+requiring frequent programme updates cannot be properly applied if only
+the baseline programme is in the warehouse.
+
+*Project complexity:* If the retrieved documents indicate a complex project
+— multiple concurrent events, overlapping critical paths, or significant
+programme revisions — assess whether the chosen methodology is appropriate
+for that complexity.
+
+State the appropriateness finding explicitly:
+"[Methodology] is [APPROPRIATE / NOT APPROPRIATE] for the project
+conditions evidenced in the retrieved documents."
+If not appropriate: "A more appropriate methodology given the available
+records would have been [X] because [specific reason from retrieved
+documents]."
 
 ### Step 6 — Assess concurrent delay
 *Contract-type-agnostic*
