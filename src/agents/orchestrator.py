@@ -427,6 +427,13 @@ def process_query(request: QueryRequest) -> QueryResponse:
     # Step 5b.2 — Extract SME invocations deterministically
     sme_invocations = _extract_sme_invocations(round_1_findings)
 
+    # Step 5b.3 — Evidence Auditor (deterministic — zero API calls)
+    audit_result = run_evidence_audit(
+        findings=round_1_findings,
+        sme_invocations=sme_invocations,
+        routing_gaps=routing_gaps,
+    )
+
     # ------------------------------------------------------------------
     # Step 6: Cross-specialist contradiction pass (stub — Phase 5)
     # ------------------------------------------------------------------
@@ -464,6 +471,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
         request.query_text,
         document_count=len(document_ids),
         routing_gaps=routing_gaps,
+        audit_result=audit_result,
     )
 
     # ------------------------------------------------------------------
@@ -511,6 +519,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
         document_ids_at_query_time=document_ids,
         audit_log_id=audit_log_id,
         routing_gaps=routing_gaps,
+        audit_result=audit_result,
     )
 
 
