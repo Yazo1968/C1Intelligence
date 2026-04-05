@@ -79,11 +79,38 @@ applicable:
 - Are there FLAGS from one orchestrator that compound FLAGS from
   another?
 
-### 7. Consolidated FLAGS
+### 7. Consolidated Risk Register
 
-Merge all FLAGS from all orchestrators into a single list. Remove
-duplicates. Where a FLAG from one orchestrator is amplified by a FLAG
-from another, combine them and state the joint effect in one sentence.
+Merge all Risk Register entries from all invoked orchestrators into a
+single ISO 31000:2018 compliant risk register. Apply the following rules:
+
+**Ranking:** Present entries in descending order of Inherent Rating —
+CRITICAL first, then HIGH, then MEDIUM, then LOW.
+
+**Deduplication:** Where two orchestrators have raised entries describing
+the same underlying event, merge them into one entry. State both domain
+perspectives in the Description. Take the higher of the two Inherent Ratings.
+
+**Numbering:** Assign sequential IDs across all entries — RISK-001,
+RISK-002, RISK-003... regardless of which orchestrator produced the entry.
+Prefix the Category with the originating domain where relevant.
+
+**Compound Risk identification:** After listing all entries, identify
+where two or more entries interact to produce a joint consequence greater
+than either alone. For each compound risk:
+
+COMPOUND: RISK-[ID] + RISK-[ID]
+Joint effect: [one sentence — what the combined exposure or consequence is,
+from retrieved documents]
+Combined Rating: [CRITICAL / HIGH / MEDIUM / LOW — use the higher of the two,
+or escalate one level if the interaction materially amplifies the exposure]
+
+**CANNOT ASSESS entries:** Include all entries where Likelihood or Residual
+Rating is CANNOT ASSESS. Do not suppress them — an unassessed risk is still
+a risk. State clearly what document is missing that prevents the assessment.
+
+**Entry format:** Use the nine-field ISO 31000 format defined in
+skills/c1-skill-authoring/references/output_formats.md for every entry.
 
 ### 8. Integrated Assessment
 
