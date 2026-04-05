@@ -167,6 +167,13 @@ For each, record entity name, jurisdiction scope, required interaction
 type, and whether the required interaction is evidenced in the warehouse.
 Classify authority dimension as layer_2b.
 
+**Invoke `statutory_authority_mapping.md` at this step.** That skill
+retrieves all statutory authorities with jurisdiction over this project,
+maps required interactions to project milestones, and identifies which
+permits, NOCs, and approvals are documented in the warehouse. Its output
+feeds into the governance event log — statutory approvals are a distinct
+category of authority event alongside contractual party appointments.
+
 ### Step 6 — Identify governance gaps
 
 Using the retrieved Layer 2b standard form provisions, identify every
