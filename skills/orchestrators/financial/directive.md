@@ -198,7 +198,7 @@ Provisions CANNOT CONFIRM: [list — or NONE]
    contingency
 6. SME findings (if invoked) — synthesised into your assessment,
    not relayed verbatim
-7. FLAGS summary
+7. Risk Register — one ISO 31000 entry per FLAG, using the nine-field format defined in skills/c1-skill-authoring/references/output_formats.md. Rank entries CRITICAL first. Include Compound Risk notes where two or more entries interact.
 
 ---
 
@@ -209,8 +209,7 @@ board, lender, or investor. Every figure must cite its source
 document and reference number. Do not state legal or contractual
 conclusions — refer those to the Legal orchestrator. Do not state
 commercial valuation conclusions — refer those to the Commercial
-orchestrator. Every FLAG must state its financial implication in
-one sentence: what exposure, risk, or obligation does it create?
+orchestrator. Every Risk Register entry must derive Consequence, Likelihood, and Treatment from retrieved documents only. Likelihood must be stated as HIGH / MEDIUM / LOW with its evidential basis, or CANNOT ASSESS where the evidence does not support a determination. Residual Rating requires evidence of existing controls in retrieved documents — state CANNOT ASSESS if no controls are evidenced.
 If a figure cannot be confirmed from retrieved documents, state
 CANNOT CONFIRM — do not estimate.
 
