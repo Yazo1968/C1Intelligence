@@ -25,11 +25,13 @@ from src.config import CLAUDE_MODEL
 from src.logging_config import get_logger
 from src.agents.models import (
     AgentError,
+    AuditResult,
     ConfidenceLevel,
     ContradictionFlag,
     QueryRequest,
     QueryResponse,
     RetrievalResult,
+    SMEConfidenceRecord,
     SourceCitation,
     SpecialistFindings,
 )
@@ -160,6 +162,105 @@ def _extract_sme_invocations(findings: list[SpecialistFindings]) -> dict[str, li
         invocations={k: v for k, v in result.items()},
     )
     return result
+
+
+def run_evidence_audit(
+    findings: list[SpecialistFindings],
+    sme_invocations: dict[str, list[str]],
+    routing_gaps: list[str],
+) -> AuditResult:
+    """
+    Deterministic Evidence Auditor. Zero API calls.
+
+    Reads:
+    - findings[].evidence_record.provisions_cannot_confirm (deterministic)
+    - findings[].raw_sme_outputs (captured from tool results)
+    - findings[].confidence (deterministic)
+    - findings[].sources_used (deterministic)
+    - sme_invocations (extracted from tools_called)
+    - routing_gaps (from chunk-domain alignment)
+
+    Cannot be gamed by agents being audited.
+    """
+    audit = AuditResult()
+    audit.sme_invocations = sme_invocations
+    audit.routing_gaps = routing_gaps
+
+    # --- Confidence by orchestrator domain ---
+    for finding in findings:
+        audit.confidence_by_domain[finding.domain] = finding.confidence
+
+    # --- Consolidate CANNOT CONFIRM from orchestrators ---
+    for finding in findings:
+        if finding.evidence_record and finding.evidence_record.provisions_cannot_confirm:
+            for item in finding.evidence_record.provisions_cannot_confirm:
+                entry = f"[{finding.domain.upper()}] {item}"
+                if entry not in audit.cannot_confirm_consolidated:
+                    audit.cannot_confirm_consolidated.append(entry)
+
+    # --- Extract per-SME confidence and CANNOT CONFIRM from raw outputs ---
+    for finding in findings:
+        for raw_output in finding.raw_sme_outputs:
+            sme_domain = raw_output.get("domain", "unknown")
+            sme_confidence = raw_output.get("confidence", "GREY")
+            sme_sources = raw_output.get("sources_used", [])
+            sme_findings_text = raw_output.get("findings", "")
+
+            # Extract CANNOT CONFIRM from raw SME findings text
+            sme_cannot_confirm: list[str] = []
+            if "CANNOT CONFIRM" in sme_findings_text.upper():
+                import re
+                matches = re.findall(
+                    r"CANNOT CONFIRM[^\n.]*",
+                    sme_findings_text,
+                    re.IGNORECASE,
+                )
+                sme_cannot_confirm = [m.strip() for m in matches[:5]]
+
+            record = SMEConfidenceRecord(
+                orchestrator_domain=finding.domain,
+                sme_domain=sme_domain,
+                confidence=sme_confidence,
+                sources_used=sme_sources,
+                cannot_confirm_items=sme_cannot_confirm,
+            )
+            audit.sme_confidence_records.append(record)
+
+            # Add SME CANNOT CONFIRM to consolidated list
+            for item in sme_cannot_confirm:
+                entry = f"[{sme_domain.upper()} via {finding.domain.upper()}] {item}"
+                if entry not in audit.cannot_confirm_consolidated:
+                    audit.cannot_confirm_consolidated.append(entry)
+
+    # --- Determine minimum confidence basis ---
+    conf_order = {"GREY": 3, "RED": 2, "AMBER": 1, "GREEN": 0}
+    all_confidences: list[tuple[str, str]] = [
+        (domain, conf)
+        for domain, conf in audit.confidence_by_domain.items()
+    ]
+    for rec in audit.sme_confidence_records:
+        all_confidences.append((f"{rec.sme_domain} (SME)", rec.confidence))
+
+    if all_confidences:
+        worst_entry = max(
+            all_confidences,
+            key=lambda x: conf_order.get(x[1], 1)
+        )
+        audit.minimum_confidence_basis = (
+            f"Minimum confidence: {worst_entry[1]} — "
+            f"driven by {worst_entry[0]}."
+        )
+
+    logger.info(
+        "evidence_audit_complete",
+        cannot_confirm_count=len(audit.cannot_confirm_consolidated),
+        sme_confidence_records=len(audit.sme_confidence_records),
+        routing_gaps=routing_gaps,
+        confidence_by_domain=dict(audit.confidence_by_domain),
+        minimum_confidence_basis=audit.minimum_confidence_basis,
+    )
+
+    return audit
 
 
 def process_query(request: QueryRequest) -> QueryResponse:
