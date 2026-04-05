@@ -16,7 +16,7 @@ document — not assumed.
   establishing the dispute history
 - Layer 2b — reference standards: Dispute resolution provision from
   the governing standard form (whatever is in the warehouse)
-**Domain:** Claims & Disputes SME
+**Domain:** Legal & Contractual SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
 ---

@@ -13,7 +13,7 @@
   methods); contemporaneous records establishing awareness date
 - Layer 2b — reference standards: notice provisions from the governing
   standard form (whatever form is in the warehouse)
-**Domain:** Claims & Disputes SME
+**Domain:** Legal & Contractual SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
 ---
