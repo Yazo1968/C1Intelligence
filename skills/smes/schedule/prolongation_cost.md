@@ -15,7 +15,7 @@ from the retrieved amendment document — not assumed from the standard form.
 - Layer 2b — reference standards: cost recovery provision for the
   confirmed standard form and version; definition of cost in the
   General Conditions
-**Domain:** Claims & Disputes SME
+**Domain:** Delay and Cost Analytics SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
 ---

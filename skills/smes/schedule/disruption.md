@@ -19,7 +19,7 @@
   confirmed standard form and version; SCL Protocol 2nd Edition 2017
   (disruption methodology framework, if ingested); AACE RP 29R-03
   (if referenced in the claim)
-**Domain:** Claims & Disputes SME
+**Domain:** Delay and Cost Analytics SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
 ---

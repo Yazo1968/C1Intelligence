@@ -15,7 +15,7 @@ retrieving the applicable provision from the amendment document.
 - Layer 2b — reference standards: time extension provision for the
   confirmed standard form and version; SCL Protocol 2nd Edition 2017
   (delay methodology framework, if ingested)
-**Domain:** Claims & Disputes SME
+**Domain:** Delay and Cost Analytics SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
 ---
