@@ -96,8 +96,64 @@ Summary: [Two to three sentences — retrieved facts only]
 **CANNOT ASSESS** — for individual findings within an output when a required
 document was not retrieved. Different from GREY (which is overall confidence).
 
-**FLAG** — Risk, contractual issue, contradiction, or anomaly.
-Always state forensic implication in one sentence after the flag.
+**FLAG — Orchestrator level (ISO 31000:2018 risk register format)**
+
+At orchestrator level every FLAG is a structured risk register entry per
+ISO 31000:2018. The simple one-sentence format is for SME internal output
+only and does not reach the user. Orchestrator FLAGS use this nine-field format:
+
+RISK-[ID] | [Category]
+Description:       [what has happened or could happen — from retrieved documents only]
+Cause:             [root cause — from retrieved documents only]
+Consequence:       [HIGH / MEDIUM / LOW] — [financial or contractual impact from retrieved documents]
+Likelihood:        [HIGH / MEDIUM / LOW] — [basis from retrieved documents — or: CANNOT ASSESS — state which document is missing]
+Inherent Rating:   [CRITICAL / HIGH / MEDIUM / LOW]
+Existing Controls: [mitigations evidenced in retrieved documents — or: NONE EVIDENCED]
+Treatment:         [AVOID / REDUCE / TRANSFER / ACCEPT] — [specific action from retrieved documents]
+Residual Rating:   [CRITICAL / HIGH / MEDIUM / LOW — or: CANNOT ASSESS — controls not evidenced in warehouse]
+Status:            [OPEN / REALIZED / TREATED / EXPIRED / ACCEPTED]
+
+Risk Category values: Legal & Contractual | Commercial & Financial |
+Technical & Construction | Schedule & Programme | Compliance & Governance |
+Financial & Accounting
+
+Risk Rating Matrix (Likelihood x Consequence = Inherent Rating):
+  High Likelihood   + High Consequence   = CRITICAL
+  High Likelihood   + Medium Consequence = HIGH
+  High Likelihood   + Low Consequence    = MEDIUM
+  Medium Likelihood + High Consequence   = HIGH
+  Medium Likelihood + Medium Consequence = MEDIUM
+  Medium Likelihood + Low Consequence    = LOW
+  Low Likelihood    + High Consequence   = MEDIUM
+  Low Likelihood    + Medium Consequence = LOW
+  Low Likelihood    + Low Consequence    = LOW
+
+Risk Status definitions:
+  OPEN      — risk is active, not yet controlled or treated
+  REALIZED  — risk has materialised and is documented in retrieved evidence
+  TREATED   — controls in place, residual risk remains, evidenced in retrieved documents
+  EXPIRED   — risk window has closed, no further action required
+  ACCEPTED  — risk acknowledged and formally accepted, no further treatment planned
+
+Likelihood derivation rules: Derive Likelihood from retrieved documents
+where evidence supports it. A condition already met from retrieved documents
+(e.g. notice issued beyond the contractual period) = HIGH. A risk dependent
+on future events not evidenced in retrieved documents = CANNOT ASSESS.
+Do not estimate Likelihood from training knowledge.
+
+Residual Rating derivation rules: Requires evidence of existing controls
+in retrieved documents (remediation actions, insurance certificates, extension
+grants, payment of disputed amounts, or equivalent). If no controls are
+evidenced: CANNOT ASSESS — controls not evidenced in warehouse.
+Do not assume controls exist.
+
+**FLAG — SME level (internal format — not user-facing)**
+
+At SME level FLAGS use the simple format for internal orchestrator consumption:
+FLAG: [finding] — [forensic implication in one sentence]
+Include a flag for every CANNOT CONFIRM provision.
+SME FLAGS are synthesised by the orchestrator into risk register entries.
+They do not reach the user in this simple format.
 
 **INFORMATIONAL** — Noted for completeness, no risk or issue.
 

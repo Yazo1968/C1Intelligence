@@ -129,3 +129,13 @@ standard form text.
 | Layer 2b retrieved, amendment doc not retrieved | AMBER |
 | Layer 2b not retrieved for any provision | AMBER |
 | Amendment doc not retrieved AND Layer 2b not retrieved | GREY |
+
+---
+
+## FLAG Format — Risk Register Standard
+
+The FLAG format (ISO 31000:2018 risk register at orchestrator level,
+simple one-sentence format at SME level) is defined in
+`skills/c1-skill-authoring/references/output_formats.md`.
+See that file for the full nine-field risk register format,
+rating matrix, status definitions, and derivation rules.
