@@ -263,6 +263,122 @@ def run_evidence_audit(
     return audit
 
 
+def _build_consolidated_evidence_map(
+    findings: list[SpecialistFindings],
+    audit_result: "AuditResult | None",
+    routing_gaps: list[str] | None,
+) -> str:
+    """
+    Build Consolidated Evidence Map from deterministic fields.
+
+    Uses:
+    - findings[].confidence (deterministic)
+    - findings[].sources_used (deterministic — document IDs)
+    - audit_result.cannot_confirm_consolidated (deterministic)
+    - audit_result.sme_confidence_records (from raw SME outputs)
+    - audit_result.sme_invocations (from tools_called)
+    - routing_gaps (from chunk-domain alignment)
+
+    No LLM call. No self-reporting.
+    """
+    lines: list[str] = []
+    lines.append("## Consolidated Evidence Map")
+    lines.append("")
+    lines.append(
+        "*This map is generated deterministically from recorded system "
+        "state — not from agent self-reporting.*"
+    )
+    lines.append("")
+
+    # --- Domain confidence audit ---
+    lines.append("### Domain Confidence Audit")
+    lines.append("")
+    if audit_result and audit_result.confidence_by_domain:
+        for domain, conf in audit_result.confidence_by_domain.items():
+            display = DOMAIN_DISPLAY_NAMES.get(domain, domain)
+            lines.append(f"- **{display}:** {conf}")
+        if audit_result.minimum_confidence_basis:
+            lines.append("")
+            lines.append(f"*{audit_result.minimum_confidence_basis}*")
+    else:
+        lines.append("*No domain confidence data recorded.*")
+    lines.append("")
+
+    # --- SME invocations (from tools_called — deterministic) ---
+    lines.append("### SME Agents Invoked")
+    lines.append("")
+    if audit_result and audit_result.sme_invocations:
+        any_invoked = False
+        for orch_domain, sme_list in audit_result.sme_invocations.items():
+            display = DOMAIN_DISPLAY_NAMES.get(orch_domain, orch_domain)
+            if sme_list:
+                any_invoked = True
+                lines.append(f"**{display} orchestrator invoked:**")
+                for sme in sme_list:
+                    sme_conf = next(
+                        (r.confidence for r in audit_result.sme_confidence_records
+                         if r.orchestrator_domain == orch_domain and r.sme_domain == sme),
+                        "unknown"
+                    )
+                    lines.append(f"- {sme} — confidence: {sme_conf}")
+            else:
+                lines.append(f"**{display} orchestrator:** No SME delegation.")
+        if not any_invoked:
+            lines.append("*No SME delegation occurred in this query.*")
+    else:
+        lines.append("*No SME invocation data recorded.*")
+    lines.append("")
+
+    # --- Document sources by domain (from sources_used — deterministic) ---
+    lines.append("### Documents Retrieved by Domain")
+    lines.append("")
+    for finding in findings:
+        display = DOMAIN_DISPLAY_NAMES.get(finding.domain, finding.domain)
+        if finding.sources_used:
+            lines.append(
+                f"**{display}** ({len(finding.sources_used)} source(s), "
+                f"confidence: {finding.confidence})"
+            )
+        else:
+            lines.append(f"**{display}** — no documents retrieved")
+    lines.append("")
+
+    # --- Consolidated CANNOT CONFIRM ---
+    lines.append("### Consolidated CANNOT CONFIRM")
+    lines.append("")
+    if audit_result and audit_result.cannot_confirm_consolidated:
+        for item in audit_result.cannot_confirm_consolidated:
+            lines.append(f"- {item}")
+        lines.append("")
+        lines.append(
+            "*These items require resolution before findings dependent on them "
+            "can be treated as confirmed.*"
+        )
+    else:
+        lines.append(
+            "*None — all required evidence was retrieved across all domains "
+            "and invoked SMEs.*"
+        )
+    lines.append("")
+
+    # --- Routing coverage gaps ---
+    if routing_gaps:
+        lines.append("### Routing Coverage Notice")
+        lines.append("")
+        gap_displays = [DOMAIN_DISPLAY_NAMES.get(d, d) for d in routing_gaps]
+        lines.append(
+            f"The document warehouse contained signals for the following "
+            f"domains that were not engaged: **{', '.join(gap_displays)}**."
+        )
+        lines.append(
+            "This may indicate a partial assessment. Resubmit the query "
+            "or engage these domains explicitly."
+        )
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def process_query(request: QueryRequest) -> QueryResponse:
     """
     Full query pipeline (Phase 2 — multi-round):
@@ -875,6 +991,15 @@ def build_response_text(
 
         sections.append("---")
         sections.append("")
+
+    # --- Consolidated Evidence Map ---
+    evidence_map = _build_consolidated_evidence_map(
+        findings, audit_result, routing_gaps
+    )
+    sections.append(evidence_map)
+    sections.append("")
+    sections.append("---")
+    sections.append("")
 
     # --- Contradictions ---
     sections.append("## Contradictions Detected")
