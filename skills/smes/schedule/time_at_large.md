@@ -18,7 +18,7 @@
 - Layer 2b — reference standards: time extension provision and agreed
   damages provision for the confirmed standard form (whatever is in
   the warehouse); applicable law (if ingested in Layer 2b)
-**Domain:** Schedule & Programme SME
+**Domain:** Delay and Cost Analytics SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
 ---

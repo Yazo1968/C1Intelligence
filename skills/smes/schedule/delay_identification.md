@@ -15,7 +15,7 @@ is contract-type-agnostic.
   confirmed standard form and version (whatever is in the warehouse);
   SCL Protocol 2nd Edition 2017 (delay event classification principles,
   if ingested)
-**Domain:** Schedule & Programme SME
+**Domain:** Delay and Cost Analytics SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
 ---

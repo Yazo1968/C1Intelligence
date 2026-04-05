@@ -19,7 +19,7 @@
   provisions from the governing standard form (whatever is in the
   warehouse); SCL Protocol 2nd Edition 2017 (acceleration principles,
   if ingested)
-**Domain:** Schedule & Programme SME
+**Domain:** Delay and Cost Analytics SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
 ---

@@ -14,7 +14,7 @@ and must be confirmed from retrieved amendment documents.
 - Layer 2b — reference standards: SCL Protocol 2nd Edition 2017
   (float and critical path principles, if ingested); AACE RP 29R-03
   (schedule analysis methodology, if ingested)
-**Domain:** Schedule & Programme SME
+**Domain:** Delay and Cost Analytics SME
 **Invoked by:** Legal orchestrator, Commercial orchestrator
 
 ---

@@ -16,7 +16,7 @@
   periods); payment certificates (actual cost verification)
 - Layer 2b — reference standards: AACE International EVM standards
   (if ingested); PMI/PMBoK EVM framework (if ingested)
-**Domain:** Schedule & Programme SME
+**Domain:** Delay and Cost Analytics SME
 **Invoked by:** Financial orchestrator, Commercial orchestrator
 
 ---
