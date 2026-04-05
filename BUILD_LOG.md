@@ -1247,3 +1247,24 @@ Residual Rating | Status (OPEN/REALIZED/TREATED/EXPIRED/ACCEPTED)
 **No new agents. No new orchestrators. No extra API calls.**
 Six skill/reference files changed. SME skill files unchanged.
 Database unchanged. No migration required.
+
+---
+## Session — QueryInput Risk Report Fix + ISO 31000 Risk Register Enhancement
+
+**Date:** April 2026
+
+**Additional fix — QueryInput.tsx (c21d9eb):**
+Risk Report checkbox was missed in the original removal (f752a47).
+The checkbox and all riskMode logic were implemented in
+frontend/src/components/query/QueryInput.tsx — a component file
+not named in the original removal task. Fix applied and deployed.
+Zero risk references now in any frontend file. Verified via live
+Vercel deployment dpl_Dxvfj2ZptvCsd5H7XnuwYKw2AtvK.
+
+**Risk Register Enhancement commits:**
+6bbd22e, 4008575, 108ed51, bb52d35, 12c302d, 43fe125, e935a0e
+
+**ISO 31000:2018 Risk Register now built into all orchestrator outputs.**
+No new agents. No new orchestrators. No extra API calls.
+Six skill/reference files changed. SME skill files unchanged.
+Database unchanged. No migration required.
