@@ -1371,3 +1371,90 @@ skills/c1-skill-authoring/references/output_formats.md
 CLAUDE.md
 docs/C1_MASTER_PLAN.md
 BUILD_LOG.md
+
+---
+
+## Session — Governance Execution Plan
+
+**Date:** April 2026
+**Status:** COMPLETE
+**Tasks:** A1–E1 — all 10 tasks complete
+
+### Summary
+
+Implemented the governance execution layer — the missing backend processing
+that makes the Establish Governance button functional. Two-phase design
+with a user confirmation gate between phases, faithful to the
+party_and_role_identification and governance_establishment skill files.
+
+### What was built
+
+**Migration 019 (applied directly via Supabase MCP):**
+- governance_parties.confirmation_status column
+- governance_run_log.parties_identified status + phase column
+
+**B1 — specialist_config.py:**
+- compliance SME added to SPECIALIST_CONFIGS (tier 2, max_tool_rounds 5)
+
+**B2 — src/agents/governance_runner.py (new file):**
+- run_party_identification() — Phase 1: invokes Compliance SME, parses
+  ~~~json_registry block, writes to governance_parties, sets run_log to parties_identified
+- run_governance_establishment() — Phase 2: fetches confirmed parties, invokes
+  Compliance SME with entity registry context, parses ~~~json_events block,
+  resolves party names to IDs, writes to governance_events, sets run_log to complete
+- _parse_json_block(), _parse_date(), _mark_run_failed() helpers
+
+**C1 — schemas.py:**
+- GovernancePartyResponse, ConfirmPartiesRequest, GovernancePartyUpdateRequest
+- parties_count added to GovernanceStatusResponse
+
+**C2 — governance.py:**
+- /run launches run_party_identification as background task
+- /status detects parties_identified state
+
+**C3 — governance.py:**
+- GET /parties — list entity registry
+- PATCH /parties/{party_id} — confirm or flag a party
+- POST /confirm-parties — trigger Phase 2
+
+**D1 — frontend/src/api/types.ts:**
+- GovernancePartyResponse interface
+- GovernanceStatusResponse updated: parties_identified status, parties_count field
+
+**D2 — frontend/src/api/governance.ts:**
+- listGovernanceParties, updateGovernanceParty, confirmParties
+
+**D3 — frontend/src/components/governance/GovernancePanel.tsx:**
+- Entity registry table with Confirm/Flag actions per party
+- "Confirm Parties & Establish Governance" button (disabled until ≥1 confirmed)
+- parties_identified status badge and state handling
+
+### Commit log
+
+Migration 019: applied directly via Supabase MCP
+Plan doc:  636fd0f
+B1:        8ec3ff4
+B2:        c4b327f
+C1:        ae32949
+C2:        33d0496
+C3:        491d423
+D1:        0984edc
+D2:        8e8706f
+D3:        349b476
+E1:        this commit
+
+### Database state
+20 migrations (001–019 + check_pgvector_version diagnostic). No new tables.
+governance_parties: +confirmation_status column.
+governance_run_log: +phase column, parties_identified status added.
+
+### Files changed
+src/agents/specialist_config.py
+src/agents/governance_runner.py (new)
+src/api/schemas.py
+src/api/routes/governance.py
+frontend/src/api/types.ts
+frontend/src/api/governance.ts
+frontend/src/components/governance/GovernancePanel.tsx
+docs/C1_GOVERNANCE_EXECUTION_PLAN.md (new)
+BUILD_LOG.md
