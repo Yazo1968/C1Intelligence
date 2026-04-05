@@ -139,6 +139,29 @@ def _check_routing_coverage(
     return gaps
 
 
+def _extract_sme_invocations(findings: list[SpecialistFindings]) -> dict[str, list[str]]:
+    """
+    Extract which SMEs were actually invoked by each orchestrator.
+
+    Uses tools_called (deterministic record from agentic loop).
+    Returns dict: orchestrator_domain → [sme_domains_invoked].
+    """
+    result: dict[str, list[str]] = {}
+    for finding in findings:
+        invoked: list[str] = []
+        for tool_entry in finding.tools_called:
+            if tool_entry.startswith("invoke_sme:"):
+                sme_domain = tool_entry.split(":", 1)[1]
+                invoked.append(sme_domain)
+        result[finding.domain] = invoked
+
+    logger.info(
+        "sme_invocations_extracted",
+        invocations={k: v for k, v in result.items()},
+    )
+    return result
+
+
 def process_query(request: QueryRequest) -> QueryResponse:
     """
     Full query pipeline (Phase 2 — multi-round):
@@ -299,6 +322,9 @@ def process_query(request: QueryRequest) -> QueryResponse:
             engaged=domains_engaged,
             query_snippet=request.query_text[:100],
         )
+
+    # Step 5b.2 — Extract SME invocations deterministically
+    sme_invocations = _extract_sme_invocations(round_1_findings)
 
     # ------------------------------------------------------------------
     # Step 6: Cross-specialist contradiction pass (stub — Phase 5)
