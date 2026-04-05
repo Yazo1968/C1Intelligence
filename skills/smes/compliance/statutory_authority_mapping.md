@@ -285,6 +285,7 @@ requiring user verification, per required interaction not evidenced.]
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / GREY]
+*(Confidence scale: GREEN = all required evidence retrieved and findings fully supported | AMBER = Layer 2b not retrieved or amendment position unknown -- findings provisional | RED = critical document absent -- findings materially constrained | GREY = standard form unconfirmed -- form-specific analysis suspended. Full definition: skills/c1-skill-authoring/references/grounding_protocol.md)*
 [GREEN: all statutory authorities confirmed from retrieved documents, all
 required interactions evidenced in warehouse]
 [AMBER: one or more authorities inferred; or one or more required interactions

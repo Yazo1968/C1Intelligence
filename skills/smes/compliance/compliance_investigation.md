@@ -329,6 +329,7 @@ flags already raised in sub-skill outputs — cross-reference them.]
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / GREY]
+*(Confidence scale: GREEN = all required evidence retrieved and findings fully supported | AMBER = Layer 2b not retrieved or amendment position unknown -- findings provisional | RED = critical document absent -- findings materially constrained | GREY = standard form unconfirmed -- form-specific analysis suspended. Full definition: skills/c1-skill-authoring/references/grounding_protocol.md)*
 [GREEN: all findings confirmed from confirmed governance events and retrieved
 documents across all required layers]
 [AMBER: one or more findings rest on inferred governance events, partially

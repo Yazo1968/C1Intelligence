@@ -388,6 +388,7 @@ confirmation — this section states the factual record only.
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / RED / GREY]
+*(Confidence scale: GREEN = all required evidence retrieved and findings fully supported | AMBER = Layer 2b not retrieved or amendment position unknown -- findings provisional | RED = critical document absent -- findings materially constrained | GREY = standard form unconfirmed -- form-specific analysis suspended. Full definition: skills/c1-skill-authoring/references/grounding_protocol.md)*
 Summary: [two to three sentences — factual record from retrieved
 documents only; note periods where the record is incomplete]
 ```
