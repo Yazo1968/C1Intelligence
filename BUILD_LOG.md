@@ -1268,3 +1268,25 @@ Vercel deployment dpl_Dxvfj2ZptvCsd5H7XnuwYKw2AtvK.
 No new agents. No new orchestrators. No extra API calls.
 Six skill/reference files changed. SME skill files unchanged.
 Database unchanged. No migration required.
+
+---
+## Session — Aggregation Integrity Plan v2.0
+
+**Date:** April 2026
+
+**Work completed:**
+- Aggregation Integrity Plan v2.0 authored and approved
+- Plan supersedes v1.0 (rejected: LLM self-reporting flaw)
+- All 20 tasks defined, sequenced, and QG criteria specified
+- Three stale bugs identified during direct code inspection:
+  S1: base_orchestrator.py — stale "claims" SME domain reference
+  S2: prompts.py — "SIX DOMAINS" should be "FIVE DOMAINS"
+  S3: tools.py — invoke_sme enum still contains "claims"
+- Plan committed to docs/C1_AGGREGATION_INTEGRITY_PLAN_v2.md
+- No code changed this session — plan only
+
+**Design principle:** All integrity checks read deterministic system state
+(tools_called, raw_sme_outputs, sources_used, evidence_record). Zero
+additional LLM calls. No new agent frameworks. No DB migrations.
+
+**Research basis:** MAST NeurIPS 2025, AgentAuditor Feb 2026, TRiSM Mar 2026.
