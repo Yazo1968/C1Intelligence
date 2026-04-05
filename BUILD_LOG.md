@@ -1220,3 +1220,30 @@ next Railway build. No database changes. No migration required.
 **No new agents. No new orchestrators. No extra API calls.**
 Six skill/reference files changed. SME skill files unchanged.
 Database unchanged. No migration required.
+
+---
+## Session — ISO 31000 Risk Register Enhancement Complete
+
+**Date:** April 2026
+**Commits:** 6bbd22e, 4008575, 108ed51, bb52d35, 12c302d, 43fe125, e935a0e
+
+**Changes:**
+- R1: grounding_protocol.md + output_formats.md — ISO 31000:2018 FLAGS standard defined. Nine-field risk register entry format, Risk Rating Matrix, Status definitions, Likelihood and Residual Rating derivation rules
+- R2: output_formats.md — orchestrator template FLAGS Summary replaced with ISO 31000 Risk Register template
+- R3: legal/directive.md — FLAGS output updated to ISO 31000 Risk Register format
+- R4: commercial/directive.md — FLAGS output updated to ISO 31000 Risk Register format
+- R5: financial/directive.md — FLAGS output updated to ISO 31000 Risk Register format
+- R6: synthesis_directive.md — Section 7 Consolidated FLAGS replaced with ISO 31000 Consolidated Risk Register (CRITICAL-first ranking, COMPOUND notation, deduplication, CANNOT ASSESS preservation)
+- R7: README.md + CLAUDE.md — ISO 31000 output recorded, risk_mode removal noted
+
+**Risk register fields per entry (ISO 31000:2018):**
+Risk ID | Category | Description | Cause | Consequence (H/M/L) |
+Likelihood (H/M/L or CANNOT ASSESS) | Inherent Rating (CRITICAL/HIGH/MEDIUM/LOW) |
+Existing Controls | Treatment (AVOID/REDUCE/TRANSFER/ACCEPT) |
+Residual Rating | Status (OPEN/REALIZED/TREATED/EXPIRED/ACCEPTED)
+
+**Risk Report toggle previously removed:** f752a47 (no trace in frontend or backend)
+
+**No new agents. No new orchestrators. No extra API calls.**
+Six skill/reference files changed. SME skill files unchanged.
+Database unchanged. No migration required.
