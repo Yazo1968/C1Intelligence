@@ -1177,3 +1177,24 @@ All tasks verified by strategic partner via GitHub API.
 - Financial & Accounting SME added
 - 18 migrations, 15 tables — unchanged
 - Production live and unchanged
+
+---
+## Session — Risk Report Feature Removed
+
+**Date:** April 2026
+**Commit:** f752a47
+
+**Change:** Risk Report feature removed without trace.
+Files changed: src/agents/orchestrator.py, src/agents/models.py,
+frontend/src/api/queries.ts,
+frontend/src/pages/ProjectWorkspacePage.tsx (4 files, 46 deletions)
+
+**Reason:** Feature was architecturally unsound — wrapping any
+finding in a risk template regardless of materiality or relevance.
+Finding classification (FLAG / INFORMATIONAL / CANNOT ASSESS) with
+explicit forensic implications is already built into every skill file
+and orchestrator directive. The risk framing layer was redundant and
+potentially misleading for the platform's target audience.
+
+**Platform state:** Production deployment will reflect removal on
+next Railway build. No database changes. No migration required.
