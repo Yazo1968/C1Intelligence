@@ -429,3 +429,34 @@ f1520bb D5 specialist_config + financial directive — code wiring
 query against the `contracts` table (`fidic_edition` column). Pre-existing
 form-specific reference in form-agnostic code. Does not affect the
 Enhancement Plan. Must be resolved before C1 is used on non-FIDIC projects.
+
+---
+
+## Aggregation Integrity Plan v2.0 — Complete
+
+**Status:** Complete
+**Document:** `docs/C1_AGGREGATION_INTEGRITY_PLAN_v2.md`
+
+20 tasks across 6 phases. All verification is deterministic — zero additional
+LLM calls. No new agent frameworks. No new API endpoints. No database
+migrations. No frontend changes.
+
+End state: routing coverage is verified against retrieved chunk content;
+SME invocations are traced via tools_called; raw SME outputs are preserved
+before synthesis; CANNOT CONFIRM items are consolidated from
+evidence_record; every response carries a Consolidated Evidence Map built
+from system-recorded data, not agent self-reports.
+
+Research basis: MAST NeurIPS 2025, AgentAuditor Feb 2026, TRiSM Mar 2026.
+Design principle: verification must read what the system recorded, not what
+agents say they did.
+
+### Commits
+
+Phase S:  7ff3d0f, 96526af, d4d050f
+Phase 1:  20254fc, 0e97785
+Phase 2:  445fe05, 59735e0
+Phase 3:  1da9344, 8362368
+Phase 4:  daca8d9, 8c6893b, b7aeea6
+Phase 5:  5e0de3b, 51f5023
+Phase 6:  18e29c7 (+ 6.2 and 6.3 commits to follow)
