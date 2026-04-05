@@ -11,7 +11,6 @@ DOMAIN_LEGAL_CONTRACTUAL = "legal_contractual"
 DOMAIN_COMMERCIAL_FINANCIAL = "commercial_financial"
 DOMAIN_SCHEDULE_PROGRAMME = "schedule_programme"
 DOMAIN_TECHNICAL_DESIGN = "technical_design"
-DOMAIN_CLAIMS_DISPUTES = "claims_disputes"
 DOMAIN_FINANCIAL_REPORTING = "financial_reporting"
 
 ALL_DOMAINS: list[str] = [
@@ -20,7 +19,6 @@ ALL_DOMAINS: list[str] = [
     DOMAIN_FINANCIAL_REPORTING,
     DOMAIN_SCHEDULE_PROGRAMME,
     DOMAIN_TECHNICAL_DESIGN,
-    DOMAIN_CLAIMS_DISPUTES,
 ]
 
 DOMAIN_DISPLAY_NAMES: dict[str, str] = {
@@ -29,7 +27,6 @@ DOMAIN_DISPLAY_NAMES: dict[str, str] = {
     DOMAIN_FINANCIAL_REPORTING: "Financial & Reporting",
     DOMAIN_SCHEDULE_PROGRAMME: "Schedule & Programme",
     DOMAIN_TECHNICAL_DESIGN: "Technical & Design",
-    DOMAIN_CLAIMS_DISPUTES: "Claims & Disputes",
 }
 
 # ---------------------------------------------------------------------------
@@ -41,21 +38,19 @@ Given a user query about a construction project, identify which of the six speci
 
 THE SIX DOMAINS:
 
-1. legal_contractual — Contract agreements, general and particular conditions of contract, contractual notices, time bars, letters of intent, performance bonds, insurance, amendments, side letters, novation, settlement agreements, dispute notices. Any question about what the contract says, what obligations exist, or what notices were issued.
+1. legal_contractual — Contract agreements, general and particular conditions of contract, contractual notices, time bars, letters of intent, performance bonds, insurance, amendments, side letters, novation, settlement agreements, dispute notices, notice compliance as a gateway to claim entitlement (time bar, form, awareness date), dispute resolution procedure assessment (adjudication, dispute board, arbitration escalation). Any question about what the contract says, what obligations exist, what notices were issued, or whether dispute resolution prerequisites have been satisfied.
 
 2. commercial_financial — Bills of quantities, payment applications, interim payment certificates, variations, daywork, measurement, cash flow, cost reports, budgets, liquidated damages, final accounts. Any question about money, costs, payments, or financial exposure.
 
-3. schedule_programme — Baseline programmes, revised programmes, recovery programmes, look-ahead schedules, as-built programmes, delay events, extensions of time, float, critical path, milestones. Any question about time, delays, or programme status.
+3. schedule_programme — Baseline programmes, revised programmes, recovery programmes, look-ahead schedules, as-built programmes, delay events, extensions of time, float, critical path, milestones, extension of time (EOT) claims and delay analysis, prolongation and time-related cost claims, disruption claims, productivity analysis, measured mile assessment. Any question about time, delays, programme status, delay quantum, or time-related cost.
 
 4. technical_design — Design basis, specifications, drawings, shop drawings, BIM, clash reports, value engineering, design changes, RFIs, technical reports. Any question about design, engineering, or technical specifications.
 
-5. claims_disputes — Notices of claim, delay notices, EOT claims, prolongation claims, disruption claims, acceleration claims, employer's claims, delay analysis, adjudication, expert reports, dispute board decisions, arbitration. Any question about claims, disputes, or their resolution.
-
-6. financial_reporting — Project budgets, cost control reports, earned value data (EVM, CPI, SPI, EAC, ETC), cash flow statements, financial forecasts, cost overrun and underrun analysis, contingency drawdown, lender and investor financial reports. Any question about financial performance, budget vs actual, or cost forecasting.
+5. financial_reporting — Project budgets, cost control reports, earned value data (EVM, CPI, SPI, EAC, ETC), cash flow statements, financial forecasts, cost overrun and underrun analysis, contingency drawdown, lender and investor financial reports. Any question about financial performance, budget vs actual, or cost forecasting.
 
 RULES:
 - Select ALL domains that are relevant, not just the primary one.
-- A delay claim query engages: claims_disputes (the claim itself), schedule_programme (the delay evidence), legal_contractual (the contractual basis), and possibly commercial_financial (the cost impact).
+- A delay claim query engages: schedule_programme (the delay evidence and EOT/prolongation quantum), legal_contractual (the contractual basis, notice compliance, and dispute resolution procedure), and possibly commercial_financial (the cost impact).
 - When in doubt, include the domain — it is better to engage a specialist that finds nothing than to miss a relevant dimension.
 - Always explain your reasoning."""
 
@@ -172,34 +167,6 @@ KEY ANALYTICAL FLAGS FOR THIS DOMAIN:
 - Document priority: when there is ambiguity between specifications and drawings, retrieve the priority of documents provision from Layer 2b.
 - Design changes: retrieve the variation procedure from Layer 2b; check Layer 1 for compliance with that procedure.
 - RFIs: retrieve from Layer 1; assess against the applicable specification or drawing and the relevant Layer 2b provision on ambiguity or discrepancy.
-{_SPECIALIST_RULES}""",
-
-    DOMAIN_CLAIMS_DISPUTES: f"""You are the Claims & Disputes specialist for C1, a universal construction project intelligence platform.
-
-YOUR DOMAIN COVERS:
-- Notices of claim (contractor and employer)
-- Notices of delay
-- Extension of time (EOT) claims
-- Prolongation and additional cost claims
-- Disruption claims and acceleration claims
-- Delay analysis reports and expert reports
-- Engineer's or adjudicator's determinations
-- Dispute board decisions
-- Notices of dissatisfaction
-- Arbitration notices and proceedings
-- Settlement agreements
-
-RETRIEVAL PROTOCOL — FOLLOW IN THIS ORDER:
-1. Retrieve the governing claims procedure and dispute resolution provisions from Layer 2b using search_chunks. The standard form in use is whatever is present in the warehouse — this is your most critical retrieval. Do not apply any claims procedure from training knowledge.
-2. Retrieve claim notices, correspondence, delay records, and any determinations from Layer 1 (project documents).
-3. Retrieve applicable internal claims governance or authority frameworks from Layer 2a.
-4. Apply what you retrieved. If the governing claims procedure was not retrieved from Layer 2b, state: CANNOT CONFIRM — STANDARD FORM NOT IN WAREHOUSE. You cannot assess notice compliance, time bar status, or procedural validity without the retrieved provision.
-
-KEY ANALYTICAL FLAGS FOR THIS DOMAIN:
-- Notice time bar: retrieve the applicable notice provision from Layer 2b; calculate the time bar date against the event awareness date found in Layer 1. Flag explicitly if the notice is late or if the time bar date cannot be calculated because Layer 2b was not retrieved.
-- Claim procedural compliance: retrieve the full claims procedure from Layer 2b; check each Layer 1 submission against each procedural step.
-- Dispute board: retrieve the applicable dispute resolution provision from Layer 2b to confirm the type of board, its constitution, and its decision-making powers.
-- Employer's claims: retrieve from Layer 2b — the procedural requirements for employer's claims vary significantly between standard forms and editions.
 {_SPECIALIST_RULES}""",
 
     DOMAIN_FINANCIAL_REPORTING: f"""You are the Financial Reporting specialist for C1, a universal construction project intelligence platform.
