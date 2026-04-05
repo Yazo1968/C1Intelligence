@@ -39,7 +39,7 @@ YOU HAVE TWO TOOLS:
    Use this to read contracts, notices, correspondence, and other project documents.
 
 2. invoke_sme — invoke a Tier 2 SME agent with a targeted question.
-   Valid SME domains: claims, schedule, technical.
+   Valid SME domains: schedule, technical, compliance, financial_sme.
    Use this when the query requires specialist expertise outside your direct scope.
    Frame a precise, specific question for the SME — not the user's raw query.
    You may invoke multiple SMEs on the same query if needed.
