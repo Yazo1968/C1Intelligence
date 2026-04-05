@@ -1091,3 +1091,36 @@ orchestrator directives and all 26 SME skill files.
 - 18 migrations, 15 tables, 26 skill files — all unchanged
 - Production live and unchanged
 - Next session: push this BUILD_LOG entry, then execute from Task A1.1
+
+---
+## Session — Part A Complete
+
+**Date:** April 2026
+**Commits:** d9c277e, a35021f, 0c5ce16, 92c37b5, 2555457, cbb7797,
+f9df792, 1240d85, 2a5739d, a25d1e6, 81e6ecf
+
+**Tasks completed:**
+- A1.1: notice_and_instruction_compliance.md — retired engineer_identification references replaced
+- A1.2: entitlement_basis.md — retired engineer_identification reference replaced
+- A1.3: key_dates_and_securities.md — retired engineer_identification reference replaced
+- A1.4: programme_assessment.md — retired engineer_identification reference replaced
+- A3.1: commercial/directive.md — missing H1 title added
+- A4.1: claims/README.md — stale placeholder removed, pending restructure noted
+- A2.1: notice_and_instruction_compliance.md + notice_compliance.md — routing boundary clarified
+- A7.1: governance_establishment.md — explicit statutory_authority_mapping invocation added
+- A8.1: evm_and_cost_reporting.md — fallback path added for missing EVM reports
+- A6.1: All 27 SME skill files — confidence scale reference added to output format sections
+- A5.1: synthesis_directive.md — new file created, multi-orchestrator assembly directive
+
+**Part A status:** COMPLETE — all 11 tasks verified by strategic partner via GitHub API.
+
+**Next session:** Part B — Broken Window session. Tasks B1 through B_code3
+must execute without interruption in a single session. Do not start Part B
+without confirming full session availability.
+
+**Known backlog item (not in Enhancement Plan):**
+skill_loader._generate_project_context() contains a FIDIC-specific query
+against the contracts table (fidic_edition column). This is a pre-existing
+form-specific reference in form-agnostic code. Does not affect Enhancement
+Plan. Must be resolved in a future session before C1 is used on non-FIDIC
+projects.
