@@ -1198,3 +1198,25 @@ potentially misleading for the platform's target audience.
 
 **Platform state:** Production deployment will reflect removal on
 next Railway build. No database changes. No migration required.
+
+---
+## Session — ISO 31000 Risk Register Enhancement Complete
+
+**Date:** April 2026
+**Commits:** 6bbd22e, 4008575, 108ed51, bb52d35, 12c302d, 43fe125
+
+**Changes:**
+- R1: grounding_protocol.md — ISO 31000:2018 FLAGS standard defined (orchestrator vs SME level). output_formats.md — full nine-field risk register entry format, Risk Rating Matrix, Status definitions, Likelihood and Residual Rating derivation rules added
+- R2: output_formats.md — orchestrator directive output template FLAGS Summary replaced with ISO 31000 Risk Register template
+- R3: legal/directive.md — FLAGS output updated to ISO 31000 Risk Register format
+- R4: commercial/directive.md — FLAGS output updated to ISO 31000 Risk Register format
+- R5: financial/directive.md — FLAGS output updated to ISO 31000 Risk Register format
+- R6: synthesis_directive.md — Section 7 Consolidated FLAGS replaced with ISO 31000 Consolidated Risk Register with CRITICAL-first ranking, compound risk identification, and COMPOUND notation
+
+**Risk register fields per entry:** Risk ID, Category, Description, Cause, Consequence (H/M/L), Likelihood (H/M/L or CANNOT ASSESS), Inherent Rating (CRITICAL/HIGH/MEDIUM/LOW), Existing Controls, Treatment (AVOID/REDUCE/TRANSFER/ACCEPT), Residual Rating, Status (OPEN/REALIZED/TREATED/EXPIRED/ACCEPTED)
+
+**Standard:** ISO 31000:2018 — internationally recognised risk management framework used by construction, audit, and lender communities
+
+**No new agents. No new orchestrators. No extra API calls.**
+Six skill/reference files changed. SME skill files unchanged.
+Database unchanged. No migration required.
