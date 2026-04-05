@@ -6,8 +6,11 @@ import {
   getGovernanceStatus,
   listGovernanceEvents,
   updateGovernanceEvent,
+  listGovernanceParties,
+  updateGovernanceParty,
+  confirmParties,
 } from '../../api/governance';
-import type { GovernanceStatusResponse, GovernanceEventResponse } from '../../api/types';
+import type { GovernanceStatusResponse, GovernanceEventResponse, GovernancePartyResponse } from '../../api/types';
 
 interface GovernancePanelProps {
   projectId: string;
@@ -15,6 +18,7 @@ interface GovernancePanelProps {
 
 const STATUS_LABELS: Record<string, { label: string; colour: string }> = {
   not_established: { label: 'Not Established', colour: 'bg-gray-100 text-gray-600' },
+  parties_identified: { label: 'Parties Identified', colour: 'bg-amber-100 text-amber-700' },
   established: { label: 'Established', colour: 'bg-green-100 text-green-700' },
   stale: { label: 'Stale', colour: 'bg-amber-100 text-amber-700' },
 };
@@ -39,6 +43,10 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
   const [running, setRunning] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [parties, setParties] = useState<GovernancePartyResponse[]>([]);
+  const [partiesLoading, setPartiesLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [updatingPartyId, setUpdatingPartyId] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     setStatusLoading(true);
@@ -64,6 +72,18 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
     }
   }, [projectId]);
 
+  const fetchParties = useCallback(async () => {
+    setPartiesLoading(true);
+    try {
+      const p = await listGovernanceParties(projectId);
+      setParties(p);
+    } catch {
+      setError('Failed to load governance parties.');
+    } finally {
+      setPartiesLoading(false);
+    }
+  }, [projectId]);
+
   useEffect(() => {
     fetchStatus();
   }, [fetchStatus]);
@@ -73,6 +93,12 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
       fetchEvents();
     }
   }, [status, fetchEvents]);
+
+  useEffect(() => {
+    if (status && status.status === 'parties_identified') {
+      fetchParties();
+    }
+  }, [status, fetchParties]);
 
   const handleRun = async () => {
     setRunning(true);
@@ -86,6 +112,39 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
       setError('Failed to trigger governance run. Please try again.');
     } finally {
       setRunning(false);
+    }
+  };
+
+  const handleConfirmParties = async () => {
+    setConfirming(true);
+    setError(null);
+    try {
+      await confirmParties(projectId);
+      await fetchStatus();
+      await fetchEvents();
+    } catch {
+      setError('Failed to trigger governance establishment. Please try again.');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const handleUpdatePartyStatus = async (
+    partyId: string,
+    newStatus: 'confirmed' | 'flagged' | 'inferred',
+  ) => {
+    setUpdatingPartyId(partyId);
+    try {
+      const updated = await updateGovernanceParty(projectId, partyId, {
+        confirmation_status: newStatus,
+      });
+      setParties((prev) =>
+        prev.map((p) => (p.id === updated.id ? updated : p)),
+      );
+    } catch {
+      setError('Failed to update party status.');
+    } finally {
+      setUpdatingPartyId(null);
     }
   };
 
@@ -155,6 +214,8 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
               <span className="flex items-center gap-2"><Spinner className="h-3 w-3" />Running...</span>
             ) : status?.status === 'not_established' ? (
               'Establish Governance'
+            ) : status?.status === 'parties_identified' ? (
+              'Re-run Party Identification'
             ) : (
               'Refresh Governance'
             )}
@@ -173,6 +234,118 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
           </div>
         )}
       </div>
+
+      {status?.status === 'parties_identified' && (
+        <div className="bg-white border border-gray-200 rounded-lg">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-navy-900">Entity Registry</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Review each identified party. Confirm or flag before establishing governance.
+              </p>
+            </div>
+            <button
+              onClick={handleConfirmParties}
+              disabled={
+                confirming ||
+                partiesLoading ||
+                parties.filter((p) => p.confirmation_status === 'confirmed').length === 0
+              }
+              className="shrink-0 px-4 py-2 text-sm font-medium bg-green-700 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {confirming ? (
+                <span className="flex items-center gap-2">
+                  <Spinner className="h-3 w-3" />Running...
+                </span>
+              ) : (
+                'Confirm Parties & Establish Governance'
+              )}
+            </button>
+          </div>
+
+          {partiesLoading ? (
+            <div className="flex justify-center py-12">
+              <Spinner className="h-6 w-6" />
+            </div>
+          ) : parties.length === 0 ? (
+            <div className="p-5">
+              <EmptyState
+                title="No parties identified"
+                description="Party identification is still running or produced no results."
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-gray-50 text-left">
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Canonical Name</th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Terminus</th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {parties.map((party) => {
+                    const isUpdating = updatingPartyId === party.id;
+                    const statusColour =
+                      party.confirmation_status === 'confirmed'
+                        ? 'bg-green-100 text-green-700'
+                        : party.confirmation_status === 'flagged'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-amber-100 text-amber-700';
+                    return (
+                      <tr key={party.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 capitalize text-gray-600">{party.entity_type}</td>
+                        <td className="px-4 py-3 font-medium text-navy-900 max-w-[200px] truncate" title={party.canonical_name}>
+                          {party.canonical_name}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate" title={party.contractual_role ?? ''}>
+                          {party.contractual_role ?? '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500">
+                          {party.terminus_node ? 'Yes' : 'No'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${statusColour}`}>
+                            {party.confirmation_status.charAt(0).toUpperCase() + party.confirmation_status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {isUpdating ? (
+                            <Spinner className="h-3 w-3" />
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              {party.confirmation_status !== 'confirmed' && (
+                                <button
+                                  onClick={() => handleUpdatePartyStatus(party.id, 'confirmed')}
+                                  className="text-green-700 hover:underline font-medium"
+                                >
+                                  Confirm
+                                </button>
+                              )}
+                              {party.confirmation_status !== 'flagged' && (
+                                <button
+                                  onClick={() => handleUpdatePartyStatus(party.id, 'flagged')}
+                                  className="text-red-600 hover:underline font-medium"
+                                >
+                                  Flag
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
