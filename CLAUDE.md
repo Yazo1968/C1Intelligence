@@ -121,6 +121,10 @@ Read this skill before building or rebuilding any file under `skills/`.
 **Skill files:** 3 orchestrator directives + 1 synthesis directive
 + 26 SME skill files = 30 files total.
 
+**Aggregation Integrity Layer (v2.0 — deterministic):**
+Routing coverage check (chunk-domain keyword alignment — deterministic, no LLM). SME invocation trace (tools_called records invoke_sme:{domain} — deterministic). Raw SME output preservation (captured in agentic loop before synthesis). Evidence Auditor (run_evidence_audit() — zero API calls, reads only pre-recorded deterministic data). Consolidated Evidence Map in every response (built from sources_used, tools_called, raw_sme_outputs, and evidence_record — not from agent self-reporting).
+Design principle: every integrity check reads deterministic system state. No integrity layer asks an agent to audit itself.
+
 **Domains:**
 - Legal & Contractual SME: 7 skills (contract_assembly,
   entitlement_basis, key_dates_and_securities,
