@@ -231,7 +231,11 @@ class BaseOrchestrator:
                 for tool_block in tool_use_blocks:
                     tool_name = tool_block.name
                     tool_input = tool_block.input
-                    tools_called.append(tool_name)
+                    # For invoke_sme, record the specific SME domain — not just the tool name
+                    if tool_name == "invoke_sme" and "sme_domain" in tool_input:
+                        tools_called.append(f"invoke_sme:{tool_input['sme_domain']}")
+                    else:
+                        tools_called.append(tool_name)
 
                     logger.info(
                         "orchestrator_tool_call",
