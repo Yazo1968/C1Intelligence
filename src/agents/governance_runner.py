@@ -485,6 +485,7 @@ def _mark_run_failed(supabase, run_id: str, reason: str) -> None:
     try:
         supabase.table("governance_run_log").update({
             "status": "failed",
+            "error_message": reason[:2000],
             "completed_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", run_id).execute()
         logger.error("governance_run_marked_failed", run_id=run_id, reason=reason)
