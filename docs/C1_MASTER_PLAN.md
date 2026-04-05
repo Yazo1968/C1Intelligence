@@ -356,21 +356,76 @@ At the close of every session:
 
 ---
 
-## Enhancement Plan — Active Workstream
+## Enhancement Plan — COMPLETE
 
-**Status:** Planned — ready for execution
+**Status:** Complete
 **Document:** `docs/C1_Orchestrators_and_SMEs_enhancement.md` v2.3
-**Committed:** 190dfb8
+**Completed:** April 2026
 
-29 tasks across 4 parts. No Phases 1–6 work is changed.
+29 tasks across 4 parts — all complete and verified.
 
-| Part | Scope | Tasks | Executor |
+| Part | Scope | Tasks | Status |
 |---|---|---|---|
-| A | Expert examination remediation — 8 issues | 11 | Claude Code |
-| B | Claims SME dissolution + backend code changes | 9 | Claude Code |
-| C | Delay assessment quality improvements | 2 | Claude Code |
-| D | 3 new Financial SME skills | 5 | Strategic Partner drafts |
-| Governing docs | CLAUDE.md + C1_MASTER_PLAN.md | 2 | Claude Code |
+| A | Expert examination remediation — 8 issues | 11 | Complete ✅ |
+| B | Claims SME dissolution + backend code changes | 9 | Complete ✅ |
+| C | Delay assessment quality improvements | 2 | Complete ✅ |
+| D | Financial & Accounting SME — 3 new skills | 5 | Complete ✅ |
+| Governing docs | CLAUDE.md + C1_MASTER_PLAN.md | 2 | Complete ✅ |
 
-End state: 31 skill files, 4 active SME domains, Claims SME dissolved,
-Financial SME domain added. See Enhancement Plan for full task specs.
+### End state
+
+**Skill file inventory (30 files):**
+- 3 orchestrator directives + 1 synthesis directive
+- Legal & Contractual SME: 7 skills
+- Delay and Cost Analytics SME: 9 skills
+- Technical & Construction SME: 6 skills (unchanged)
+- Compliance SME: 6 skills (unchanged)
+- Financial & Accounting SME: 3 skills (new domain)
+
+**Backend domain routing (5 router-accessible domains):**
+`legal_contractual→legal` | `commercial_financial→commercial` |
+`financial_reporting→financial` | `schedule_programme→schedule` |
+`technical_construction→technical`
+`claims_disputes` removed from ALL_DOMAINS and DOMAIN_TO_CONFIG_KEY.
+`financial_sme` loaded by Financial orchestrator delegation only.
+
+**Part A — 11 tasks (commits):**
+d9c277e A1.1 notice_and_instruction_compliance — retired reference fixed
+a35021f A1.2 entitlement_basis — retired reference fixed
+0c5ce16 A1.3 key_dates_and_securities — retired reference fixed
+92c37b5 A1.4 programme_assessment — retired reference fixed
+2555457 A3.1 commercial directive — missing H1 title added
+cbb7797 A4.1 claims README — stale placeholder removed
+f9df792 A2.1 notice compliance skill boundary clarified in both files
+1240d85 A7.1 governance_establishment — statutory_authority_mapping invoked
+2a5739d A8.1 evm_and_cost_reporting — fallback path added
+a25d1e6 A6.1 all 27 SME files — confidence scale added to output sections
+81e6ecf A5.1 synthesis_directive.md — new file created
+
+**Part B — 9 tasks (Broken Window session):**
+0f4ac18 B1 schedule SME domain labels updated
+9d02c69 B2 eot_quantification, prolongation_cost, disruption moved to schedule
+3972b43 B3 notice_compliance, dispute_resolution_procedure moved to legal
+3723c51 B4 claims directory retired
+8d15f28 B_schema claims schema deleted, schedule schema updated
+b409b66 B5 all 3 orchestrator directives updated
+489cf65 B_code1 specialist_config — claims entry removed
+41fb74d B_code2 prompts.py — claims_disputes removed
+c340677 B_code3 orchestrator.py — claims routing removed
+
+**Part C — 2 tasks:**
+7e2a0ef C1 eot_quantification — methodology appropriateness + As-Built Critical Path
+00d4cfc C2 delay_identification — forensic four-way classification added
+
+**Part D — 5 tasks:**
+4b3ab3d D1 cost_control_assessment.md — new Financial & Accounting SME skill
+f09ae3d D2 multi_contract_account_reconciliation.md — new skill
+3a31ab8 D3 financial_reporting_compliance.md — new skill
+a2105b2 D4 grounding_schema.json — Financial & Accounting SME domain
+f1520bb D5 specialist_config + financial directive — code wiring
+
+**Known backlog item:**
+`skill_loader._generate_project_context()` contains a FIDIC-specific
+query against the `contracts` table (`fidic_edition` column). Pre-existing
+form-specific reference in form-agnostic code. Does not affect the
+Enhancement Plan. Must be resolved before C1 is used on non-FIDIC projects.
