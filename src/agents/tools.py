@@ -129,18 +129,18 @@ ORCHESTRATOR_TOOL_DEFINITIONS: list[dict] = TOOL_DEFINITIONS + [
         "description": (
             "Invoke a Tier 2 SME agent with a targeted, specific question. "
             "Use this when the query requires specialist expertise beyond your orchestrator scope — "
-            "e.g., delay analysis (schedule SME), notice compliance (claims SME), "
-            "or design defect assessment (technical SME). "
+            "e.g., delay analysis (schedule SME), specification compliance (technical SME), "
+            "regulatory compliance (compliance SME), or cost accounting (financial_sme). "
             "The SME will retrieve relevant documents and return structured findings. "
             "Ask one focused question per invocation. "
-            "Valid SME domains: 'claims', 'schedule', 'technical'."
+            "Valid SME domains: 'schedule', 'technical', 'compliance', 'financial_sme'."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "sme_domain": {
                     "type": "string",
-                    "enum": ["claims", "schedule", "technical"],
+                    "enum": ["schedule", "technical", "compliance", "financial_sme"],
                     "description": "The Tier 2 SME domain to invoke.",
                 },
                 "question": {
