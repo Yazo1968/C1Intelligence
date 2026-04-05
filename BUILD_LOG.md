@@ -1290,3 +1290,84 @@ Database unchanged. No migration required.
 additional LLM calls. No new agent frameworks. No DB migrations.
 
 **Research basis:** MAST NeurIPS 2025, AgentAuditor Feb 2026, TRiSM Mar 2026.
+
+---
+
+## Session — Aggregation Integrity Plan v2.0
+
+**Date:** April 2026
+**Status:** COMPLETE
+**Phases:** S, 1, 2, 3, 4, 5, 6 — all 20 tasks complete
+
+### Summary
+
+Implemented the Aggregation Integrity Layer v2.0. All verification is
+deterministic — zero additional LLM calls. No database migrations.
+No frontend changes. No new agent frameworks.
+
+### What was built
+
+**Phase S — Stale bug fixes (3 commits):**
+- S1: base_orchestrator.py — removed stale claims SME domain, added compliance and financial_sme
+- S2: prompts.py — domain router corrected from SIX to FIVE domains
+- S3: tools.py — invoke_sme enum updated, claims removed, compliance and financial_sme added
+
+**Phase 1 — Deterministic routing audit (2 commits):**
+- 1.1: orchestrator.py — _DOMAIN_CHUNK_KEYWORDS dict and _check_routing_coverage() added
+- 1.2: orchestrator.py + models.py — routing gaps detected, surfaced in response, QueryResponse field added
+
+**Phase 2 — Deterministic SME trace (2 commits):**
+- 2.1: base_orchestrator.py — tools_called records invoke_sme:{domain}
+- 2.2: orchestrator.py — _extract_sme_invocations() added and called as Step 5b.2
+
+**Phase 3 — Raw SME output preservation (2 commits):**
+- 3.1: models.py — raw_sme_outputs field added to SpecialistFindings
+- 3.2: base_orchestrator.py — raw SME outputs captured in agentic loop, threaded through _parse_findings()
+
+**Phase 4 — Evidence Auditor (3 commits):**
+- 4.1: models.py — AuditResult and SMEConfidenceRecord models added, audit_result on QueryResponse
+- 4.2: orchestrator.py — run_evidence_audit() implemented, zero API calls
+- 4.3: orchestrator.py — Evidence Auditor integrated as Step 5b.3 in process_query() pipeline
+
+**Phase 5 — Evidence Map (2 commits):**
+- 5.1: orchestrator.py — _build_consolidated_evidence_map() added, called in build_response_text()
+- 5.2: output_formats.md — Consolidated Evidence Map documented as system-generated
+
+**Phase 6 — Governing documents (3 commits):**
+- 6.1: CLAUDE.md — Aggregation Integrity Layer v2.0 documented in Architecture section
+- 6.2: C1_MASTER_PLAN.md — Plan recorded as complete with full commit log
+- 6.3: BUILD_LOG.md — this entry
+
+### Commit log
+
+S1:  7ff3d0f
+S2:  96526af
+S3:  d4d050f
+1.1: 20254fc
+1.2: 0e97785
+2.1: 59735e0
+2.2: 445fe05
+3.1: 1da9344
+3.2: 8362368
+4.1: daca8d9
+4.2: 8c6893b
+4.3: b7aeea6
+5.1: 5e0de3b
+5.2: 51f5023
+6.1: 18e29c7
+6.2: c1400bb
+6.3: this commit
+
+### Database state
+18 migrations (001–018) — unchanged. No migrations added.
+
+### Files changed
+src/agents/base_orchestrator.py
+src/agents/orchestrator.py
+src/agents/models.py
+src/agents/prompts.py
+src/agents/tools.py
+skills/c1-skill-authoring/references/output_formats.md
+CLAUDE.md
+docs/C1_MASTER_PLAN.md
+BUILD_LOG.md
