@@ -275,9 +275,12 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
         <div className="bg-white border border-gray-200 rounded-lg">
           <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-sm font-semibold text-navy-900">Entity Registry</h3>
+              <h3 className="text-sm font-semibold text-navy-900">Identified Parties</h3>
               <p className="text-xs text-gray-500 mt-0.5">
-                Review each identified party. Confirm or flag before establishing governance.
+                Review each identified party extracted from your project documents.
+                Confirm parties that are correctly identified. Flag any entry that
+                is incorrect or uncertain — flagged parties are excluded from the
+                governance analysis.
               </p>
             </div>
             <button
@@ -316,9 +319,9 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
                 <thead>
                   <tr className="bg-gray-50 text-left">
                     <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Canonical Name</th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Party Name</th>
                     <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Terminus</th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Has Downward Authority</th>
                     <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -338,11 +341,15 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
                         <td className="px-4 py-3 font-medium text-navy-900 max-w-[200px] truncate" title={party.canonical_name}>
                           {party.canonical_name}
                         </td>
-                        <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate" title={party.contractual_role ?? ''}>
+                        <td
+                          className="px-4 py-3 text-gray-600 max-w-[220px]"
+                          style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}
+                          title={party.contractual_role ?? ''}
+                        >
                           {party.contractual_role ?? '—'}
                         </td>
                         <td className="px-4 py-3 text-gray-500">
-                          {party.terminus_node ? 'Yes' : 'No'}
+                          {party.terminus_node ? 'No' : 'Yes'}
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${statusColour}`}>
