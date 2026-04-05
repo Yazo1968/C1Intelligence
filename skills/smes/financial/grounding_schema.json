@@ -1,0 +1,8 @@
+{
+  "skill_group": "financial_accounting_sme",
+  "layer2b_required": false,
+  "layer2a_required": true,
+  "layer1_amendment_document_required": false,
+  "confidence_cap_without_layer2a": "AMBER",
+  "description": "Financial & Accounting SMEs require Layer 2a internal financial policies and DOA frameworks before assessing cost control governance, contingency drawdown authority, payment approval compliance, and financial reporting obligations. Layer 1 cost reports, contract documents, payment records, and financial reports are the primary evidence base. Layer 2b accounting and cost management standards improve assessment quality when ingested but are not required to proceed — findings that depend on a retrieved standard are flagged CANNOT CONFIRM when the standard is absent."
+}
