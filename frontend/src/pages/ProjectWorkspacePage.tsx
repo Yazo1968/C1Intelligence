@@ -39,7 +39,6 @@ export function ProjectWorkspacePage() {
   // Round 0 assessment state
   const [round0Assessment, setRound0Assessment] = useState<Round0Assessment | null>(null);
   const lastQueryTextRef = useRef<string>('');
-  const lastRiskModeRef = useRef<boolean>(false);
 
   // Contradictions state
   const [contradictions, setContradictions] = useState<ContradictionResponse[]>([]);
@@ -92,7 +91,7 @@ export function ProjectWorkspacePage() {
     if (activeTab === 'contradictions') fetchContradictions();
   }, [activeTab, fetchContradictions]);
 
-  const handleAssess = async (queryText: string, riskMode: boolean = false) => {
+  const handleAssess = async (queryText: string) => {
     if (!projectId) return;
     setQueryError(null);
     setQueryResponse(null);
@@ -101,10 +100,9 @@ export function ProjectWorkspacePage() {
     setQueryStatusMessage('Assessing query...');
     stopQueryPolling();
     lastQueryTextRef.current = queryText;
-    lastRiskModeRef.current = riskMode;
 
     try {
-      const result = await assessQuery(projectId, queryText, riskMode);
+      const result = await assessQuery(projectId, queryText);
       setRound0Assessment(result);
       setQueryLoading(false);
       setQueryStatusMessage(null);
@@ -115,7 +113,7 @@ export function ProjectWorkspacePage() {
     }
   };
 
-  const handleQuery = async (queryText: string, riskMode: boolean = false, domains?: string[]) => {
+  const handleQuery = async (queryText: string, domains?: string[]) => {
     if (!projectId) return;
     setQueryError(null);
     setQueryResponse(null);
@@ -124,7 +122,7 @@ export function ProjectWorkspacePage() {
     stopQueryPolling();
 
     try {
-      const res = await submitQuery(projectId, queryText, riskMode, domains);
+      const res = await submitQuery(projectId, queryText, domains);
       const queryId = res.query_id;
       setQueryStatusMessage('Analysing documents across specialist domains...');
 
@@ -197,10 +195,10 @@ export function ProjectWorkspacePage() {
                 assessment={round0Assessment}
                 loading={queryLoading}
                 onRunAnalysis={(domains) => {
-                  handleQuery(lastQueryTextRef.current, lastRiskModeRef.current, domains);
+                  handleQuery(lastQueryTextRef.current, domains);
                 }}
                 onRunAll={() => {
-                  handleQuery(lastQueryTextRef.current, lastRiskModeRef.current);
+                  handleQuery(lastQueryTextRef.current);
                 }}
               />
             )}

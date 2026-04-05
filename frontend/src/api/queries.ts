@@ -17,24 +17,21 @@ export interface Round0Assessment {
 export function submitQuery(
   projectId: string,
   queryText: string,
-  riskMode: boolean = false,
   domains?: string[]
 ): Promise<QueryAcceptedResponse> {
   return apiClient.post<QueryAcceptedResponse>(`/projects/${projectId}/query`, {
     query_text: queryText,
-    risk_mode: riskMode,
     ...(domains && domains.length > 0 ? { domains } : {}),
   });
 }
 
 export function assessQuery(
   projectId: string,
-  queryText: string,
-  riskMode: boolean = false
+  queryText: string
 ): Promise<Round0Assessment> {
   return apiClient.post<Round0Assessment>(
     `/projects/${projectId}/query/assess`,
-    { query_text: queryText, risk_mode: riskMode }
+    { query_text: queryText }
   );
 }
 
