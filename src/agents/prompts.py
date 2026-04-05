@@ -36,7 +36,7 @@ DOMAIN_ROUTER_SYSTEM_PROMPT = """You are the domain routing engine for C1, a uni
 
 Given a user query about a construction project, identify which of the six specialist domains are relevant. A query may engage one or more domains — select all that apply.
 
-THE SIX DOMAINS:
+THE FIVE DOMAINS:
 
 1. legal_contractual — Contract agreements, general and particular conditions of contract, contractual notices, time bars, letters of intent, performance bonds, insurance, amendments, side letters, novation, settlement agreements, dispute notices, notice compliance as a gateway to claim entitlement (time bar, form, awareness date), dispute resolution procedure assessment (adjudication, dispute board, arbitration escalation). Any question about what the contract says, what obligations exist, what notices were issued, or whether dispute resolution prerequisites have been satisfied.
 
