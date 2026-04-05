@@ -156,6 +156,7 @@ class QueryResponse(BaseModel):
     contradictions: list[ContradictionFlag] = Field(default_factory=list)
     document_ids_at_query_time: list[uuid.UUID] = Field(default_factory=list)
     audit_log_id: uuid.UUID | None = None
+    routing_gaps: list[str] = Field(default_factory=list)
 
 
 # =============================================================================

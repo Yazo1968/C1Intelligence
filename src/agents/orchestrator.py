@@ -286,6 +286,21 @@ def process_query(request: QueryRequest) -> QueryResponse:
     all_findings: list[SpecialistFindings] = round_1_findings
 
     # ------------------------------------------------------------------
+    # Step 5b.1 — Deterministic routing coverage audit
+    # ------------------------------------------------------------------
+    routing_gaps = _check_routing_coverage(
+        domains_engaged=domains_engaged,
+        retrieved_chunks=retrieved_chunks_dicts,
+    )
+    if routing_gaps:
+        logger.warning(
+            "routing_gaps_detected",
+            gaps=routing_gaps,
+            engaged=domains_engaged,
+            query_snippet=request.query_text[:100],
+        )
+
+    # ------------------------------------------------------------------
     # Step 6: Cross-specialist contradiction pass (stub — Phase 5)
     # ------------------------------------------------------------------
     cross_specialist_contradictions = cross_specialist_contradiction_pass(
@@ -321,6 +336,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
         confidence,
         request.query_text,
         document_count=len(document_ids),
+        routing_gaps=routing_gaps,
     )
 
     # ------------------------------------------------------------------
@@ -367,6 +383,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
         contradictions=contradictions,
         document_ids_at_query_time=document_ids,
         audit_log_id=audit_log_id,
+        routing_gaps=routing_gaps,
     )
 
 
@@ -655,6 +672,8 @@ def build_response_text(
     query_text: str,
     document_count: int = 0,
     audit_log_id: uuid.UUID | None = None,
+    routing_gaps: list[str] | None = None,
+    audit_result: "AuditResult | None" = None,
 ) -> str:
     """
     Professional report assembly from SpecialistFindings.
@@ -676,6 +695,16 @@ def build_response_text(
     sections.append("")
     sections.append("---")
     sections.append("")
+
+    if routing_gaps:
+        gap_names = [DOMAIN_DISPLAY_NAMES.get(d, d) for d in routing_gaps]
+        sections.append(
+            f"> ⚠ **Coverage Notice:** The document warehouse contains signals "
+            f"for the following domains that were not engaged in this analysis: "
+            f"{', '.join(gap_names)}. This may indicate a partial assessment. "
+            f"Consider resubmitting the query or engaging these domains explicitly."
+        )
+        sections.append("")
 
     # --- Domain Assessments ---
     sections.append("## Domain Assessments")
