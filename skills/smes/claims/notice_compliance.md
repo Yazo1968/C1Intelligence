@@ -20,6 +20,13 @@
 
 ## When to apply this skill
 
+This skill governs notice compliance as a procedural gateway to claim
+entitlement — whether the prerequisites for a specific EOT, prolongation
+cost, disruption, or dispute resolution claim have been satisfied. For
+general validity of notices and instructions assessed independently of a
+specific claim entitlement, route to
+`notice_and_instruction_compliance.md`.
+
 Apply when retrieved documents contain a notice of claim, notice of
 delay, notice of potential claim, or any letter asserting a right to
 additional time or money. Apply when a query concerns whether a notice

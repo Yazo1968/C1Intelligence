@@ -21,6 +21,14 @@
 
 ## When to apply this skill
 
+This skill governs the formal validity of notices and instructions as a
+contractual matter, assessed independently of any specific claim
+entitlement. Apply for variation instructions, suspension notices,
+termination notices, and any communication whose validity depends on
+form, timing, or routing. For notice compliance specifically as a
+procedural gateway to claim entitlement (EOT, prolongation cost,
+disruption, dispute resolution), route to `notice_compliance.md`.
+
 Apply when a query concerns whether a notice or instruction was validly
 issued — including notice of claim, notice of delay, contract
 administrator instruction, variation instruction, suspension notice,
