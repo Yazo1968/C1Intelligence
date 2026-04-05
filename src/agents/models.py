@@ -157,6 +157,7 @@ class QueryResponse(BaseModel):
     document_ids_at_query_time: list[uuid.UUID] = Field(default_factory=list)
     audit_log_id: uuid.UUID | None = None
     routing_gaps: list[str] = Field(default_factory=list)
+    audit_result: "AuditResult | None" = None
 
 
 # =============================================================================
@@ -195,4 +196,62 @@ class SpecialistFindings(BaseModel):
     evidence_record: EvidenceRecord | None = Field(
         default=None,
         description="Parsed from the Evidence Declaration block in the findings output",
+    )
+
+
+class SMEConfidenceRecord(BaseModel):
+    """Confidence level from a specific SME invocation."""
+    orchestrator_domain: str
+    sme_domain: str
+    confidence: str  # GREEN / AMBER / RED / GREY
+    sources_used: list[str] = Field(default_factory=list)
+    cannot_confirm_items: list[str] = Field(default_factory=list)
+
+
+class AuditResult(BaseModel):
+    """
+    Output of the deterministic Evidence Auditor.
+
+    All fields populated from existing deterministic data:
+    - tools_called (agentic loop)
+    - raw_sme_outputs (captured from tool results)
+    - evidence_record.provisions_cannot_confirm (parsed from Evidence Declaration)
+    - sources_used (populated from tool results)
+
+    Zero LLM calls. Cannot be fabricated by agents being audited.
+    """
+    # R5: Consolidated CANNOT CONFIRM across all findings
+    cannot_confirm_consolidated: list[str] = Field(
+        default_factory=list,
+        description="All CANNOT CONFIRM items from all orchestrators and SMEs"
+    )
+
+    # R2: SME invocation map — what actually happened
+    sme_invocations: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="orchestrator_domain → [sme_domains_actually_invoked]"
+    )
+
+    # R3: Per-SME confidence from raw outputs
+    sme_confidence_records: list[SMEConfidenceRecord] = Field(
+        default_factory=list,
+        description="Confidence and CANNOT CONFIRM from each raw SME output"
+    )
+
+    # R4: Per-domain confidence for audit trail
+    confidence_by_domain: dict[str, str] = Field(
+        default_factory=dict,
+        description="orchestrator_domain → confidence"
+    )
+
+    # R1: Routing gaps from deterministic chunk alignment
+    routing_gaps: list[str] = Field(
+        default_factory=list,
+        description="Domains with chunk signal but not engaged by router"
+    )
+
+    # Derived: minimum confidence across all SMEs and orchestrators
+    minimum_confidence_basis: str = Field(
+        default="",
+        description="Which domain/SME drove the minimum confidence and why"
     )
