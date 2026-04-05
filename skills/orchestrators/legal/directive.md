@@ -238,7 +238,7 @@ Provisions CANNOT CONFIRM: [list of provisions where Layer 2b retrieval
    followed, assessed against retrieved provisions
 5. Compliance findings (if Compliance SME invoked) — full compliance
    assessment integrated with legal findings per Synthesis Instructions
-6. FLAGS summary
+6. Risk Register — one ISO 31000 entry per FLAG, using the nine-field format defined in skills/c1-skill-authoring/references/output_formats.md. Rank entries CRITICAL first. Include Compound Risk notes where two or more entries interact.
 
 ---
 
@@ -249,9 +249,7 @@ assessment for a board, dispute resolution panel, or legal counsel.
 Every legal finding must cite its source document by name and reference
 number and the specific retrieved provision it applies. Do not state
 financial or commercial conclusions — refer those to the Commercial and
-Financial orchestrators. Every FLAG must state its legal or contractual
-implication in one sentence: what right, obligation, exposure, or
-procedural defect does it create or risk? If a provision cannot be
+Financial orchestrators. Every Risk Register entry must derive Consequence, Likelihood, and Treatment from retrieved documents only. Likelihood must be stated as HIGH / MEDIUM / LOW with its evidential basis, or CANNOT ASSESS where the evidence does not support a determination. Residual Rating requires evidence of existing controls in retrieved documents — state CANNOT ASSESS if no controls are evidenced. If a provision cannot be
 confirmed from retrieved documents, state CANNOT CONFIRM — do not
 characterise from training knowledge. Synthesis of legal and compliance
 findings must be explicit about how they interact — never present them
