@@ -81,7 +81,7 @@ not the user's raw query.
   cost overrun
 - As-built programme data needed to verify earned value claims
 
-**Claims & Disputes SME** — invoke for:
+**Delay and Cost Analytics SME** — invoke for:
 - Financial exposure from specific claims (quantum of a pending
   EOT cost claim, prolongation cost, disruption cost)
 - Whether claimed amounts are supported by the underlying

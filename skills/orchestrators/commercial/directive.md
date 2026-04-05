@@ -73,7 +73,7 @@ Before characterising any provision of the governing contract standard:
 Invoke SMEs when the query requires specialist expertise outside commercial scope.
 Frame a precise, targeted question — not the user's raw query.
 
-**Claims & Disputes SME** — invoke for:
+**Delay and Cost Analytics SME** — invoke for:
 - Whether a specific variation instruction was validly issued (pass the retrieved
   Layer 2b variation procedure to the SME with the Layer 1 instruction)
 - Commercial quantum of a claim submission

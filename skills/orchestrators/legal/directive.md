@@ -102,9 +102,32 @@ Layer 1 documents to the SME.
 - Contractual time analysis — time at large, time bar, limitation
 - Securities, bonds, guarantees, and their call conditions
 
-**Claims SMEs** — invoke for:
-- EOT quantification, prolongation cost, disruption, notice compliance
-  in claims, dispute resolution procedure
+- **Notice Compliance SME** (`notice_compliance.md`) — invoke when
+  assessing notice compliance as a procedural gateway to a specific claim
+  entitlement: EOT, prolongation cost, disruption, or dispute resolution.
+  Distinct from Notice and Instruction Compliance — this skill assesses
+  whether time bar and awareness prerequisites for a specific claim have
+  been satisfied.
+
+- **Dispute Resolution Procedure SME** (`dispute_resolution_procedure.md`)
+  — invoke when assessing the contractual escalation pathway: whether the
+  correct dispute resolution tier has been engaged, whether procedural
+  prerequisites are satisfied, and whether time limits for escalation have
+  been observed.
+
+- **Delay and Cost Analytics SME** (`skills/smes/schedule/`) — invoke when
+  a query with a legal entitlement dimension requires EOT quantification,
+  prolongation cost assessment, or disruption quantum. The Legal
+  orchestrator engages this SME for the entitlement and procedural gateway
+  assessment; the delay quantum is produced by the Delay and Cost Analytics
+  SME.
+
+**Notice skill routing boundary:**
+For general validity of notices and instructions assessed independently of
+a specific claim entitlement (variation instructions, suspension,
+termination) — invoke `notice_and_instruction_compliance.md`.
+For notice compliance as a gateway to a specific claim entitlement (EOT,
+prolongation cost, disruption) — invoke `notice_compliance.md`.
 
 **Note:** `engineer_identification.md` is retired. Party and role
 identification for all roles — including the Engineer — is handled
