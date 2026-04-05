@@ -39,8 +39,18 @@ important finding. No source citations — synthesis only.]
 ### SME Findings
 [Synthesise SME findings — do not relay verbatim]
 
-### FLAGS Summary
-FLAG [N]: [finding] — [implication in one sentence]
+### Risk Register
+RISK-[ID] | [Category]
+Description:       [from retrieved documents]
+Cause:             [from retrieved documents]
+Consequence:       [HIGH / MEDIUM / LOW] — [stated impact]
+Likelihood:        [HIGH / MEDIUM / LOW — or: CANNOT ASSESS]
+Inherent Rating:   [CRITICAL / HIGH / MEDIUM / LOW]
+Existing Controls: [from retrieved documents — or: NONE EVIDENCED]
+Treatment:         [AVOID / REDUCE / TRANSFER / ACCEPT] — [action]
+Residual Rating:   [CRITICAL / HIGH / MEDIUM / LOW — or: CANNOT ASSESS]
+Status:            [OPEN / REALIZED / TREATED / EXPIRED / ACCEPTED]
+[Repeat for each FLAG. See output_formats.md FLAGS section for full definitions.]
 
 ### Overall Assessment
 Confidence: [GREEN / AMBER / RED / GREY]
