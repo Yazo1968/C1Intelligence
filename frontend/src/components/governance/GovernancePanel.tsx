@@ -18,9 +18,11 @@ interface GovernancePanelProps {
 
 const STATUS_LABELS: Record<string, { label: string; colour: string }> = {
   not_established: { label: 'Not Established', colour: 'bg-gray-100 text-gray-600' },
+  processing: { label: 'Processing…', colour: 'bg-blue-100 text-blue-700' },
   parties_identified: { label: 'Parties Identified', colour: 'bg-amber-100 text-amber-700' },
   established: { label: 'Established', colour: 'bg-green-100 text-green-700' },
   stale: { label: 'Stale', colour: 'bg-amber-100 text-amber-700' },
+  failed: { label: 'Run Failed', colour: 'bg-red-100 text-red-700' },
 };
 
 const EXTRACTION_LABELS: Record<string, { label: string; colour: string }> = {
@@ -106,8 +108,7 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
     const runType = status?.status === 'not_established' ? 'full' : 'incremental';
     try {
       await runGovernance(projectId, runType);
-      await fetchStatus();
-      await fetchEvents();
+      await pollUntilResolved();
     } catch {
       setError('Failed to trigger governance run. Please try again.');
     } finally {
@@ -128,6 +129,31 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
       setConfirming(false);
     }
   };
+
+  const pollUntilResolved = useCallback(async () => {
+    const maxAttempts = 36; // 3 minutes at 5s intervals
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      try {
+        const s = await getGovernanceStatus(projectId);
+        setStatus(s);
+        if (s.status === 'parties_identified') {
+          await fetchParties();
+          return;
+        }
+        if (s.status === 'established' || s.status === 'stale') {
+          await fetchEvents();
+          return;
+        }
+        if (s.status === 'failed' || s.status === 'not_established') {
+          return;
+        }
+        // status === 'processing' — keep polling
+      } catch {
+        return;
+      }
+    }
+  }, [projectId, fetchParties, fetchEvents]);
 
   const handleUpdatePartyStatus = async (
     partyId: string,
@@ -187,6 +213,16 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
                 >
                   {statusInfo?.label}
                 </span>
+                {status?.status === 'processing' && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    Analysing project documents… this may take 1–2 minutes.
+                  </p>
+                )}
+                {status?.status === 'failed' && (
+                  <p className="text-xs text-red-600 mt-1">
+                    The last run failed. Check your documents are ingested and try again.
+                  </p>
+                )}
                 {status.last_run_at && (
                   <p className="text-xs text-gray-500">
                     Last run: {new Date(status.last_run_at).toLocaleString()}

@@ -176,6 +176,44 @@ async def get_governance_status(
                 parties_count=parties_count,
             )
 
+        # Check for in-progress or failed run
+        try:
+            latest_run_result = (
+                supabase.table("governance_run_log")
+                .select("id, status, triggered_at")
+                .eq("project_id", str(project_id))
+                .order("triggered_at", desc=True)
+                .limit(1)
+                .execute()
+            )
+        except Exception:
+            latest_run_result = None
+
+        if latest_run_result and latest_run_result.data:
+            latest = latest_run_result.data[0]
+            if latest["status"] == "running":
+                return GovernanceStatusResponse(
+                    project_id=project_id,
+                    status="processing",
+                    last_run_at=latest["triggered_at"],
+                    last_run_id=uuid.UUID(latest["id"]),
+                    events_confirmed=0,
+                    events_flagged=0,
+                    events_inferred=0,
+                    parties_count=0,
+                )
+            if latest["status"] == "failed":
+                return GovernanceStatusResponse(
+                    project_id=project_id,
+                    status="failed",
+                    last_run_at=latest["triggered_at"],
+                    last_run_id=uuid.UUID(latest["id"]),
+                    events_confirmed=0,
+                    events_flagged=0,
+                    events_inferred=0,
+                    parties_count=0,
+                )
+
         return GovernanceStatusResponse(
             project_id=project_id,
             status="not_established",
