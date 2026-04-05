@@ -112,16 +112,35 @@ state. `list_migrations` for applied migrations.
 - Tier 0: Main orchestrator (router)
 - Tier 1: Legal, Commercial, Financial orchestrators (BaseOrchestrator,
   directive files in `skills/orchestrators/`)
-- Tier 2: Claims, Schedule, Technical SMEs (BaseSpecialist,
-  skill files in `skills/smes/`)
+- Tier 2: Delay and Cost Analytics, Technical, Compliance, Financial &
+  Accounting SMEs (BaseSpecialist, skill files in `skills/smes/`)
 
 **Skill authoring:** All skill files authored using `skills/c1-skill-authoring/`.
 Read this skill before building or rebuilding any file under `skills/`.
 
-**Skill files:** 3 orchestrator directives + 23 SME skill files = 26 files total.
-Legal orchestrator renamed Legal & Compliance. engineer_identification.md retired.
-6 Compliance SME skill files live under skills/smes/compliance/.
-All require the Evidence Declaration block in their output format.
+**Skill files:** 3 orchestrator directives + 1 synthesis directive
++ 26 SME skill files = 30 files total.
+
+**Domains:**
+- Legal & Contractual SME: 7 skills (contract_assembly,
+  entitlement_basis, key_dates_and_securities,
+  notice_and_instruction_compliance, notice_compliance,
+  dispute_resolution_procedure, and a seventh skill as applicable)
+- Delay and Cost Analytics SME: 9 skills (acceleration,
+  critical_path_analysis, delay_identification,
+  evm_and_cost_reporting, programme_assessment, time_at_large,
+  eot_quantification, prolongation_cost, disruption)
+- Technical & Construction SME: 6 skills (unchanged)
+- Compliance SME: 6 skills (unchanged)
+- Financial & Accounting SME: 3 skills (cost_control_assessment,
+  multi_contract_account_reconciliation,
+  financial_reporting_compliance)
+
+Claims SME domain dissolved — 3 analytical skills moved to Delay
+and Cost Analytics SME; 2 procedural skills moved to Legal SME.
+synthesis_directive.md governs multi-orchestrator query assembly.
+engineer_identification.md retired.
+All files require the Evidence Declaration block in their output format.
 
 ---
 
@@ -138,7 +157,10 @@ All require the Evidence Declaration block in their output format.
 - CORS locked to `https://c1intelligence.vercel.app`
 - `claude-sonnet-4-6` — no LangChain, no LangGraph, no LlamaIndex
 - `DOMAIN_TO_CONFIG_KEY`: `legal_contractual→legal`, `commercial_financial→commercial`,
-  `financial_reporting→financial`
+  `financial_reporting→financial`, `schedule_programme→schedule`,
+  `technical_design→technical`
+  Financial & Accounting SME (`financial_sme`) is loaded by Financial
+  orchestrator delegation — not router-accessible directly.
 
 ---
 
