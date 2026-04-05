@@ -158,12 +158,25 @@ export interface GovernanceRunResponse {
 
 export interface GovernanceStatusResponse {
   project_id: string;
-  status: 'not_established' | 'established' | 'stale';
+  status: 'not_established' | 'parties_identified' | 'established' | 'stale';
   last_run_at: string | null;
   last_run_id: string | null;
   events_confirmed: number;
   events_flagged: number;
   events_inferred: number;
+  parties_count: number;
+}
+
+export interface GovernancePartyResponse {
+  id: string;
+  project_id: string;
+  entity_type: 'organisation' | 'individual';
+  canonical_name: string;
+  aliases: string[];
+  contractual_role: string | null;
+  terminus_node: boolean;
+  confirmation_status: 'confirmed' | 'inferred' | 'flagged';
+  created_at: string;
 }
 
 export interface GovernanceEventResponse {
