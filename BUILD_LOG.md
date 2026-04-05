@@ -1124,3 +1124,25 @@ against the contracts table (fidic_edition column). This is a pre-existing
 form-specific reference in form-agnostic code. Does not affect Enhancement
 Plan. Must be resolved in a future session before C1 is used on non-FIDIC
 projects.
+
+---
+## Session — Part B Complete (Broken Window Session)
+
+**Date:** April 2026
+**Commits:** 0f4ac18, 9d02c69, 3972b43, 3723c51, 8d15f28, b409b66,
+489cf65, 41fb74d, c340677
+
+**Tasks completed:**
+- B1: schedule SME skills (6 files) — domain label updated to Delay and Cost Analytics SME
+- B2: eot_quantification, prolongation_cost, disruption — moved to skills/smes/schedule/ via git mv, domain label updated
+- B3: notice_compliance, dispute_resolution_procedure — moved to skills/smes/legal/ via git mv, domain label updated
+- B4: claims/README.md — retired domain redirect README written
+- B_schema: claims grounding_schema.json deleted; schedule grounding_schema.json updated to delay_and_cost_analytics_sme
+- B5: all 3 orchestrator directives updated — Claims SME dissolved, Delay and Cost Analytics SME named, Legal SME absorbs notice_compliance and dispute_resolution_procedure, routing boundary documented
+- B_code1: specialist_config.py — claims domain entry removed, 5 domains remain
+- B_code2: prompts.py — claims_disputes constant, ALL_DOMAINS entry, domain description, and fallback removed; schedule_programme and legal_contractual descriptions updated
+- B_code3: orchestrator.py — claims_disputes removed from DOMAIN_TO_CONFIG_KEY and NOT_ENGAGED_REASONS; Tier 2 SME comment updated
+
+**Part B status:** COMPLETE — all 9 tasks verified by strategic partner via GitHub API and HTTP status checks.
+
+**Next session:** Part C tasks C1 and C2, then Part D (Strategic Partner drafts).
