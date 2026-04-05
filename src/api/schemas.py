@@ -166,6 +166,10 @@ class GovernanceRunRequest(BaseModel):
     run_type: str = Field(default="full", pattern="^(full|incremental)$")
 
 
+class ConfirmPartiesRequest(BaseModel):
+    pass  # Empty body — confirms all non-flagged parties for the project
+
+
 class GovernanceRunResponse(BaseModel):
     run_id: uuid.UUID
     project_id: uuid.UUID
@@ -182,6 +186,19 @@ class GovernanceStatusResponse(BaseModel):
     events_confirmed: int
     events_flagged: int
     events_inferred: int
+    parties_count: int = 0
+
+
+class GovernancePartyResponse(BaseModel):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    entity_type: str  # organisation / individual
+    canonical_name: str
+    aliases: list[str]
+    contractual_role: str | None
+    terminus_node: bool
+    confirmation_status: str  # confirmed / inferred / flagged
+    created_at: str
 
 
 class GovernanceEventResponse(BaseModel):
