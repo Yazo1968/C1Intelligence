@@ -7,7 +7,7 @@ Phase A: Tier-based dispatch.
 - Tier 1 orchestrators (legal, commercial, financial) run in parallel via
   ThreadPoolExecutor using BaseOrchestrator. Each may invoke Tier 2 SMEs
   on-demand via the invoke_sme tool during their own agentic loop.
-- Tier 2 SMEs (claims, schedule, technical) are not dispatched directly.
+- Tier 2 SMEs (schedule, technical, compliance) are not dispatched directly.
   They are invoked by Tier 1 orchestrators as needed.
 - Cross-specialist contradiction pass (stub — Phase 7 replaces)
 
@@ -56,7 +56,6 @@ DOMAIN_TO_CONFIG_KEY: dict[str, str] = {
     "financial_reporting": "financial",
     "schedule_programme": "schedule",
     "technical_design": "technical",
-    "claims_disputes": "claims",
 }
 
 _RISK_FRAMING_DIRECTIVE: str = """
@@ -231,7 +230,7 @@ def process_query(request: QueryRequest) -> QueryResponse:
             findings_count=len(round_1_findings),
         )
 
-    # Tier 2 SMEs (claims, schedule, technical) are invoked on-demand by
+    # Tier 2 SMEs (schedule, technical, compliance) are invoked on-demand by
     # Tier 1 orchestrators via the invoke_sme tool. No direct Round 2 dispatch.
     all_findings: list[SpecialistFindings] = round_1_findings
 
@@ -483,7 +482,6 @@ NOT_ENGAGED_REASONS: dict[str, str] = {
     "legal_contractual": "No contract documents found in the warehouse for this query.",
     "commercial_financial": "No BOQ, IPC, payment, or variation documents found in the warehouse.",
     "financial_reporting": "No budget documents, cost reports, cash flow statements, or EVM data found in the warehouse.",
-    "claims_disputes": "No notice documents, EOT claims, or dispute correspondence found in the warehouse.",
     "schedule_programme": "No programme documents, delay records, or progress reports found in the warehouse.",
     "technical_design": "No specifications, drawings, RFIs, or NCRs found in the warehouse.",
 }
