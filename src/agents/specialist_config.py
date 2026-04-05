@@ -32,4 +32,10 @@ SPECIALIST_CONFIGS: dict[str, SpecialistConfig] = {
     ),
     "schedule": SpecialistConfig(domain="schedule", tier=2, round_assignment=2, max_tool_rounds=3),
     "technical": SpecialistConfig(domain="technical", tier=2, round_assignment=2, max_tool_rounds=3),
+    "compliance": SpecialistConfig(
+        domain="compliance",
+        tier=2,
+        round_assignment=2,
+        max_tool_rounds=5,
+    ),
 }
