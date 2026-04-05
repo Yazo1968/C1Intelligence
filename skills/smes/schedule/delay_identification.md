@@ -188,6 +188,37 @@ Compensable delay: entitles the Contractor to both time and cost.
 Do not apply SCL terminology without confirming the amendment
 document entitlement terms.
 
+**Four-way forensic classification** (alongside contractual classification):
+
+The four-way forensic classification is the standard used by dispute panels,
+arbitrators, and forensic experts. Apply it to each event alongside the
+contractual classification and bridge them explicitly — the forensic
+classification is the industry-standard label for the same finding:
+
+— **Excusable Compensable:** event caused by an employer risk event under
+the retrieved amendment document; entitles the contractor to both time
+extension and cost. Contractual equivalent: Employer Risk Event.
+
+— **Excusable Non-Compensable:** event caused by a neutral event (force
+majeure, adverse weather, or equivalent neutral category under the retrieved
+amendment document); entitles the contractor to time extension but not cost.
+Contractual equivalent: Neutral Event.
+
+— **Non-Excusable:** event caused by or attributable to the contractor;
+no entitlement to time extension or cost. Contractual equivalent:
+Contractor Risk Event.
+
+— **Concurrent:** employer-caused and contractor-caused delays overlap on
+the critical path during the same period; entitlement depends on governing
+law, contract terms, and the concurrent delay principles retrieved from
+Layer 2b. This is a distinct classification — not a sub-category of the
+others.
+
+Do not apply the forensic classification without first establishing the
+contractual classification from the retrieved amendment document. The
+forensic classification is derived from the contractual classification —
+never applied independently.
+
 ### Step 5 — Assess weather and force majeure events
 *Contract-type-specific*
 
@@ -349,9 +380,9 @@ Amendments to standard form list: [list or NONE FOUND / CANNOT CONFIRM]
 
 ### Delay Event Register
 
-| # | Event description | Period | Duration | Contemporaneous evidence | Classification | Entitlement | Source |
-|---|---|---|---|---|---|---|---|
-| 1 | [description] | [dates] | [days] | [EVIDENCED / NOT VERIFIED] | [ER/Neutral/CR/CANNOT CLASSIFY] | [Time+Cost / Time only / Nil / CANNOT CONFIRM] | [docs] |
+| # | Event description | Period | Duration | Contemporaneous evidence | Contractual classification | Forensic classification | Entitlement | Source |
+|---|---|---|---|---|---|---|---|---|
+| 1 | [description] | [dates] | [days] | [EVIDENCED / NOT VERIFIED] | [ER/Neutral/CR/CANNOT CLASSIFY] | [Ex.Comp / Ex.Non-Comp / Non-Ex / Concurrent / CANNOT CLASSIFY] | [Time+Cost / Time only / Nil / CANNOT CONFIRM] | [docs] |
 
 ### Findings by Delay Event
 
@@ -363,6 +394,10 @@ NOT INDEPENDENTLY VERIFIED — records not in warehouse]
 Classification: [EMPLOYER RISK EVENT / NEUTRAL EVENT /
 CONTRACTOR RISK EVENT / CANNOT CLASSIFY]
 Classification basis: [retrieved amendment provision / CANNOT CONFIRM]
+Forensic classification: [EXCUSABLE COMPENSABLE / EXCUSABLE NON-COMPENSABLE /
+NON-EXCUSABLE / CONCURRENT / CANNOT CLASSIFY]
+Forensic classification basis: [derived from contractual classification /
+CANNOT CLASSIFY — contractual classification not established]
 Entitlement: [Time + Cost / Time only / No entitlement / CANNOT CONFIRM]
 Critical path impact: [from critical_path_analysis findings /
 CANNOT ASSESS — programme not available]
