@@ -21,7 +21,7 @@
 | Production fixes, Layer 2 warehouse, file storage | ✅ Complete |
 | Query pipeline — citation quality, output format | ✅ Complete |
 | Three-tier multi-agent architecture — orchestrators + SME domains | ✅ Complete |
-| Risk reporting mode, Round 0 domain triage, domain filtering | ✅ Complete |
+| ISO 31000:2018 Risk Register output, Round 0 domain triage, domain filtering | ✅ Complete |
 | Layer 2 split — layer_type 2a/2b + jurisdiction tagging | ✅ Complete |
 | Platform identity overhaul — universal form-agnostic architecture | ✅ Complete |
 

@@ -141,6 +141,10 @@ and Cost Analytics SME; 2 procedural skills moved to Legal SME.
 synthesis_directive.md governs multi-orchestrator query assembly.
 engineer_identification.md retired.
 All files require the Evidence Declaration block in their output format.
+Orchestrator FLAGS follow ISO 31000:2018 risk register format (nine-field
+entries: Description, Cause, Consequence, Likelihood, Inherent Rating,
+Existing Controls, Treatment, Residual Rating, Status). Risk report toggle
+removed — risk output is built into every orchestrator response.
 
 ---
 
