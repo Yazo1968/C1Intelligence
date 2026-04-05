@@ -170,6 +170,10 @@ class ConfirmPartiesRequest(BaseModel):
     pass  # Empty body — confirms all non-flagged parties for the project
 
 
+class GovernancePartyUpdateRequest(BaseModel):
+    confirmation_status: str | None = None  # confirmed / inferred / flagged
+
+
 class GovernanceRunResponse(BaseModel):
     run_id: uuid.UUID
     project_id: uuid.UUID

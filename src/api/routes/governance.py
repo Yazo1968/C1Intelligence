@@ -15,9 +15,12 @@ from src.logging_config import get_logger
 from src.api.auth import AuthenticatedUser
 from src.api.errors import error_response
 from src.api.schemas import (
+    ConfirmPartiesRequest,
     GovernanceEventCreateRequest,
     GovernanceEventResponse,
     GovernanceEventUpdateRequest,
+    GovernancePartyResponse,
+    GovernancePartyUpdateRequest,
     GovernanceRunRequest,
     GovernanceRunResponse,
     GovernanceStatusResponse,
@@ -454,4 +457,194 @@ async def create_governance_event(
         ),
         extraction_status=row["extraction_status"],
         created_at=row["created_at"],
+    )
+
+
+@router.get("/parties", response_model=list[GovernancePartyResponse])
+async def list_governance_parties(
+    project_id: uuid.UUID,
+    user_id: AuthenticatedUser,
+) -> list[GovernancePartyResponse]:
+    """Return all governance parties (entity registry) for a project."""
+    supabase = get_supabase_client()
+    _verify_project_access(supabase, project_id, user_id)
+
+    try:
+        response = (
+            supabase.table("governance_parties")
+            .select("*")
+            .eq("project_id", str(project_id))
+            .order("entity_type", desc=False)
+            .order("canonical_name", desc=False)
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("governance_parties_fetch_failed", project_id=str(project_id), error=str(exc))
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="GOVERNANCE_PARTIES_FAILED",
+            message=f"Failed to retrieve governance parties: {exc}",
+        )
+
+    return [
+        GovernancePartyResponse(
+            id=uuid.UUID(row["id"]),
+            project_id=uuid.UUID(row["project_id"]),
+            entity_type=row["entity_type"],
+            canonical_name=row["canonical_name"],
+            aliases=row.get("aliases") or [],
+            contractual_role=row.get("contractual_role"),
+            terminus_node=row["terminus_node"],
+            confirmation_status=row["confirmation_status"],
+            created_at=row["created_at"],
+        )
+        for row in response.data
+    ]
+
+
+@router.patch("/parties/{party_id}", response_model=GovernancePartyResponse)
+async def update_governance_party(
+    project_id: uuid.UUID,
+    party_id: uuid.UUID,
+    body: GovernancePartyUpdateRequest,
+    user_id: AuthenticatedUser,
+) -> GovernancePartyResponse:
+    """Confirm or flag a governance party in the entity registry."""
+    supabase = get_supabase_client()
+    _verify_project_access(supabase, project_id, user_id)
+
+    updates: dict = {}
+    if body.confirmation_status is not None:
+        valid = {"confirmed", "flagged", "inferred"}
+        if body.confirmation_status not in valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"confirmation_status must be one of: {valid}",
+            )
+        updates["confirmation_status"] = body.confirmation_status
+
+    if not updates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields provided to update.",
+        )
+
+    try:
+        response = (
+            supabase.table("governance_parties")
+            .update(updates)
+            .eq("id", str(party_id))
+            .eq("project_id", str(project_id))
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("governance_party_update_failed", party_id=str(party_id), error=str(exc))
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="GOVERNANCE_PARTY_UPDATE_FAILED",
+            message=f"Failed to update governance party: {exc}",
+        )
+
+    if not response.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Governance party not found.",
+        )
+
+    row = response.data[0]
+    return GovernancePartyResponse(
+        id=uuid.UUID(row["id"]),
+        project_id=uuid.UUID(row["project_id"]),
+        entity_type=row["entity_type"],
+        canonical_name=row["canonical_name"],
+        aliases=row.get("aliases") or [],
+        contractual_role=row.get("contractual_role"),
+        terminus_node=row["terminus_node"],
+        confirmation_status=row["confirmation_status"],
+        created_at=row["created_at"],
+    )
+
+
+@router.post("/confirm-parties", response_model=GovernanceRunResponse,
+             status_code=status.HTTP_202_ACCEPTED)
+async def confirm_parties(
+    project_id: uuid.UUID,
+    body: ConfirmPartiesRequest,
+    user_id: AuthenticatedUser,
+    background_tasks: BackgroundTasks,
+) -> GovernanceRunResponse:
+    """
+    Confirm the entity registry and trigger Phase 2 governance establishment.
+    Requires at least one confirmed party to proceed.
+    """
+    from src.agents.governance_runner import run_governance_establishment
+
+    supabase = get_supabase_client()
+    _verify_project_access(supabase, project_id, user_id)
+
+    # Verify at least one confirmed party exists
+    try:
+        confirmed_result = (
+            supabase.table("governance_parties")
+            .select("id", count="exact")
+            .eq("project_id", str(project_id))
+            .eq("confirmation_status", "confirmed")
+            .execute()
+        )
+        confirmed_count = confirmed_result.count or 0
+    except Exception as exc:
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="GOVERNANCE_CONFIRM_FAILED",
+            message=f"Failed to check confirmed parties: {exc}",
+        )
+
+    if confirmed_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No confirmed parties. Confirm at least one party before establishing governance.",
+        )
+
+    now = datetime.now(timezone.utc)
+
+    try:
+        response = (
+            supabase.table("governance_run_log")
+            .insert({
+                "project_id": str(project_id),
+                "run_type": "full",
+                "triggered_at": now.isoformat(),
+                "status": "running",
+                "phase": 2,
+            })
+            .execute()
+        )
+    except Exception as exc:
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="GOVERNANCE_RUN_FAILED",
+            message=f"Failed to create Phase 2 run: {exc}",
+        )
+
+    run = response.data[0]
+
+    background_tasks.add_task(
+        run_governance_establishment,
+        str(project_id),
+        run["id"],
+    )
+
+    logger.info(
+        "governance_phase2_triggered",
+        project_id=str(project_id),
+        run_id=run["id"],
+        confirmed_parties=confirmed_count,
+    )
+
+    return GovernanceRunResponse(
+        run_id=uuid.UUID(run["id"]),
+        project_id=project_id,
+        run_type=run["run_type"],
+        status=run["status"],
+        triggered_at=run["triggered_at"],
     )
