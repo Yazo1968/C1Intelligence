@@ -989,7 +989,7 @@ def _run_governance_llm(user_query: str, project_id: str) -> tuple[str, int]:
     _messages = [{"role": "user", "content": user_query}]
 
     _response = _client.messages.create(
-        model="claude-sonnet-4-5-20250514",
+        model="claude-sonnet-4-5",
         max_tokens=8000,
         system=_JSON_SYSTEM_PROMPT,
         tools=[_SEARCH_TOOL],
@@ -1020,7 +1020,7 @@ def _run_governance_llm(user_query: str, project_id: str) -> tuple[str, int]:
         _messages.append({"role": "user", "content": _tool_results})
 
         _response = _client.messages.create(
-            model="claude-sonnet-4-5-20250514",
+            model="claude-sonnet-4-5",
             max_tokens=8000,
             system=_JSON_SYSTEM_PROMPT,
             tools=[_SEARCH_TOOL],
