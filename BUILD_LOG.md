@@ -1495,10 +1495,6 @@ BUILD_LOG.md
 - Procfile — superseded by railway.json
 - risk_mode parameter — from schemas.py, queries.py
 
-### Next session
-Execute Phases 2-9 of the Governance Authority Log build sequence.
-Read C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md before any action.
-
 ### Commit log
 Design doc:     429d205
 Docs archive:   2c258b5
@@ -1506,4 +1502,80 @@ Specialists rm: 4f82323
 Procfile rm:    b7d7551
 risk_mode rm:   36a8bd6
 Master plan:    c42953d
-BUILD_LOG:      this commit
+BUILD_LOG:      bdad53c
+
+---
+
+## Session — Governance Authority Log Phases 2–7
+
+**Date:** April 2026
+**Status:** COMPLETE (Phase 8 deferred)
+
+### What was built
+
+**Phase 2 — governance_runner.py Phase 1 rewrite:**
+PARTY_ID_QUERY replaced with three-level model prompt. run_party_identification()
+writes to party_identities + party_roles instead of dropped governance_parties.
+Validation for appointment_status (3 values) and governing_instrument_type (7 values).
+
+**Phase 3a — schemas.py + governance.py API layer cleanup:**
+Removed 6 stale schema classes and 6 stale endpoints from the prototype model.
+Added 5 new schema classes (PartyRoleResponse, PartyIdentityResponse,
+ReconciliationQuestionResponse, ReconciliationAnswerRequest, InterviewStatusResponse).
+New GET /parties endpoint returns nested PartyIdentityResponse with roles.
+get_governance_status reads party_identities instead of governance_parties.
+
+**Phase 3b — Reconciliation interview backend:**
+generate_interview_questions() added to governance_runner.py — 4 detection
+rules produce questions for inferred parties, role conflicts, proposed roles,
+and is_internal confirmation. Three interview endpoints in governance.py:
+GET /interview, GET /interview/next-question, POST /interview/questions/{id}/answer.
+
+**Phase 4a — Frontend types + API:**
+types.ts and governance.ts fully replaced — stale interfaces removed, new
+three-level model interfaces added. Four new API functions:
+listPartyIdentities, getInterviewStatus, getNextInterviewQuestion,
+submitInterviewAnswer.
+
+**Phase 4b — GovernancePanel rewrite:**
+Complete rewrite. Reconciliation interview UI: progress bar, one question
+at a time, radio options, free text, skip. Identified Parties: collapsible
+cards with nested roles showing appointment_status, authority_scope,
+financial thresholds. Authority log placeholder for Phase 8.
+
+**Phase 5 — governance_runner.py Phase 2 rewrite:**
+run_governance_establishment() reads from party_identities + party_roles.
+Writes to authority_events with full Level 3 field set. Role resolution
+with exact/partial/fallback matching. 10 event types. Separate
+initiated_by and authorised_by actor fields.
+
+**Phase 6 — Compliance agent integration:**
+get_party_authority() deterministic tool added to tools.py. Zero LLM calls.
+Reads authority_events chronologically. Returns authority position,
+appointment_status, financial_threshold, assumption warnings. Registered
+in TOOL_DEFINITIONS and _TOOL_EXECUTORS.
+
+**Phase 7 — skill_loader rewrite:**
+_generate_project_context() reads party_identities + party_roles. Dead
+contracts and parties table references removed. FIDIC-specific fidic_edition
+reference removed. Internal/external party split. Graceful degradation.
+
+### Commit log
+Phase 2:   1250038
+Phase 3a:  680638b
+Phase 3b:  e28a7ed
+Phase 4a:  d7aa392
+Phase 4b:  5cf1262
+Phase 5:   95bc27c
+Phase 6:   7a8726b
+Phase 7:   de445da
+Phase 9:   0e4e0d7, 14dd54b, this commit
+
+### Deferred
+Phase 8 — Frontend authority event log display: placeholder in GovernancePanel.
+Requires authority_events to be populated by a full governance run.
+Standalone task — does not block compliance agent or query pipeline.
+
+### Database state
+21 migrations unchanged. Five new tables from Migration 021 all populated
+by the new governance runner.
