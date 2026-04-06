@@ -348,3 +348,255 @@ async def list_party_identities(
             )
         )
     return output
+
+
+@router.get("/interview", response_model=InterviewStatusResponse)
+async def get_interview_status(
+    project_id: uuid.UUID,
+    user_id: AuthenticatedUser,
+) -> InterviewStatusResponse:
+    """
+    Return the reconciliation interview status for the most recent run.
+    Shows total questions, how many are answered, and whether the interview
+    is complete (all questions answered).
+    """
+    supabase = get_supabase_client()
+    _verify_project_access(supabase, project_id, user_id)
+
+    # Get the most recent run in parties_identified status
+    try:
+        run_result = (
+            supabase.table("governance_run_log")
+            .select("id")
+            .eq("project_id", str(project_id))
+            .eq("status", "parties_identified")
+            .order("triggered_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("interview_status_run_fetch_failed",
+                     project_id=str(project_id), error=str(exc))
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="INTERVIEW_STATUS_FAILED",
+            message=f"Failed to retrieve interview status: {exc}",
+        )
+
+    if not run_result.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No party identification run found. Run Phase 1 first.",
+        )
+
+    run_id = run_result.data[0]["id"]
+
+    try:
+        questions_result = (
+            supabase.table("reconciliation_questions")
+            .select("id, answer_selected")
+            .eq("project_id", str(project_id))
+            .eq("run_id", run_id)
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("interview_questions_fetch_failed",
+                     project_id=str(project_id), error=str(exc))
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="INTERVIEW_STATUS_FAILED",
+            message=f"Failed to retrieve questions: {exc}",
+        )
+
+    questions = questions_result.data or []
+    total = len(questions)
+    answered = sum(1 for q in questions if q.get("answer_selected"))
+    pending = total - answered
+
+    return InterviewStatusResponse(
+        project_id=project_id,
+        run_id=uuid.UUID(run_id),
+        total_questions=total,
+        answered_questions=answered,
+        pending_questions=pending,
+        interview_complete=(total > 0 and pending == 0),
+    )
+
+
+@router.get("/interview/next-question",
+            response_model=ReconciliationQuestionResponse)
+async def get_next_interview_question(
+    project_id: uuid.UUID,
+    user_id: AuthenticatedUser,
+) -> ReconciliationQuestionResponse:
+    """
+    Return the next unanswered reconciliation question for the most recent run,
+    ordered by sequence_number. Returns 404 when all questions are answered.
+    """
+    supabase = get_supabase_client()
+    _verify_project_access(supabase, project_id, user_id)
+
+    # Get the most recent parties_identified run
+    try:
+        run_result = (
+            supabase.table("governance_run_log")
+            .select("id")
+            .eq("project_id", str(project_id))
+            .eq("status", "parties_identified")
+            .order("triggered_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="INTERVIEW_QUESTION_FAILED",
+            message=f"Failed to retrieve run: {exc}",
+        )
+
+    if not run_result.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No party identification run found.",
+        )
+
+    run_id = run_result.data[0]["id"]
+
+    try:
+        q_result = (
+            supabase.table("reconciliation_questions")
+            .select("*")
+            .eq("project_id", str(project_id))
+            .eq("run_id", run_id)
+            .is_("answer_selected", "null")
+            .order("sequence_number")
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="INTERVIEW_QUESTION_FAILED",
+            message=f"Failed to retrieve next question: {exc}",
+        )
+
+    if not q_result.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="All questions answered. Interview is complete.",
+        )
+
+    q = q_result.data[0]
+    return ReconciliationQuestionResponse(
+        id=uuid.UUID(q["id"]),
+        project_id=uuid.UUID(q["project_id"]),
+        run_id=uuid.UUID(q["run_id"]),
+        question_type=q["question_type"],
+        question_text=q["question_text"],
+        parties_referenced=[uuid.UUID(p) for p in (q.get("parties_referenced") or [])],
+        documents_referenced=[uuid.UUID(d) for d in (q.get("documents_referenced") or [])],
+        options_presented=q.get("options_presented") or [],
+        answer_selected=q.get("answer_selected"),
+        user_free_text=q.get("user_free_text"),
+        answered_at=q.get("answered_at"),
+        sequence_number=q["sequence_number"],
+        created_at=q["created_at"],
+    )
+
+
+@router.post(
+    "/interview/questions/{question_id}/answer",
+    response_model=ReconciliationQuestionResponse,
+)
+async def submit_interview_answer(
+    project_id: uuid.UUID,
+    question_id: uuid.UUID,
+    body: ReconciliationAnswerRequest,
+    user_id: AuthenticatedUser,
+) -> ReconciliationQuestionResponse:
+    """
+    Record the user's answer to a reconciliation question.
+    answer_selected must match one of the options_presented for this question.
+    Records answered_by (user_id) and answered_at (now).
+    """
+    supabase = get_supabase_client()
+    _verify_project_access(supabase, project_id, user_id)
+
+    # Fetch the question first to validate it belongs to this project
+    try:
+        q_result = (
+            supabase.table("reconciliation_questions")
+            .select("*")
+            .eq("id", str(question_id))
+            .eq("project_id", str(project_id))
+            .single()
+            .execute()
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Question not found.",
+        )
+
+    q = q_result.data
+
+    # Validate answer is one of the presented options
+    options = q.get("options_presented") or []
+    if options and body.answer_selected not in options:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"answer_selected must be one of the presented options. "
+                f"Received: {body.answer_selected!r}"
+            ),
+        )
+
+    now = datetime.now(timezone.utc)
+
+    try:
+        update_result = (
+            supabase.table("reconciliation_questions")
+            .update({
+                "answer_selected": body.answer_selected,
+                "user_free_text": body.user_free_text,
+                "answered_by": str(user_id),
+                "answered_at": now.isoformat(),
+            })
+            .eq("id", str(question_id))
+            .eq("project_id", str(project_id))
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("interview_answer_update_failed",
+                     question_id=str(question_id), error=str(exc))
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="INTERVIEW_ANSWER_FAILED",
+            message=f"Failed to record answer: {exc}",
+        )
+
+    updated = update_result.data[0]
+
+    logger.info(
+        "interview_answer_recorded",
+        project_id=str(project_id),
+        question_id=str(question_id),
+        question_type=updated["question_type"],
+        answer=body.answer_selected,
+    )
+
+    return ReconciliationQuestionResponse(
+        id=uuid.UUID(updated["id"]),
+        project_id=uuid.UUID(updated["project_id"]),
+        run_id=uuid.UUID(updated["run_id"]),
+        question_type=updated["question_type"],
+        question_text=updated["question_text"],
+        parties_referenced=[uuid.UUID(p) for p in (updated.get("parties_referenced") or [])],
+        documents_referenced=[uuid.UUID(d) for d in (updated.get("documents_referenced") or [])],
+        options_presented=updated.get("options_presented") or [],
+        answer_selected=updated.get("answer_selected"),
+        user_free_text=updated.get("user_free_text"),
+        answered_at=updated.get("answered_at"),
+        sequence_number=updated["sequence_number"],
+        created_at=updated["created_at"],
+    )

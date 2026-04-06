@@ -414,6 +414,8 @@ def run_party_identification(project_id: str, run_id: str) -> None:
                         error=str(exc),
                     )
 
+        generate_interview_questions(project_id, run_id, supabase)
+
         supabase.table("governance_run_log").update({
             "status": "parties_identified",
             "documents_scanned": len(findings.sources_used),
@@ -435,6 +437,209 @@ def run_party_identification(project_id: str, run_id: str) -> None:
             error=str(exc),
         )
         _mark_run_failed(supabase, run_id, str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Phase 1.5 — Reconciliation interview question generation
+# ---------------------------------------------------------------------------
+
+def generate_interview_questions(
+    project_id: str,
+    run_id: str,
+    supabase,
+) -> None:
+    """
+    Generate reconciliation interview questions based on Phase 1 output.
+    Reads party_identities and party_roles. Inserts into reconciliation_questions.
+    Four detection rules applied in sequence. Each rule may produce 0..N questions.
+    Questions are numbered sequentially starting from 1.
+    Errors are logged but do not abort Phase 1 — the run proceeds even if
+    question generation fails.
+    """
+    from collections import defaultdict
+
+    try:
+        identities_result = (
+            supabase.table("party_identities")
+            .select("id, legal_name, trading_names, party_category, is_internal, identification_status")
+            .eq("project_id", project_id)
+            .execute()
+        )
+        identities = identities_result.data or []
+
+        roles_result = (
+            supabase.table("party_roles")
+            .select("id, party_identity_id, role_title, role_category, "
+                    "appointment_status, confirmation_status, "
+                    "effective_from, effective_to, governing_instrument")
+            .eq("project_id", project_id)
+            .execute()
+        )
+        roles = roles_result.data or []
+
+    except Exception as exc:
+        logger.error(
+            "interview_questions_fetch_failed",
+            project_id=project_id,
+            run_id=run_id,
+            error=str(exc),
+        )
+        return
+
+    questions: list[dict] = []
+    seq = 1
+
+    # --- Rule 1: Inferred parties (identification_status = "inferred") ---
+    # Type 3 — Missing party: party exists in documents but could not be
+    # fully confirmed. Ask user to confirm or correct.
+    for identity in identities:
+        if identity.get("identification_status") == "inferred":
+            questions.append({
+                "project_id": project_id,
+                "run_id": run_id,
+                "question_type": "missing_party",
+                "question_text": (
+                    f"The party \"{identity['legal_name']}\" was identified in project documents "
+                    f"but could not be confirmed from a retrieved appointment instrument. "
+                    f"Please confirm whether this party holds a formal role on this project."
+                ),
+                "parties_referenced": [identity["id"]],
+                "documents_referenced": [],
+                "options_presented": [
+                    "Yes — this party holds a confirmed role on this project",
+                    "No — this party does not hold a formal role",
+                    "I need to review further before answering",
+                ],
+                "answer_selected": None,
+                "user_free_text": None,
+                "answered_by": None,
+                "answered_at": None,
+                "sequence_number": seq,
+            })
+            seq += 1
+
+    # --- Rule 2: Role conflict — multiple parties with the same role_category ---
+    # Type 2 — Role conflict: two or more distinct parties hold the same
+    # role_category simultaneously. Ask user which party governs.
+    role_category_to_parties: dict[str, list] = defaultdict(list)
+    for role in roles:
+        if role.get("appointment_status") in ("executed", "pending"):
+            cat = role.get("role_category") or "unclassified"
+            pid = role.get("party_identity_id")
+            if pid not in role_category_to_parties[cat]:
+                role_category_to_parties[cat].append(pid)
+
+    identity_name_map = {i["id"]: i["legal_name"] for i in identities}
+
+    for cat, party_ids in role_category_to_parties.items():
+        if len(party_ids) > 1 and cat != "unclassified":
+            names = [identity_name_map.get(pid, pid) for pid in party_ids]
+            names_str = " / ".join(names)
+            options = [f"{n} governs this role" for n in names]
+            options.append("Both parties hold this role simultaneously (legitimate overlap)")
+            options.append("I need to review the instruments before answering")
+            questions.append({
+                "project_id": project_id,
+                "run_id": run_id,
+                "question_type": "role_conflict",
+                "question_text": (
+                    f"Multiple parties appear to hold the role category \"{cat}\": {names_str}. "
+                    f"Please confirm which party governs this role, or confirm a legitimate overlap."
+                ),
+                "parties_referenced": party_ids,
+                "documents_referenced": [],
+                "options_presented": options,
+                "answer_selected": None,
+                "user_free_text": None,
+                "answered_by": None,
+                "answered_at": None,
+                "sequence_number": seq,
+            })
+            seq += 1
+
+    # --- Rule 3: Proposed roles (appointment_status = "proposed") ---
+    # Party named in a document but no appointment instrument found.
+    # Ask user to confirm contractual standing.
+    for role in roles:
+        if role.get("appointment_status") == "proposed":
+            pid = role.get("party_identity_id")
+            party_name = identity_name_map.get(pid, "Unknown party")
+            instrument = role.get("governing_instrument") or "an unidentified instrument"
+            questions.append({
+                "project_id": project_id,
+                "run_id": run_id,
+                "question_type": "missing_party",
+                "question_text": (
+                    f"\"{party_name}\" is named as \"{role['role_title']}\" in {instrument}, "
+                    f"but no executed appointment instrument was retrieved. "
+                    f"Please confirm the appointment status of this party."
+                ),
+                "parties_referenced": [pid] if pid else [],
+                "documents_referenced": [],
+                "options_presented": [
+                    "Formally appointed — I can confirm a binding instrument exists",
+                    "Nominated only — no formal appointment instrument was ever issued",
+                    "Appointment is pending — instrument is in progress",
+                    "I need to review further before answering",
+                ],
+                "answer_selected": None,
+                "user_free_text": None,
+                "answered_by": None,
+                "answered_at": None,
+                "sequence_number": seq,
+            })
+            seq += 1
+
+    # --- Rule 4: is_internal confirmation ---
+    # Type 5 — Hierarchy placement: confirm which parties are internal
+    # (part of the Employer's organisation). One question covering all parties
+    # where is_internal = True, so the user can correct misclassifications.
+    internal_parties = [i for i in identities if i.get("is_internal")]
+    if internal_parties:
+        names = [i["legal_name"] for i in internal_parties]
+        names_str = ", ".join(names)
+        questions.append({
+            "project_id": project_id,
+            "run_id": run_id,
+            "question_type": "hierarchy_placement",
+            "question_text": (
+                f"The following parties were classified as internal to the Employer's "
+                f"organisation: {names_str}. Please confirm this is correct or identify "
+                f"any party that should be reclassified as external."
+            ),
+            "parties_referenced": [i["id"] for i in internal_parties],
+            "documents_referenced": [],
+            "options_presented": [
+                "All listed parties are correctly classified as internal",
+                "One or more parties are incorrectly classified — I will specify in comments",
+            ],
+            "answer_selected": None,
+            "user_free_text": None,
+            "answered_by": None,
+            "answered_at": None,
+            "sequence_number": seq,
+        })
+        seq += 1
+
+    # --- Insert all generated questions ---
+    for q in questions:
+        try:
+            supabase.table("reconciliation_questions").insert(q).execute()
+        except Exception as exc:
+            logger.error(
+                "interview_question_insert_failed",
+                project_id=project_id,
+                run_id=run_id,
+                question_type=q.get("question_type"),
+                error=str(exc),
+            )
+
+    logger.info(
+        "interview_questions_generated",
+        project_id=project_id,
+        run_id=run_id,
+        total_questions=len(questions),
+    )
 
 
 # ---------------------------------------------------------------------------
