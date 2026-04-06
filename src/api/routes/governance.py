@@ -698,22 +698,48 @@ async def list_authority_events(
     _verify_project_access(supabase, project_id, user_id)
 
     try:
-        result = (
+        # Query 1: authority_events (plain — no joins)
+        ae_result = (
             supabase.table("authority_events")
             .select(
                 "id, event_type, appointment_status, event_date, "
                 "event_date_certain, authority_after, financial_threshold_after, "
                 "financial_currency, instrument_status, confirmation_status, "
                 "missing_action, source_clause, "
-                "party_identities!party_identity_id(legal_name, party_category), "
-                "party_roles!party_role_id(role_title), "
-                "initiated:party_identities!initiated_by_party_id(legal_name), "
-                "authorised:party_identities!authorised_by_party_id(legal_name)"
+                "party_identity_id, party_role_id, "
+                "initiated_by_party_id, authorised_by_party_id"
             )
             .eq("project_id", str(project_id))
             .order("event_date", desc=False)
             .execute()
         )
+        raw_events = ae_result.data or []
+
+        if not raw_events:
+            return []
+
+        # Query 2: party_identities — fetch all for this project
+        pi_result = (
+            supabase.table("party_identities")
+            .select("id, legal_name, party_category")
+            .eq("project_id", str(project_id))
+            .execute()
+        )
+        pi_map = {
+            row["id"]: row for row in (pi_result.data or [])
+        }
+
+        # Query 3: party_roles — fetch all for this project
+        pr_result = (
+            supabase.table("party_roles")
+            .select("id, role_title")
+            .eq("project_id", str(project_id))
+            .execute()
+        )
+        pr_map = {
+            row["id"]: row for row in (pr_result.data or [])
+        }
+
     except Exception as exc:
         return error_response(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -722,21 +748,26 @@ async def list_authority_events(
         )
 
     events = []
-    for row in (result.data or []):
+    for row in raw_events:
+        party = pi_map.get(row.get("party_identity_id") or "") or {}
+        role = pr_map.get(row.get("party_role_id") or "") or {}
+        initiated = pi_map.get(row.get("initiated_by_party_id") or "") or {}
+        authorised = pi_map.get(row.get("authorised_by_party_id") or "") or {}
+
         events.append({
             "id": row["id"],
             "event_type": row["event_type"],
             "appointment_status": row["appointment_status"],
             "event_date": row.get("event_date"),
             "event_date_certain": row.get("event_date_certain", True),
-            "party_legal_name": (row.get("party_identities") or {}).get("legal_name", ""),
-            "party_category": (row.get("party_identities") or {}).get("party_category", ""),
-            "role_title": (row.get("party_roles") or {}).get("role_title", ""),
+            "party_legal_name": party.get("legal_name", ""),
+            "party_category": party.get("party_category", ""),
+            "role_title": role.get("role_title", ""),
             "authority_after": row.get("authority_after"),
             "financial_threshold_after": row.get("financial_threshold_after"),
             "financial_currency": row.get("financial_currency"),
-            "initiated_by_legal_name": (row.get("initiated") or {}).get("legal_name"),
-            "authorised_by_legal_name": (row.get("authorised") or {}).get("legal_name"),
+            "initiated_by_legal_name": initiated.get("legal_name"),
+            "authorised_by_legal_name": authorised.get("legal_name"),
             "instrument_status": row.get("instrument_status", "retrieved"),
             "confirmation_status": row.get("confirmation_status", "confirmed"),
             "missing_action": row.get("missing_action"),
