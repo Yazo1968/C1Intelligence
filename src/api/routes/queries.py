@@ -172,7 +172,6 @@ async def submit_query(
         project_id=project_id,
         user_id=user_id,
         query_text=body.query_text,
-        risk_mode=body.risk_mode,
         domains=body.domains,
     )
 
@@ -229,7 +228,6 @@ async def assess_query_endpoint(
         project_id=project_id,
         user_id=user_id,
         query_text=body.query_text,
-        risk_mode=body.risk_mode,
     )
 
     try:

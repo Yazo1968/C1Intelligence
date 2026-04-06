@@ -83,7 +83,6 @@ class DocumentDownloadResponse(BaseModel):
 # ---------------------------------------------------------------------------
 class SubmitQueryRequest(BaseModel):
     query_text: str
-    risk_mode: bool = False
     domains: list[str] | None = None
 
 
