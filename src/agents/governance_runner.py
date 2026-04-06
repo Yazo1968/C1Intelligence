@@ -323,21 +323,32 @@ def run_party_identification(project_id: str, run_id: str) -> None:
             if not legal_name:
                 continue
             try:
-                result = supabase.table("party_identities").insert({
-                    "project_id": project_id,
-                    "entity_type": "organisation",
-                    "legal_name": legal_name,
-                    "trading_names": list(dict.fromkeys(
-                        t for t in (item.get("trading_names") or []) if t
-                    )),
-                    "registration_number": item.get("registration_number") or None,
-                    "party_category": item.get("party_category") or "unclassified",
-                    "is_internal": bool(item.get("is_internal", False)),
-                    "identification_status": item.get("identification_status", "confirmed"),
-                    "assumption_id": None,
-                }).execute()
-                party_identity_id = result.data[0]["id"]
-                total_parties += 1
+                # Check for existing identity before insert
+                existing = (
+                    supabase.table("party_identities")
+                    .select("id")
+                    .eq("project_id", project_id)
+                    .eq("legal_name", legal_name)
+                    .execute()
+                )
+                if existing.data:
+                    party_identity_id = existing.data[0]["id"]
+                else:
+                    result = supabase.table("party_identities").insert({
+                        "project_id": project_id,
+                        "entity_type": "organisation",
+                        "legal_name": legal_name,
+                        "trading_names": list(dict.fromkeys(
+                            t for t in (item.get("trading_names") or []) if t
+                        )),
+                        "registration_number": item.get("registration_number") or None,
+                        "party_category": item.get("party_category") or "unclassified",
+                        "is_internal": bool(item.get("is_internal", False)),
+                        "identification_status": item.get("identification_status", "confirmed"),
+                        "assumption_id": None,
+                    }).execute()
+                    party_identity_id = result.data[0]["id"]
+                    total_parties += 1
             except Exception as exc:
                 logger.error(
                     "governance_identity_insert_failed",
@@ -389,21 +400,32 @@ def run_party_identification(project_id: str, run_id: str) -> None:
             if not legal_name:
                 continue
             try:
-                result = supabase.table("party_identities").insert({
-                    "project_id": project_id,
-                    "entity_type": "individual",
-                    "legal_name": legal_name,
-                    "trading_names": list(dict.fromkeys(
-                        t for t in (item.get("trading_names") or []) if t
-                    )),
-                    "registration_number": item.get("registration_number") or None,
-                    "party_category": item.get("party_category") or "unclassified",
-                    "is_internal": bool(item.get("is_internal", False)),
-                    "identification_status": item.get("identification_status", "confirmed"),
-                    "assumption_id": None,
-                }).execute()
-                party_identity_id = result.data[0]["id"]
-                total_parties += 1
+                # Check for existing identity before insert
+                existing = (
+                    supabase.table("party_identities")
+                    .select("id")
+                    .eq("project_id", project_id)
+                    .eq("legal_name", legal_name)
+                    .execute()
+                )
+                if existing.data:
+                    party_identity_id = existing.data[0]["id"]
+                else:
+                    result = supabase.table("party_identities").insert({
+                        "project_id": project_id,
+                        "entity_type": "individual",
+                        "legal_name": legal_name,
+                        "trading_names": list(dict.fromkeys(
+                            t for t in (item.get("trading_names") or []) if t
+                        )),
+                        "registration_number": item.get("registration_number") or None,
+                        "party_category": item.get("party_category") or "unclassified",
+                        "is_internal": bool(item.get("is_internal", False)),
+                        "identification_status": item.get("identification_status", "confirmed"),
+                        "assumption_id": None,
+                    }).execute()
+                    party_identity_id = result.data[0]["id"]
+                    total_parties += 1
             except Exception as exc:
                 logger.error(
                     "governance_identity_insert_failed",
