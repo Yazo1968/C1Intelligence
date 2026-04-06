@@ -1,3 +1,6 @@
+# Embedded git repos
+C1Intelligence/
+
 # Environment variables — never commit secrets
 .env
 .env.local
