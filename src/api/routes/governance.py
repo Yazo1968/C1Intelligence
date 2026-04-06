@@ -417,9 +417,9 @@ async def get_interview_status(
         project_id=project_id,
         run_id=uuid.UUID(run_id),
         total_questions=total,
-        answered_questions=answered,
-        pending_questions=pending,
-        interview_complete=(total > 0 and pending == 0),
+        answered=answered,
+        pending=pending,
+        complete=(total > 0 and pending == 0),
     )
 
 

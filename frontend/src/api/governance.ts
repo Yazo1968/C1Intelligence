@@ -55,7 +55,8 @@ export async function getNextInterviewQuestion(
       err instanceof Error &&
       (err.message.includes('404') ||
        err.message.toLowerCase().includes('all questions answered') ||
-       (err as { errorCode?: string }).errorCode === 'NOT_FOUND')
+       (err as { errorCode?: string }).errorCode === 'NOT_FOUND' ||
+       (err as { errorCode?: string }).errorCode === 'HTTP_404')
     ) {
       return null;
     }

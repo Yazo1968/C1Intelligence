@@ -243,6 +243,6 @@ class InterviewStatusResponse(BaseModel):
     project_id: uuid.UUID
     run_id: uuid.UUID
     total_questions: int
-    answered_questions: int
-    pending_questions: int
-    interview_complete: bool
+    answered: int
+    pending: int
+    complete: bool

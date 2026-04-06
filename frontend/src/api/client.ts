@@ -39,8 +39,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
       throw new ApiClientError('UNKNOWN', `Request failed with status ${response.status}`);
     }
     throw new ApiClientError(
-      errorBody.error_code,
-      errorBody.message,
+      errorBody.error_code ?? `HTTP_${response.status}`,
+      errorBody.message ?? (errorBody as Record<string, unknown>).detail as string ?? `Request failed with status ${response.status}`,
       errorBody.document_id,
       errorBody.query_id,
     );
