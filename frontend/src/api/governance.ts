@@ -74,3 +74,12 @@ export async function submitInterviewAnswer(
     answer as unknown as Record<string, unknown>,
   );
 }
+
+export async function extractAuthorityEvents(
+  projectId: string,
+): Promise<GovernanceRunResponse> {
+  return apiClient.post<GovernanceRunResponse>(
+    `/projects/${projectId}/governance/extract-events`,
+    {},
+  );
+}

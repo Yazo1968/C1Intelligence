@@ -600,3 +600,89 @@ async def submit_interview_answer(
         sequence_number=updated["sequence_number"],
         created_at=updated["created_at"],
     )
+
+
+@router.post("/extract-events", response_model=GovernanceRunResponse,
+             status_code=status.HTTP_202_ACCEPTED)
+async def extract_authority_events(
+    project_id: uuid.UUID,
+    user_id: AuthenticatedUser,
+    background_tasks: BackgroundTasks,
+) -> GovernanceRunResponse:
+    """
+    Trigger Phase 2 — authority event extraction.
+    Requires the reconciliation interview to be complete.
+    Creates a phase=2 run_log entry and launches run_governance_establishment
+    as a background task.
+    """
+    from src.agents.governance_runner import run_governance_establishment
+
+    supabase = get_supabase_client()
+    _verify_project_access(supabase, project_id, user_id)
+
+    # Verify interview is complete
+    try:
+        run_result = (
+            supabase.table("governance_run_log")
+            .select("id")
+            .eq("project_id", str(project_id))
+            .eq("status", "parties_identified")
+            .order("triggered_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="GOVERNANCE_RUN_FETCH_FAILED",
+            message=f"Failed to check interview status: {exc}",
+        )
+
+    if not run_result.data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reconciliation interview not complete. Complete the interview before extracting authority events.",
+        )
+
+    now = datetime.now(timezone.utc)
+
+    try:
+        response = (
+            supabase.table("governance_run_log")
+            .insert({
+                "project_id": str(project_id),
+                "run_type": "full",
+                "triggered_at": now.isoformat(),
+                "status": "running",
+                "phase": 2,
+            })
+            .execute()
+        )
+    except Exception as exc:
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="GOVERNANCE_RUN_FAILED",
+            message=f"Failed to create Phase 2 run: {exc}",
+        )
+
+    run = response.data[0]
+
+    background_tasks.add_task(
+        run_governance_establishment,
+        str(project_id),
+        run["id"],
+    )
+
+    logger.info(
+        "governance_phase2_triggered",
+        project_id=str(project_id),
+        run_id=run["id"],
+    )
+
+    return GovernanceRunResponse(
+        run_id=uuid.UUID(run["id"]),
+        project_id=project_id,
+        run_type=run["run_type"],
+        status=run["status"],
+        triggered_at=run["triggered_at"],
+    )

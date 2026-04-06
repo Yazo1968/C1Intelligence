@@ -8,6 +8,7 @@ import {
   getInterviewStatus,
   getNextInterviewQuestion,
   submitInterviewAnswer,
+  extractAuthorityEvents,
 } from '../../api/governance';
 import type {
   GovernanceStatusResponse,
@@ -86,6 +87,7 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
   const [freeText, setFreeText] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [interviewLoading, setInterviewLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     setStatusLoading(true);
@@ -224,6 +226,32 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
     }
   };
 
+  const handleExtractEvents = async () => {
+    setExtracting(true);
+    setError(null);
+    try {
+      await extractAuthorityEvents(projectId);
+      // Poll until established
+      const maxAttempts = 36;
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        const s = await getGovernanceStatus(projectId);
+        setStatus(s);
+        if (s.status === 'established' || s.status === 'stale') {
+          break;
+        }
+        if (s.status === 'failed') {
+          setError('Authority event extraction failed. Please try again.');
+          break;
+        }
+      }
+    } catch {
+      setError('Failed to start authority event extraction. Please try again.');
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   const showInterview =
     status?.status === 'parties_identified' ||
     status?.status === 'interview_in_progress';
@@ -344,10 +372,17 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
                   The reconciliation record is complete. You can now proceed to extract authority events.
                 </p>
                 <button
-                  className="px-5 py-2 text-sm font-medium bg-green-700 text-white rounded-md hover:bg-green-600 transition-colors"
-                  onClick={() => alert('Authority event extraction -- Phase 5 coming soon.')}
+                  className="px-5 py-2 text-sm font-medium bg-green-700 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  onClick={handleExtractEvents}
+                  disabled={extracting}
                 >
-                  Extract Authority Events
+                  {extracting ? (
+                    <span className="flex items-center gap-2">
+                      <Spinner className="h-3 w-3" />Extracting...
+                    </span>
+                  ) : (
+                    'Extract Authority Events'
+                  )}
                 </button>
               </div>
             ) : currentQuestion ? (
