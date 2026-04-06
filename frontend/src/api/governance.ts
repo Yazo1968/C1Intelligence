@@ -1,10 +1,11 @@
 import { apiClient } from './client';
 import type {
-  GovernancePartyResponse,
   GovernanceRunResponse,
   GovernanceStatusResponse,
-  GovernanceEventResponse,
-  GovernanceEventUpdateRequest,
+  PartyIdentityResponse,
+  ReconciliationQuestionResponse,
+  ReconciliationAnswerRequest,
+  InterviewStatusResponse,
 } from './types';
 
 export async function runGovernance(
@@ -25,49 +26,37 @@ export async function getGovernanceStatus(
   );
 }
 
-export async function listGovernanceEvents(
+export async function listPartyIdentities(
   projectId: string,
-): Promise<GovernanceEventResponse[]> {
-  return apiClient.get<GovernanceEventResponse[]>(
-    `/projects/${projectId}/governance/events`,
-  );
-}
-
-export async function updateGovernanceEvent(
-  projectId: string,
-  eventId: string,
-  update: GovernanceEventUpdateRequest,
-): Promise<GovernanceEventResponse> {
-  return apiClient.patch<GovernanceEventResponse>(
-    `/projects/${projectId}/governance/events/${eventId}`,
-    update as unknown as Record<string, unknown>,
-  );
-}
-
-export async function listGovernanceParties(
-  projectId: string,
-): Promise<GovernancePartyResponse[]> {
-  return apiClient.get<GovernancePartyResponse[]>(
+): Promise<PartyIdentityResponse[]> {
+  return apiClient.get<PartyIdentityResponse[]>(
     `/projects/${projectId}/governance/parties`,
   );
 }
 
-export async function updateGovernanceParty(
+export async function getInterviewStatus(
   projectId: string,
-  partyId: string,
-  update: { confirmation_status: 'confirmed' | 'flagged' | 'inferred' },
-): Promise<GovernancePartyResponse> {
-  return apiClient.patch<GovernancePartyResponse>(
-    `/projects/${projectId}/governance/parties/${partyId}`,
-    update as unknown as Record<string, unknown>,
+): Promise<InterviewStatusResponse> {
+  return apiClient.get<InterviewStatusResponse>(
+    `/projects/${projectId}/governance/interview`,
   );
 }
 
-export async function confirmParties(
+export async function getNextInterviewQuestion(
   projectId: string,
-): Promise<GovernanceRunResponse> {
-  return apiClient.post<GovernanceRunResponse>(
-    `/projects/${projectId}/governance/confirm-parties`,
-    {},
+): Promise<ReconciliationQuestionResponse | null> {
+  return apiClient.get<ReconciliationQuestionResponse | null>(
+    `/projects/${projectId}/governance/interview/next-question`,
+  );
+}
+
+export async function submitInterviewAnswer(
+  projectId: string,
+  questionId: string,
+  answer: ReconciliationAnswerRequest,
+): Promise<ReconciliationQuestionResponse> {
+  return apiClient.post<ReconciliationQuestionResponse>(
+    `/projects/${projectId}/governance/interview/questions/${questionId}/answer`,
+    answer as unknown as Record<string, unknown>,
   );
 }

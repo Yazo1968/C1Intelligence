@@ -145,20 +145,20 @@ export interface ApiError {
 }
 
 // ---------------------------------------------------------------------------
-// Governance
+// Governance — Three-Level Model
 // ---------------------------------------------------------------------------
 
 export interface GovernanceRunResponse {
   run_id: string;
   project_id: string;
-  run_type: 'full' | 'incremental';
+  run_type: string;
   status: string;
   triggered_at: string;
 }
 
 export interface GovernanceStatusResponse {
   project_id: string;
-  status: 'not_established' | 'processing' | 'parties_identified' | 'established' | 'stale' | 'failed';
+  status: 'not_established' | 'processing' | 'parties_identified' | 'interview_in_progress' | 'established' | 'stale' | 'failed';
   last_run_at: string | null;
   last_run_id: string | null;
   events_confirmed: number;
@@ -167,41 +167,61 @@ export interface GovernanceStatusResponse {
   parties_count: number;
 }
 
-export interface GovernancePartyResponse {
+export interface PartyRoleResponse {
+  id: string;
+  role_title: string;
+  role_category: string;
+  governing_instrument: string | null;
+  governing_instrument_type: string | null;
+  effective_from: string | null;
+  effective_to: string | null;
+  authority_scope: string | null;
+  financial_threshold: string | null;
+  financial_currency: string | null;
+  appointment_status: 'proposed' | 'pending' | 'executed';
+  confirmation_status: 'confirmed' | 'assumed';
+  source_clause: string | null;
+}
+
+export interface PartyIdentityResponse {
   id: string;
   project_id: string;
   entity_type: 'organisation' | 'individual';
-  canonical_name: string;
-  aliases: string[];
-  contractual_role: string | null;
-  terminus_node: boolean;
-  confirmation_status: 'confirmed' | 'inferred' | 'flagged';
+  legal_name: string;
+  trading_names: string[];
+  registration_number: string | null;
+  party_category: string;
+  is_internal: boolean;
+  identification_status: 'confirmed' | 'assumed';
+  roles: PartyRoleResponse[];
   created_at: string;
 }
 
-export interface GovernanceEventResponse {
+export interface ReconciliationQuestionResponse {
   id: string;
   project_id: string;
-  event_type: 'appointment' | 'delegation' | 'termination' | 'replacement' | 'modification' | 'suspension';
-  effective_date: string;
-  end_date: string | null;
-  party_id: string;
-  role: string;
-  appointed_by_party_id: string | null;
-  authority_dimension: 'layer_1' | 'layer_2a' | 'layer_2b';
-  contract_source: string | null;
-  scope: string | null;
-  terminus_node: boolean;
-  source_document_id: string | null;
-  extraction_status: 'confirmed' | 'flagged' | 'inferred';
-  created_at: string;
+  run_id: string;
+  question_type: string;
+  question_text: string;
+  parties_referenced: string[];
+  documents_referenced: string[];
+  options_presented: string[];
+  answer_selected: string | null;
+  user_free_text: string | null;
+  answered_at: string | null;
+  sequence_number: number;
 }
 
-export interface GovernanceEventUpdateRequest {
-  extraction_status: 'confirmed' | 'flagged' | 'inferred';
-  role?: string;
-  effective_date?: string;
-  end_date?: string;
-  scope?: string;
-  contract_source?: string;
+export interface ReconciliationAnswerRequest {
+  answer_selected: string;
+  user_free_text?: string;
+}
+
+export interface InterviewStatusResponse {
+  project_id: string;
+  run_id: string | null;
+  total_questions: number;
+  answered: number;
+  pending: number;
+  complete: boolean;
 }
