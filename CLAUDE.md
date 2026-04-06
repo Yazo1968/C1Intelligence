@@ -112,7 +112,7 @@ state. `list_migrations` for applied migrations.
 - Tier 0: Main orchestrator (router)
 - Tier 1: Legal, Commercial, Financial orchestrators (BaseOrchestrator,
   directive files in `skills/orchestrators/`)
-- Tier 2: Delay and Cost Analytics, Technical, Compliance, Financial &
+- Tier 2: Schedule & Programme, Technical, Compliance, Financial &
   Accounting SMEs (BaseSpecialist, skill files in `skills/smes/`)
 
 **Skill authoring:** All skill files authored using `skills/c1-skill-authoring/`.
@@ -130,7 +130,7 @@ Design principle: every integrity check reads deterministic system state. No int
   entitlement_basis, key_dates_and_securities,
   notice_and_instruction_compliance, notice_compliance,
   dispute_resolution_procedure, and a seventh skill as applicable)
-- Delay and Cost Analytics SME: 9 skills (acceleration,
+- Schedule & Programme SME: 9 skills (acceleration,
   critical_path_analysis, delay_identification,
   evm_and_cost_reporting, programme_assessment, time_at_large,
   eot_quantification, prolongation_cost, disruption)
