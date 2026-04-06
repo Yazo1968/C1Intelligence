@@ -116,7 +116,9 @@ class SkillLoader:
                 )
         else:
             # No flat file — auto-generate project context from Supabase
-            sections.append(self._generate_project_context(project_id))
+            from src.clients import get_supabase_client
+            supabase = get_supabase_client()
+            sections.append(self._generate_project_context(supabase, project_id))
 
         return "\n\n".join(sections)
 
@@ -173,91 +175,100 @@ class SkillLoader:
             )
             return None
 
-    def _generate_project_context(self, project_id: str) -> str:
+    def _generate_project_context(
+        self, supabase, project_id: str
+    ) -> str:
         """
-        Auto-generate project context from Supabase when no flat playbook exists.
+        Generate a project context block for the agent system prompt.
 
-        Queries contracts and parties tables for the project. Returns a markdown
-        block with contracts, parties, and FIDIC edition. Gracefully degrades
-        on any database error — returns partial content built so far.
+        Reads party_identities and party_roles from the governance authority
+        log. Returns a markdown block summarising identified parties and their
+        roles. Gracefully degrades if governance has not been run yet.
         """
-        from src.clients import get_supabase_client
-
-        header = "--- PROJECT CONTEXT (auto-generated from database) ---"
-
         try:
-            supabase = get_supabase_client()
-
-            contracts_resp = (
-                supabase.table("contracts")
-                .select("id, name, contract_type, fidic_edition")
+            identities_result = (
+                supabase.table("party_identities")
+                .select("id, legal_name, party_category, entity_type, is_internal")
                 .eq("project_id", project_id)
                 .execute()
             )
-            contracts = contracts_resp.data or []
-
-            parties_resp = (
-                supabase.table("parties")
-                .select("id, name, role")
-                .eq("project_id", project_id)
-                .execute()
-            )
-            parties = parties_resp.data or []
-
+            identities = identities_result.data or []
         except Exception as exc:
             logger.warning(
-                "skill_loader_playbook_db_error",
+                "skill_loader_party_identities_failed",
                 project_id=project_id,
                 error=str(exc),
             )
-            return header + "\n\nFailed to load project context from database."
+            identities = []
 
-        # Both empty — no project data registered yet
-        if not contracts and not parties:
-            logger.info(
-                "skill_loader_playbook_db_empty",
+        try:
+            roles_result = (
+                supabase.table("party_roles")
+                .select("party_identity_id, role_title, appointment_status, governing_instrument")
+                .eq("project_id", project_id)
+                .execute()
+            )
+            roles = roles_result.data or []
+        except Exception as exc:
+            logger.warning(
+                "skill_loader_party_roles_failed",
                 project_id=project_id,
+                error=str(exc),
             )
+            roles = []
+
+        if not identities:
             return (
-                header
-                + "\n\nNo contracts or parties have been registered for this project yet."
+                "\n\n## Project Context\n\n"
+                "Governance has not been established for this project. "
+                "Party identities and authority records are not yet available. "
+                "Run governance establishment before submitting compliance-dependent queries.\n"
             )
 
-        parts: list[str] = [header]
+        # Group roles by identity
+        roles_by_identity: dict[str, list[dict]] = {i["id"]: [] for i in identities}
+        for role in roles:
+            iid = role["party_identity_id"]
+            if iid in roles_by_identity:
+                roles_by_identity[iid].append(role)
 
-        # Contracts section
-        if contracts:
-            parts.append("\n## Contracts on Record")
-            for c in contracts:
-                edition = c.get("fidic_edition")
-                edition_str = f"FIDIC {edition}" if edition else "FIDIC edition not specified"
-                contract_type = c.get("contract_type", "type not specified")
-                parts.append(f"- {c.get('name', 'Unnamed')} — {contract_type} — {edition_str}")
+        lines: list[str] = ["\n\n## Project Context\n"]
+        lines.append(f"**Parties identified:** {len(identities)}\n")
 
-        # Parties section
-        if parties:
-            parts.append("\n## Parties on Record")
-            for p in parties:
-                parts.append(f"- {p.get('name', 'Unnamed')} — {p.get('role', 'role not specified')}")
+        # Internal parties first
+        internal = [i for i in identities if i.get("is_internal")]
+        external = [i for i in identities if not i.get("is_internal")]
 
-        # FIDIC edition summary
-        fidic_editions = [
-            c["fidic_edition"] for c in contracts if c.get("fidic_edition")
-        ]
-        parts.append("\n## FIDIC Edition")
-        if fidic_editions:
-            unique_editions = sorted(set(fidic_editions))
-            parts.append(f"Governing edition: {', '.join(unique_editions)}")
-        else:
-            parts.append(
-                "FIDIC edition not confirmed — determine from contract documents in the warehouse"
-            )
+        if internal:
+            lines.append("### Internal (Employer's Organisation)")
+            for identity in internal:
+                party_roles = roles_by_identity.get(identity["id"], [])
+                role_summary = ", ".join(
+                    r["role_title"] for r in party_roles
+                ) or "no roles recorded"
+                lines.append(
+                    f"- **{identity['legal_name']}** ({identity['entity_type']}) "
+                    f"— {role_summary}"
+                )
+            lines.append("")
 
-        logger.info(
-            "skill_loader_playbook_db_generated",
-            project_id=project_id,
-            contract_count=len(contracts),
-            party_count=len(parties),
+        if external:
+            lines.append("### External Parties")
+            for identity in external:
+                party_roles = roles_by_identity.get(identity["id"], [])
+                role_summary = ", ".join(
+                    f"{r['role_title']} [{r['appointment_status']}]"
+                    for r in party_roles
+                ) or "no roles recorded"
+                lines.append(
+                    f"- **{identity['legal_name']}** ({identity['entity_type']}, "
+                    f"{identity['party_category']}) — {role_summary}"
+                )
+            lines.append("")
+
+        lines.append(
+            "_Use get_party_authority tool to determine a party's specific "
+            "authority scope and financial thresholds at a given date._\n"
         )
 
-        return "\n".join(parts)
+        return "\n".join(lines)
