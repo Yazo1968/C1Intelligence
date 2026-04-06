@@ -40,7 +40,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     }
     throw new ApiClientError(
       errorBody.error_code ?? `HTTP_${response.status}`,
-      errorBody.message ?? (errorBody as Record<string, unknown>).detail as string ?? `Request failed with status ${response.status}`,
+      errorBody.message ?? ((errorBody as Record<string, unknown>).detail as string | undefined) ?? `Request failed with status ${response.status}`,
       errorBody.document_id,
       errorBody.query_id,
     );
