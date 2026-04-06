@@ -982,9 +982,9 @@ def _run_governance_llm(user_query: str, project_id: str) -> tuple[str, int]:
     agentic tool-use loop for search_chunks. Returns (output_text, rounds).
     """
     import anthropic as _anthropic
-    from src.config import settings as _settings
+    from src.config import ANTHROPIC_API_KEY as _ANTHROPIC_API_KEY
 
-    _client = _anthropic.Anthropic(api_key=_settings.anthropic_api_key)
+    _client = _anthropic.Anthropic(api_key=_ANTHROPIC_API_KEY)
 
     _messages = [{"role": "user", "content": user_query}]
 
