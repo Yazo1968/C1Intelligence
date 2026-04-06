@@ -158,7 +158,13 @@ export interface GovernanceRunResponse {
 
 export interface GovernanceStatusResponse {
   project_id: string;
-  status: 'not_established' | 'processing' | 'parties_identified' | 'interview_in_progress' | 'established' | 'stale' | 'failed';
+  status:
+    | 'not_established'
+    | 'processing'
+    | 'parties_identified'
+    | 'established'
+    | 'stale'
+    | 'failed';
   last_run_at: string | null;
   last_run_id: string | null;
   events_confirmed: number;
@@ -169,6 +175,8 @@ export interface GovernanceStatusResponse {
 
 export interface PartyRoleResponse {
   id: string;
+  party_identity_id: string;
+  project_id: string;
   role_title: string;
   role_category: string;
   governing_instrument: string | null;
@@ -179,8 +187,9 @@ export interface PartyRoleResponse {
   financial_threshold: string | null;
   financial_currency: string | null;
   appointment_status: 'proposed' | 'pending' | 'executed';
-  confirmation_status: 'confirmed' | 'assumed';
   source_clause: string | null;
+  confirmation_status: 'confirmed' | 'assumed';
+  created_at: string;
 }
 
 export interface PartyIdentityResponse {
@@ -210,38 +219,35 @@ export interface ReconciliationQuestionResponse {
   user_free_text: string | null;
   answered_at: string | null;
   sequence_number: number;
-}
-
-export interface ReconciliationAnswerRequest {
-  answer_selected: string;
-  user_free_text?: string;
+  created_at: string;
 }
 
 export interface InterviewStatusResponse {
   project_id: string;
-  run_id: string | null;
+  run_id: string;
   total_questions: number;
-  answered: number;
-  pending: number;
-  complete: boolean;
+  answered_questions: number;
+  pending_questions: number;
+  interview_complete: boolean;
 }
 
 export interface AuthorityEventResponse {
   id: string;
+  project_id: string;
+  party_role_id: string;
+  party_identity_id: string;
   event_type: string;
   appointment_status: 'proposed' | 'pending' | 'executed';
   event_date: string | null;
   event_date_certain: boolean;
-  party_legal_name: string;
-  party_category: string;
-  role_title: string;
+  end_date: string | null;
+  authority_before: string | null;
   authority_after: string | null;
+  financial_threshold_before: string | null;
   financial_threshold_after: string | null;
-  financial_currency: string | null;
-  initiated_by_legal_name: string | null;
-  authorised_by_legal_name: string | null;
-  instrument_status: 'retrieved' | 'referenced_only' | 'absent';
-  confirmation_status: 'confirmed' | 'assumed';
   missing_action: string | null;
+  instrument_status: string;
+  confirmation_status: 'confirmed' | 'assumed';
   source_clause: string | null;
+  created_at: string;
 }

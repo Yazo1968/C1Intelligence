@@ -18,7 +18,6 @@ import type {
   InterviewStatusResponse,
   AuthorityEventResponse,
 } from '../../api/types';
-import { supabase } from '../../auth/supabase';
 
 interface GovernancePanelProps {
   projectId: string;
@@ -28,16 +27,21 @@ const STATUS_LABELS: Record<string, { label: string; colour: string }> = {
   not_established: { label: 'Not Established', colour: 'bg-gray-100 text-gray-600' },
   processing: { label: 'Processing\u2026', colour: 'bg-blue-100 text-blue-700' },
   parties_identified: { label: 'Parties Identified', colour: 'bg-amber-100 text-amber-700' },
-  interview_in_progress: { label: 'Interview In Progress', colour: 'bg-amber-100 text-amber-700' },
   established: { label: 'Established', colour: 'bg-green-100 text-green-700' },
   stale: { label: 'Stale', colour: 'bg-amber-100 text-amber-700' },
   failed: { label: 'Run Failed', colour: 'bg-red-100 text-red-700' },
 };
 
+const APPOINTMENT_LABELS: Record<string, { label: string; colour: string }> = {
+  executed: { label: 'Executed', colour: 'bg-green-100 text-green-700' },
+  pending: { label: 'Pending', colour: 'bg-amber-100 text-amber-700' },
+  proposed: { label: 'Proposed', colour: 'bg-gray-100 text-gray-500' },
+};
+
 const CATEGORY_LABELS: Record<string, string> = {
   employer: 'Employer',
   employer_representative: 'Employer Representative',
-  funder: 'Funder / Lender',
+  funder: 'Funder',
   parent_affiliate: 'Parent / Affiliate',
   contract_administrator: 'Contract Administrator',
   resident_engineer: 'Resident Engineer',
@@ -49,7 +53,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   specialist_subcontractor: 'Specialist Subcontractor',
   supplier_manufacturer: 'Supplier / Manufacturer',
   design_consultant: 'Design Consultant',
-  cost_consultant: 'Cost Consultant / QS',
+  cost_consultant: 'Cost Consultant',
   project_management_consultant: 'PMC',
   planning_consultant: 'Planning Consultant',
   clerk_of_works: 'Clerk of Works',
@@ -60,23 +64,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   arbitral_tribunal: 'Arbitral Tribunal',
   expert_mediator: 'Expert / Mediator',
   insurer: 'Insurer',
-  surety: 'Surety / Bond',
+  surety: 'Surety',
   legal_counsel: 'Legal Counsel',
   unclassified: 'Unclassified',
-};
-
-const APPOINTMENT_COLOURS: Record<string, string> = {
-  executed: 'bg-green-100 text-green-700',
-  pending: 'bg-amber-100 text-amber-700',
-  proposed: 'bg-gray-100 text-gray-600',
-};
-
-const INDIVIDUAL_PARENT_CATEGORY: Record<string, string> = {
-  employer_representative: 'employer',
-  contractors_representative: 'main_contractor',
-  resident_engineer: 'contract_administrator',
-  clerk_of_works: 'contract_administrator',
-  planning_consultant: 'project_management_consultant',
 };
 
 export function GovernancePanel({ projectId }: GovernancePanelProps) {
@@ -85,29 +75,39 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Party identities state
+  // Party identities (Phase 1 output)
   const [parties, setParties] = useState<PartyIdentityResponse[]>([]);
   const [partiesLoading, setPartiesLoading] = useState(false);
-  const [expandedParty, setExpandedParty] = useState<string | null>(null);
+  const [expandedPartyId, setExpandedPartyId] = useState<string | null>(null);
 
-  // Interview state
-  const [interviewStatus, setInterviewStatus] = useState<InterviewStatusResponse | null>(null);
-  const [currentQuestion, setCurrentQuestion] = useState<ReconciliationQuestionResponse | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string>('');
-  const [freeText, setFreeText] = useState<string>('');
+  // Reconciliation interview
+  const [interviewStatus, setInterviewStatus] =
+    useState<InterviewStatusResponse | null>(null);
+  const [currentQuestion, setCurrentQuestion] =
+    useState<ReconciliationQuestionResponse | null>(null);
+  const [questionLoading, setQuestionLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [interviewLoading, setInterviewLoading] = useState(false);
-  const [extracting, setExtracting] = useState(false);
-  const [authorityEvents, setAuthorityEvents] = useState<AuthorityEventResponse[]>([]);
+  const [selectedAnswer, setSelectedAnswer] = useState<string>('');
+  const [freeText, setFreeText] = useState<string>('');
+
+  // Authority events (Phase 2 output)
+  const [events, setEvents] = useState<AuthorityEventResponse[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+
+  // -----------------------------------------------------------------------
+  // Data fetchers
+  // -----------------------------------------------------------------------
 
   const fetchStatus = useCallback(async () => {
     setStatusLoading(true);
     try {
       const s = await getGovernanceStatus(projectId);
       setStatus(s);
+      return s;
     } catch {
       setError('Failed to load governance status.');
+      return null;
     } finally {
       setStatusLoading(false);
     }
@@ -125,96 +125,108 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
     }
   }, [projectId]);
 
-  const fetchInterview = useCallback(async () => {
-    setInterviewLoading(true);
+  const fetchInterviewStatus = useCallback(async () => {
     try {
-      const iStatus = await getInterviewStatus(projectId);
-      setInterviewStatus(iStatus);
-      if (!iStatus.complete) {
-        const iQuestion = await getNextInterviewQuestion(projectId);
-        setCurrentQuestion(iQuestion);
-      } else {
-        setCurrentQuestion(null);
-      }
-      setSelectedOption('');
-      setFreeText('');
+      const s = await getInterviewStatus(projectId);
+      setInterviewStatus(s);
+      return s;
     } catch {
-      setError('Failed to load interview.');
-    } finally {
-      setInterviewLoading(false);
+      // No interview run yet -- not an error
+      return null;
     }
   }, [projectId]);
 
-  const fetchAuthorityEvents = useCallback(async () => {
+  const fetchNextQuestion = useCallback(async () => {
+    setQuestionLoading(true);
+    try {
+      const q = await getNextInterviewQuestion(projectId);
+      setCurrentQuestion(q);
+      setSelectedAnswer('');
+      setFreeText('');
+    } catch {
+      // 404 = all questions answered -- not an error
+      setCurrentQuestion(null);
+    } finally {
+      setQuestionLoading(false);
+    }
+  }, [projectId]);
+
+  const fetchEvents = useCallback(async () => {
     setEventsLoading(true);
     try {
-      const events = await listAuthorityEvents(projectId);
-      setAuthorityEvents(events);
+      const e = await listAuthorityEvents(projectId);
+      setEvents(e);
     } catch {
-      // non-critical — log silently
+      setError('Failed to load authority events.');
     } finally {
       setEventsLoading(false);
     }
   }, [projectId]);
 
-  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+  // -----------------------------------------------------------------------
+  // Initial load and status-driven side effects
+  // -----------------------------------------------------------------------
 
   useEffect(() => {
-    if (status?.status === 'parties_identified' || status?.status === 'interview_in_progress') {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  useEffect(() => {
+    if (!status) return;
+    if (status.status === 'parties_identified') {
       fetchParties();
-      fetchInterview();
+      fetchInterviewStatus().then((s) => {
+        if (s && !s.interview_complete) fetchNextQuestion();
+      });
     }
-  }, [status, fetchParties, fetchInterview]);
-
-  useEffect(() => {
-    if (status?.status === 'established' || status?.status === 'stale') {
-      fetchAuthorityEvents();
+    if (
+      status.status === 'established' ||
+      status.status === 'stale'
+    ) {
+      fetchEvents();
     }
-  }, [status, fetchAuthorityEvents]);
+  }, [status, fetchParties, fetchInterviewStatus, fetchNextQuestion, fetchEvents]);
 
-  // Continuous polling whenever status is processing
-  useEffect(() => {
-    if (status?.status !== 'processing') return;
-    const interval = setInterval(async () => {
+  // -----------------------------------------------------------------------
+  // Polling
+  // -----------------------------------------------------------------------
+
+  const pollUntilResolved = useCallback(async () => {
+    const MAX = 36; // 3 minutes at 5s intervals
+    for (let i = 0; i < MAX; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
       try {
         const s = await getGovernanceStatus(projectId);
         setStatus(s);
-        if (s.status !== 'processing') {
-          clearInterval(interval);
-          if (s.status === 'parties_identified' || s.status === 'interview_in_progress') {
-            fetchParties();
-            fetchInterview();
-          }
+        if (s.status === 'parties_identified') {
+          await fetchParties();
+          const iv = await fetchInterviewStatus();
+          if (iv && !iv.interview_complete) await fetchNextQuestion();
+          return;
         }
+        if (s.status === 'established' || s.status === 'stale') {
+          await fetchEvents();
+          return;
+        }
+        if (s.status === 'failed' || s.status === 'not_established') return;
       } catch {
-        // keep polling on error
+        return;
       }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [status?.status, projectId, fetchParties, fetchInterview]);
+    }
+  }, [projectId, fetchParties, fetchInterviewStatus, fetchNextQuestion, fetchEvents]);
 
-  // Proactively refresh auth session to prevent mid-interview logout
-  useEffect(() => {
-    const { data: { subscription } } = (supabase as unknown as {
-      auth: {
-        onAuthStateChange: (cb: (event: string) => void) => { data: { subscription: { unsubscribe: () => void } } };
-      }
-    }).auth.onAuthStateChange((event) => {
-      if (event === 'TOKEN_REFRESHED') {
-        // Session refreshed — no action needed
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+  // -----------------------------------------------------------------------
+  // Actions
+  // -----------------------------------------------------------------------
 
   const handleRun = async () => {
     setRunning(true);
     setError(null);
     try {
-      await runGovernance(projectId, 'full');
-      // Immediately update status to show processing — polling useEffect takes over
-      const s = await getGovernanceStatus(projectId);
-      setStatus(s);
+      const runType =
+        status?.status === 'not_established' ? 'full' : 'incremental';
+      await runGovernance(projectId, runType);
+      await pollUntilResolved();
     } catch {
       setError('Failed to trigger governance run. Please try again.');
     } finally {
@@ -223,34 +235,26 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
   };
 
   const handleSubmitAnswer = async () => {
-    if (!currentQuestion || !selectedOption) return;
+    if (!currentQuestion || !selectedAnswer) return;
     setSubmitting(true);
     setError(null);
     try {
-      await submitInterviewAnswer(projectId, currentQuestion.id, {
-        answer_selected: selectedOption,
-        user_free_text: freeText || undefined,
-      });
-      await fetchInterview();
+      await submitInterviewAnswer(
+        projectId,
+        currentQuestion.id,
+        selectedAnswer,
+        freeText || undefined,
+      );
+      // Refresh interview status and load next question
+      const iv = await fetchInterviewStatus();
+      setInterviewStatus(iv);
+      if (iv && iv.interview_complete) {
+        setCurrentQuestion(null);
+      } else {
+        await fetchNextQuestion();
+      }
     } catch {
-      setError('Failed to submit answer. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleSkipQuestion = async () => {
-    if (!currentQuestion) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await submitInterviewAnswer(projectId, currentQuestion.id, {
-        answer_selected: 'skipped',
-        user_free_text: 'Skipped for later review.',
-      });
-      await fetchInterview();
-    } catch {
-      setError('Failed to skip question.');
+      setError('Failed to record answer. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -261,48 +265,167 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
     setError(null);
     try {
       await extractAuthorityEvents(projectId);
-      // Poll until established
-      const maxAttempts = 36;
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        const s = await getGovernanceStatus(projectId);
-        setStatus(s);
-        if (s.status === 'established' || s.status === 'stale') {
-          break;
-        }
-        if (s.status === 'failed') {
-          setError('Authority event extraction failed. Please try again.');
-          break;
-        }
-      }
+      await pollUntilResolved();
     } catch {
-      setError('Failed to start authority event extraction. Please try again.');
+      setError('Failed to trigger event extraction. Please try again.');
     } finally {
       setExtracting(false);
     }
   };
 
-  const showInterview =
-    status?.status === 'parties_identified' ||
-    status?.status === 'interview_in_progress';
+  // -----------------------------------------------------------------------
+  // Render helpers
+  // -----------------------------------------------------------------------
 
-  const interviewComplete = interviewStatus?.complete === true;
+  const internalParties = parties.filter((p) => p.is_internal);
+  const externalParties = parties.filter((p) => !p.is_internal);
+
+  const renderPartyTable = (list: PartyIdentityResponse[]) => {
+    if (list.length === 0)
+      return (
+        <p className="text-xs text-gray-400 px-4 py-3 italic">
+          None identified.
+        </p>
+      );
+    return (
+      <div className="divide-y divide-gray-100">
+        {list.map((party) => {
+          const isExpanded = expandedPartyId === party.id;
+          return (
+            <div key={party.id}>
+              {/* Party header row */}
+              <button
+                onClick={() =>
+                  setExpandedPartyId(isExpanded ? null : party.id)
+                }
+                className="w-full flex items-start justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-navy-900 truncate">
+                    {party.legal_name}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-gray-500 capitalize">
+                      {party.entity_type}
+                    </span>
+                    <span className="text-gray-300">&middot;</span>
+                    <span className="text-xs text-gray-500">
+                      {CATEGORY_LABELS[party.party_category] ??
+                        party.party_category}
+                    </span>
+                    {party.trading_names.length > 0 && (
+                      <>
+                        <span className="text-gray-300">&middot;</span>
+                        <span className="text-xs text-gray-400">
+                          also: {party.trading_names.join(', ')}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                  {party.roles.length} role
+                  {party.roles.length !== 1 ? 's' : ''}{' '}
+                  {isExpanded ? '\u25B2' : '\u25BC'}
+                </span>
+              </button>
+
+              {/* Expanded roles */}
+              {isExpanded && party.roles.length > 0 && (
+                <div className="bg-gray-50 border-t border-gray-100 px-4 py-3 space-y-2">
+                  {party.roles.map((role) => {
+                    const appt =
+                      APPOINTMENT_LABELS[role.appointment_status] ??
+                      APPOINTMENT_LABELS['proposed'];
+                    return (
+                      <div
+                        key={role.id}
+                        className="bg-white border border-gray-200 rounded-md p-3 text-xs"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-medium text-navy-900">
+                            {role.role_title}
+                          </p>
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${appt.colour}`}
+                          >
+                            {appt.label}
+                          </span>
+                        </div>
+                        {role.governing_instrument && (
+                          <p className="text-gray-500 mt-1">
+                            Instrument:{' '}
+                            <span className="text-gray-700">
+                              {role.governing_instrument}
+                            </span>
+                          </p>
+                        )}
+                        {role.authority_scope && (
+                          <p className="text-gray-500 mt-1">
+                            Scope:{' '}
+                            <span className="text-gray-700">
+                              {role.authority_scope}
+                            </span>
+                          </p>
+                        )}
+                        {role.financial_threshold && (
+                          <p className="text-gray-500 mt-1">
+                            Threshold:{' '}
+                            <span className="text-gray-700">
+                              {role.financial_currency
+                                ? `${role.financial_currency} `
+                                : ''}
+                              {role.financial_threshold}
+                            </span>
+                          </p>
+                        )}
+                        {(role.effective_from || role.effective_to) && (
+                          <p className="text-gray-500 mt-1">
+                            Period:{' '}
+                            <span className="text-gray-700">
+                              {role.effective_from ?? '\u2014'} \u2192{' '}
+                              {role.effective_to ?? 'ongoing'}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const statusInfo = status ? STATUS_LABELS[status.status] : null;
 
+  // -----------------------------------------------------------------------
+  // Render
+  // -----------------------------------------------------------------------
+
   return (
     <div className="space-y-6">
-
+      {/* ---------------------------------------------------------------- */}
       {/* Readiness card */}
+      {/* ---------------------------------------------------------------- */}
       <div className="bg-white border border-gray-200 rounded-lg p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold text-navy-900">Governance Readiness</h2>
+            <h2 className="text-base font-semibold text-navy-900">
+              Governance Readiness
+            </h2>
             {statusLoading ? (
-              <div className="mt-2"><Spinner className="h-4 w-4" /></div>
+              <div className="mt-2">
+                <Spinner className="h-4 w-4" />
+              </div>
             ) : status ? (
               <div className="mt-2 space-y-1">
-                <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${statusInfo?.colour}`}>
+                <span
+                  className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${statusInfo?.colour}`}
+                >
                   {statusInfo?.label}
                 </span>
                 {status.status === 'processing' && (
@@ -312,379 +435,273 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
                 )}
                 {status.status === 'failed' && (
                   <p className="text-xs text-red-600 mt-1">
-                    The last run failed. Check your documents are ingested and try again.
+                    The last run failed. Check documents are ingested and
+                    try again.
                   </p>
                 )}
                 {status.last_run_at && (
                   <p className="text-xs text-gray-500">
-                    Last run: {new Date(status.last_run_at).toLocaleString()}
+                    Last run:{' '}
+                    {new Date(status.last_run_at).toLocaleString()}
                   </p>
                 )}
-                {showInterview && interviewStatus && (
-                  <p className="text-xs text-gray-500">
-                    {status.parties_count} {status.parties_count === 1 ? 'party' : 'parties'} identified ·{' '}
-                    {interviewStatus.answered} of {interviewStatus.total_questions} questions answered
+                {status.status === 'not_established' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Governance has not been established for this project.
+                    Run party identification to begin.
+                  </p>
+                )}
+                {status.status === 'stale' && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    New documents have been ingested since the last run.
+                    Refresh recommended.
                   </p>
                 )}
               </div>
             ) : null}
           </div>
+
           <button
             onClick={handleRun}
-            disabled={running || statusLoading || showInterview}
+            disabled={running || statusLoading}
             className="shrink-0 px-4 py-2 text-sm font-medium bg-navy-900 text-white rounded-md hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {running ? (
-              <span className="flex items-center gap-2"><Spinner className="h-3 w-3" />Running...</span>
+              <span className="flex items-center gap-2">
+                <Spinner className="h-3 w-3" />
+                Running...
+              </span>
             ) : status?.status === 'not_established' ? (
               'Establish Governance'
-            ) : showInterview ? (
-              'Complete Interview First'
             ) : (
               'Refresh Governance'
             )}
           </button>
         </div>
-
-        {status?.status === 'not_established' && (
-          <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-600">
-            Governance has not been established. Run governance establishment to identify
-            all parties and their authority -- this is required before compliance-dependent queries.
-          </div>
-        )}
-        {status?.status === 'stale' && (
-          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-700">
-            New documents have been ingested since the last governance run. Refresh recommended.
-          </div>
-        )}
       </div>
 
-      {/* Reconciliation Interview */}
-      {showInterview && (
-        <div className="bg-white border border-gray-200 rounded-lg">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-navy-900">Reconciliation Interview</h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Answer each question to resolve ambiguities found in your project documents.
-                  Your answers are recorded and used in all subsequent governance analysis.
-                </p>
-              </div>
-              {interviewStatus && (
-                <div className="text-right shrink-0 ml-4">
-                  <p className="text-xs font-medium text-navy-900">
-                    {interviewStatus.answered} / {interviewStatus.total_questions}
-                  </p>
-                  <p className="text-xs text-gray-500">questions answered</p>
-                </div>
-              )}
+      {/* ---------------------------------------------------------------- */}
+      {/* Error banner */}
+      {/* ---------------------------------------------------------------- */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* ---------------------------------------------------------------- */}
+      {/* Parties identified -- shown when status = parties_identified */}
+      {/* ---------------------------------------------------------------- */}
+      {status?.status === 'parties_identified' && (
+        <>
+          {/* Party identity register */}
+          <div className="bg-white border border-gray-200 rounded-lg">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-semibold text-navy-900">
+                Identified Parties
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Parties and roles extracted from project documents. Click a
+                party to expand their role records.
+              </p>
             </div>
-            {interviewStatus && interviewStatus.total_questions > 0 && (
-              <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-green-500 rounded-full transition-all"
-                  style={{
-                    width: `${Math.round((interviewStatus.answered / interviewStatus.total_questions) * 100)}%`,
-                  }}
+
+            {partiesLoading ? (
+              <div className="flex justify-center py-10">
+                <Spinner className="h-5 w-5" />
+              </div>
+            ) : parties.length === 0 ? (
+              <div className="p-5">
+                <EmptyState
+                  title="No parties identified"
+                  description="Party identification is still running or produced no results."
                 />
               </div>
+            ) : (
+              <>
+                {/* Internal tab */}
+                {internalParties.length > 0 && (
+                  <div>
+                    <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Internal -- Employer's Organisation (
+                        {internalParties.length})
+                      </p>
+                    </div>
+                    {renderPartyTable(internalParties)}
+                  </div>
+                )}
+
+                {/* External tab */}
+                {externalParties.length > 0 && (
+                  <div>
+                    <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        External ({externalParties.length})
+                      </p>
+                    </div>
+                    {renderPartyTable(externalParties)}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
-          <div className="px-5 py-5">
-            {interviewLoading ? (
-              <div className="flex justify-center py-8"><Spinner className="h-6 w-6" /></div>
-            ) : interviewComplete ? (
-              <div className="text-center py-6">
-                <p className="text-sm font-medium text-green-700 mb-1">All questions answered</p>
-                <p className="text-xs text-gray-500 mb-4">
-                  The reconciliation record is complete. You can now proceed to extract authority events.
-                </p>
+          {/* Reconciliation interview */}
+          <div className="bg-white border border-gray-200 rounded-lg">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-semibold text-navy-900">
+                Reconciliation Interview
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Answer each question to resolve ambiguities before
+                authority event extraction begins.
+              </p>
+              {/* Progress bar */}
+              {interviewStatus && interviewStatus.total_questions > 0 && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                    <span>
+                      {interviewStatus.answered_questions} of{' '}
+                      {interviewStatus.total_questions} answered
+                    </span>
+                    <span>
+                      {Math.round(
+                        (interviewStatus.answered_questions /
+                          interviewStatus.total_questions) *
+                          100,
+                      )}
+                      %
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div
+                      className="bg-navy-900 h-1.5 rounded-full transition-all"
+                      style={{
+                        width: `${Math.round(
+                          (interviewStatus.answered_questions /
+                            interviewStatus.total_questions) *
+                            100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {questionLoading ? (
+              <div className="flex justify-center py-10">
+                <Spinner className="h-5 w-5" />
+              </div>
+            ) : interviewStatus?.interview_complete ||
+              (!currentQuestion && !questionLoading) ? (
+              <div className="px-5 py-5 space-y-4">
+                <div className="flex items-center gap-2 text-sm text-green-700 font-medium">
+                  <span>{'\u2713'}</span>
+                  <span>
+                    {interviewStatus?.total_questions === 0
+                      ? 'No reconciliation questions were generated for this run.'
+                      : 'All questions answered. Ready to extract authority events.'}
+                  </span>
+                </div>
                 <button
-                  className="px-5 py-2 text-sm font-medium bg-green-700 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   onClick={handleExtractEvents}
-                  disabled={extracting || status?.status === 'established' || status?.status === 'stale'}
+                  disabled={extracting}
+                  className="px-4 py-2 text-sm font-medium bg-green-700 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {extracting ? (
                     <span className="flex items-center gap-2">
-                      <Spinner className="h-3 w-3" />Extracting...
+                      <Spinner className="h-3 w-3" />
+                      Extracting...
                     </span>
-                  ) : status?.status === 'established' || status?.status === 'stale' ? (
-                    'Authority Events Extracted \u2713'
                   ) : (
                     'Extract Authority Events'
                   )}
                 </button>
               </div>
             ) : currentQuestion ? (
-              <div className="space-y-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
-                    {currentQuestion.question_type.replace(/_/g, ' ')} · Question {(interviewStatus?.answered ?? 0) + 1} of {interviewStatus?.total_questions ?? '?'}
-                  </p>
-                  <p className="text-sm text-navy-900 leading-relaxed">{currentQuestion.question_text}</p>
-                </div>
+              <div className="px-5 py-5 space-y-4">
+                <p className="text-sm text-navy-900">
+                  {currentQuestion.question_text}
+                </p>
 
                 <div className="space-y-2">
-                  {currentQuestion.options_presented.map((option) => (
+                  {currentQuestion.options_presented.map((opt) => (
                     <label
-                      key={option}
-                      className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
-                        selectedOption === option
-                          ? 'border-navy-700 bg-navy-50'
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      key={opt}
+                      className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-colors ${
+                        selectedAnswer === opt
+                          ? 'border-navy-900 bg-navy-50'
+                          : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <input
                         type="radio"
-                        name="interview-option"
-                        value={option}
-                        checked={selectedOption === option}
-                        onChange={() => setSelectedOption(option)}
+                        name="interview-answer"
+                        value={opt}
+                        checked={selectedAnswer === opt}
+                        onChange={() => setSelectedAnswer(opt)}
                         className="mt-0.5 shrink-0"
                       />
-                      <span className="text-sm text-gray-700">{option}</span>
+                      <span className="text-sm text-gray-700">{opt}</span>
                     </label>
                   ))}
                 </div>
 
-                {selectedOption && (
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">
-                      Additional comment (optional)
-                    </label>
-                    <textarea
-                      value={freeText}
-                      onChange={(e) => setFreeText(e.target.value)}
-                      rows={2}
-                      className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:border-navy-700 focus:outline-none focus:ring-1 focus:ring-navy-700 resize-none"
-                      placeholder="Add context or clarification if needed..."
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3 pt-1">
-                  <button
-                    onClick={handleSubmitAnswer}
-                    disabled={!selectedOption || submitting}
-                    className="px-4 py-2 text-sm font-medium bg-navy-900 text-white rounded-md hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {submitting ? (
-                      <span className="flex items-center gap-2"><Spinner className="h-3 w-3" />Saving...</span>
-                    ) : (
-                      'Submit Answer'
-                    )}
-                  </button>
-                  <button
-                    onClick={handleSkipQuestion}
-                    disabled={submitting}
-                    className="px-4 py-2 text-sm font-medium text-gray-500 border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
-                  >
-                    Skip for now
-                  </button>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">
+                    Additional comments (optional)
+                  </label>
+                  <textarea
+                    value={freeText}
+                    onChange={(e) => setFreeText(e.target.value)}
+                    rows={2}
+                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-navy-900 resize-none"
+                    placeholder="Any additional context..."
+                  />
                 </div>
+
+                <button
+                  onClick={handleSubmitAnswer}
+                  disabled={!selectedAnswer || submitting}
+                  className="px-4 py-2 text-sm font-medium bg-navy-900 text-white rounded-md hover:bg-navy-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {submitting ? (
+                    <span className="flex items-center gap-2">
+                      <Spinner className="h-3 w-3" />
+                      Saving...
+                    </span>
+                  ) : (
+                    'Submit Answer'
+                  )}
+                </button>
               </div>
-            ) : (
-              <EmptyState
-                title="No questions pending"
-                description="No reconciliation questions were generated for this run."
-              />
-            )}
+            ) : null}
           </div>
-        </div>
+        </>
       )}
 
-      {/* Identified Parties */}
-      {showInterview && (
-        <div className="bg-white border border-gray-200 rounded-lg">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-navy-900">Identified Parties</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Parties extracted from your project documents. Each party may hold multiple roles.
-            </p>
-          </div>
-          {partiesLoading ? (
-            <div className="flex justify-center py-12"><Spinner className="h-6 w-6" /></div>
-          ) : parties.length === 0 ? (
-            <div className="p-5">
-              <EmptyState
-                title="No parties identified"
-                description="Party identification is still running or produced no results."
-              />
-            </div>
-          ) : (() => {
-            const organisations = parties.filter(p => p.entity_type === 'organisation');
-            const individuals = parties.filter(p => p.entity_type === 'individual');
-
-            const individualsForOrg = (_orgId: string, orgCategory: string) => {
-              const expectedIndividualCategory = Object.entries(INDIVIDUAL_PARENT_CATEGORY)
-                .filter(([, parentCat]) => parentCat === orgCategory)
-                .map(([indCat]) => indCat);
-              return individuals.filter(ind =>
-                expectedIndividualCategory.includes(ind.party_category)
-              );
-            };
-
-            const unmatchedIndividuals = individuals.filter(ind => {
-              const parentCat = INDIVIDUAL_PARENT_CATEGORY[ind.party_category];
-              if (!parentCat) return true;
-              return !organisations.some(org => org.party_category === parentCat);
-            });
-
-            return (
-              <div>
-                {[...organisations, ...unmatchedIndividuals].map((party) => {
-                  const isOrg = party.entity_type === 'organisation';
-                  const nestedIndividuals = isOrg
-                    ? individualsForOrg(party.id, party.party_category)
-                    : [];
-
-                  return (
-                    <div key={party.id} className="px-5 py-4 border-b border-gray-100 last:border-0">
-                      <div
-                        className="flex items-start justify-between gap-4 cursor-pointer"
-                        onClick={() => setExpandedParty(expandedParty === party.id ? null : party.id)}
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-navy-900">{party.legal_name}</span>
-                            {party.is_internal && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">Internal</span>
-                            )}
-                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                              party.identification_status === 'confirmed'
-                                ? 'bg-green-50 text-green-700'
-                                : 'bg-amber-50 text-amber-700'
-                            }`}>
-                              {party.identification_status.charAt(0).toUpperCase() + party.identification_status.slice(1)}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {CATEGORY_LABELS[party.party_category] ?? party.party_category} · {party.entity_type}
-                            {party.roles.length > 0 && ` · ${party.roles.length} role${party.roles.length !== 1 ? 's' : ''}`}
-                            {nestedIndividuals.length > 0 && ` · ${nestedIndividuals.length} named individual${nestedIndividuals.length !== 1 ? 's' : ''}`}
-                          </p>
-                          {party.trading_names.length > 0 && (
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              Also known as: {[...new Set(party.trading_names)].join(', ')}
-                            </p>
-                          )}
-                        </div>
-                        <span className="text-xs text-gray-400 shrink-0 mt-1">
-                          {expandedParty === party.id ? '\u25B2' : '\u25BC'}
-                        </span>
-                      </div>
-
-                      {expandedParty === party.id && party.roles.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {party.roles.map((role) => (
-                            <div key={role.id} className="bg-gray-50 rounded-md px-4 py-3 text-xs">
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <p className="font-medium text-navy-900">{role.role_title}</p>
-                                  {role.governing_instrument && (
-                                    <p className="text-gray-500 mt-0.5">
-                                      {role.governing_instrument}
-                                      {role.source_clause && ` -- ${role.source_clause}`}
-                                    </p>
-                                  )}
-                                  {role.authority_scope && (
-                                    <p className="text-gray-600 mt-1">{role.authority_scope}</p>
-                                  )}
-                                  {role.financial_threshold && (
-                                    <p className="text-gray-500 mt-0.5">
-                                      Threshold: {role.financial_threshold} {role.financial_currency ?? ''}
-                                    </p>
-                                  )}
-                                  {(role.effective_from || role.effective_to) && (
-                                    <p className="text-gray-400 mt-0.5">
-                                      {role.effective_from ?? '--'} → {role.effective_to ?? 'ongoing'}
-                                    </p>
-                                  )}
-                                </div>
-                                <span className={`shrink-0 px-2 py-0.5 rounded-full font-medium ${
-                                  APPOINTMENT_COLOURS[role.appointment_status] ?? 'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {role.appointment_status.charAt(0).toUpperCase() + role.appointment_status.slice(1)}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {nestedIndividuals.length > 0 && (
-                        <div className="mt-3 space-y-2 pl-4 border-l-2 border-gray-100">
-                          {nestedIndividuals.map((ind) => (
-                            <div key={ind.id}>
-                              <div
-                                className="flex items-start justify-between gap-4 cursor-pointer py-2"
-                                onClick={(e) => { e.stopPropagation(); setExpandedParty(expandedParty === ind.id ? null : ind.id); }}
-                              >
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-medium text-navy-900">{ind.legal_name}</span>
-                                    <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">
-                                      {CATEGORY_LABELS[ind.party_category] ?? ind.party_category}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-0.5">
-                                    Individual · {ind.roles.length} role{ind.roles.length !== 1 ? 's' : ''}
-                                  </p>
-                                </div>
-                                <span className="text-xs text-gray-400 shrink-0 mt-1">
-                                  {expandedParty === ind.id ? '\u25B2' : '\u25BC'}
-                                </span>
-                              </div>
-                              {expandedParty === ind.id && ind.roles.length > 0 && (
-                                <div className="space-y-2">
-                                  {ind.roles.map((role) => (
-                                    <div key={role.id} className="bg-gray-50 rounded-md px-4 py-3 text-xs">
-                                      <div className="flex items-start justify-between gap-2">
-                                        <div>
-                                          <p className="font-medium text-navy-900">{role.role_title}</p>
-                                          {role.governing_instrument && (
-                                            <p className="text-gray-500 mt-0.5">{role.governing_instrument}</p>
-                                          )}
-                                          {role.authority_scope && (
-                                            <p className="text-gray-600 mt-1">{role.authority_scope}</p>
-                                          )}
-                                        </div>
-                                        <span className={`shrink-0 px-2 py-0.5 rounded-full font-medium ${
-                                          APPOINTMENT_COLOURS[role.appointment_status] ?? 'bg-gray-100 text-gray-600'
-                                        }`}>
-                                          {role.appointment_status.charAt(0).toUpperCase() + role.appointment_status.slice(1)}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
+      {/* ---------------------------------------------------------------- */}
+      {/* Authority Event Log -- shown when established / stale */}
+      {/* ---------------------------------------------------------------- */}
       {(status?.status === 'established' || status?.status === 'stale') && (
         <div className="bg-white border border-gray-200 rounded-lg">
           <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="text-sm font-semibold text-navy-900">Authority Event Log</h3>
+            <h3 className="text-sm font-semibold text-navy-900">
+              Authority Event Log
+            </h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              Chronological record of all authority events extracted from project documents.
+              Chronological record of all authority events extracted from
+              project documents.
             </p>
           </div>
+
           {eventsLoading ? (
-            <div className="flex justify-center py-12"><Spinner className="h-6 w-6" /></div>
-          ) : authorityEvents.length === 0 ? (
+            <div className="flex justify-center py-12">
+              <Spinner className="h-6 w-6" />
+            </div>
+          ) : events.length === 0 ? (
             <div className="p-5">
               <EmptyState
                 title="No authority events"
@@ -692,92 +709,77 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
               />
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {authorityEvents.map((event) => (
-                <div key={event.id} className="px-5 py-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-navy-900">
-                          {event.party_legal_name}
-                        </span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                          event.appointment_status === 'executed'
-                            ? 'bg-green-50 text-green-700'
-                            : event.appointment_status === 'pending'
-                            ? 'bg-amber-50 text-amber-700'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {event.appointment_status.charAt(0).toUpperCase() +
-                            event.appointment_status.slice(1)}
-                        </span>
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium capitalize">
-                          {event.event_type.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-0.5">{event.role_title}</p>
-                      {event.event_date && (
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {event.event_date}
-                          {!event.event_date_certain && ' (approximate)'}
-                        </p>
-                      )}
-                      {event.authority_after && (
-                        <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                          {event.authority_after}
-                        </p>
-                      )}
-                      {event.financial_threshold_after && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Financial threshold: {event.financial_threshold_after}{' '}
-                          {event.financial_currency ?? ''}
-                        </p>
-                      )}
-                      {event.initiated_by_legal_name && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Initiated by: {event.initiated_by_legal_name}
-                          {event.authorised_by_legal_name &&
-                            ` \u00B7 Authorised by: ${event.authorised_by_legal_name}`}
-                        </p>
-                      )}
-                      {event.missing_action && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          \u26A0 {event.missing_action}
-                        </p>
-                      )}
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                        event.instrument_status === 'retrieved'
-                          ? 'bg-green-50 text-green-600'
-                          : event.instrument_status === 'referenced_only'
-                          ? 'bg-amber-50 text-amber-600'
-                          : 'bg-red-50 text-red-600'
-                      }`}>
-                        {event.instrument_status === 'retrieved'
-                          ? 'Retrieved'
-                          : event.instrument_status === 'referenced_only'
-                          ? 'Referenced only'
-                          : 'No instrument'}
-                      </span>
-                      {event.confirmation_status === 'assumed' && (
-                        <p className="text-xs text-amber-600 mt-1">Assumed</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-gray-50 text-left">
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">
+                      Event
+                    </th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">
+                      Authority After
+                    </th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">
+                      Threshold
+                    </th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 font-medium text-gray-500 uppercase tracking-wider">
+                      Missing Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {events.map((event) => {
+                    const appt =
+                      APPOINTMENT_LABELS[event.appointment_status] ??
+                      APPOINTMENT_LABELS['proposed'];
+                    return (
+                      <tr
+                        key={event.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-4 py-3 capitalize font-medium text-navy-900">
+                          {event.event_type}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {event.event_date ?? '\u2014'}
+                          {!event.event_date_certain && (
+                            <span className="text-amber-500 ml-1"
+                                  title="Date uncertain">~</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700 max-w-[200px]"
+                            style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                          {event.authority_after ?? '\u2014'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {event.financial_threshold_after ?? '\u2014'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${appt.colour}`}
+                          >
+                            {appt.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-amber-700 max-w-[160px]"
+                            style={{ whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                          {event.missing_action ?? '\u2014'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
       )}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
     </div>
   );
 }

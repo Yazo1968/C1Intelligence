@@ -1,12 +1,11 @@
 import { apiClient } from './client';
 import type {
+  AuthorityEventResponse,
   GovernanceRunResponse,
   GovernanceStatusResponse,
+  InterviewStatusResponse,
   PartyIdentityResponse,
   ReconciliationQuestionResponse,
-  ReconciliationAnswerRequest,
-  InterviewStatusResponse,
-  AuthorityEventResponse,
 } from './types';
 
 export async function runGovernance(
@@ -45,34 +44,21 @@ export async function getInterviewStatus(
 
 export async function getNextInterviewQuestion(
   projectId: string,
-): Promise<ReconciliationQuestionResponse | null> {
-  try {
-    return await apiClient.get<ReconciliationQuestionResponse>(
-      `/projects/${projectId}/governance/interview/next-question`,
-    );
-  } catch (err: unknown) {
-    // 404 means all questions answered — not an error
-    if (
-      err instanceof Error &&
-      (err.message.includes('404') ||
-       err.message.toLowerCase().includes('all questions answered') ||
-       (err as { errorCode?: string }).errorCode === 'NOT_FOUND' ||
-       (err as { errorCode?: string }).errorCode === 'HTTP_404')
-    ) {
-      return null;
-    }
-    throw err;
-  }
+): Promise<ReconciliationQuestionResponse> {
+  return apiClient.get<ReconciliationQuestionResponse>(
+    `/projects/${projectId}/governance/interview/next-question`,
+  );
 }
 
 export async function submitInterviewAnswer(
   projectId: string,
   questionId: string,
-  answer: ReconciliationAnswerRequest,
+  answer: string,
+  freeText?: string,
 ): Promise<ReconciliationQuestionResponse> {
   return apiClient.post<ReconciliationQuestionResponse>(
     `/projects/${projectId}/governance/interview/questions/${questionId}/answer`,
-    answer as unknown as Record<string, unknown>,
+    { answer_selected: answer, user_free_text: freeText ?? null },
   );
 }
 
