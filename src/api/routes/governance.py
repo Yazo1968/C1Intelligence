@@ -15,15 +15,14 @@ from src.logging_config import get_logger
 from src.api.auth import AuthenticatedUser
 from src.api.errors import error_response
 from src.api.schemas import (
-    ConfirmPartiesRequest,
-    GovernanceEventCreateRequest,
-    GovernanceEventResponse,
-    GovernanceEventUpdateRequest,
-    GovernancePartyResponse,
-    GovernancePartyUpdateRequest,
     GovernanceRunRequest,
     GovernanceRunResponse,
     GovernanceStatusResponse,
+    InterviewStatusResponse,
+    PartyIdentityResponse,
+    PartyRoleResponse,
+    ReconciliationAnswerRequest,
+    ReconciliationQuestionResponse,
 )
 
 logger = get_logger(__name__)
@@ -153,10 +152,10 @@ async def get_governance_status(
             parties_run_result = None
 
         if parties_run_result and parties_run_result.data:
-            # Count parties extracted so far
+            # Count party identities extracted so far
             try:
                 parties_count_result = (
-                    supabase.table("governance_parties")
+                    supabase.table("party_identities")
                     .select("id", count="exact")
                     .eq("project_id", str(project_id))
                     .execute()
@@ -229,27 +228,8 @@ async def get_governance_status(
     last_run_at = last_run["triggered_at"]
     last_run_id = uuid.UUID(last_run["id"])
 
-    # Count events by extraction_status
-    try:
-        events_result = (
-            supabase.table("governance_events")
-            .select("extraction_status")
-            .eq("project_id", str(project_id))
-            .execute()
-        )
-    except Exception as exc:
-        logger.error("governance_status_events_fetch_failed", project_id=str(project_id), error=str(exc))
-        return error_response(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_code="GOVERNANCE_STATUS_FAILED",
-            message=f"Failed to retrieve event counts: {exc}",
-        )
-
+    # authority_events counts — populated in Phase 5; stub zeros for now
     counts = {"confirmed": 0, "flagged": 0, "inferred": 0}
-    for row in events_result.data:
-        s = row.get("extraction_status", "inferred")
-        if s in counts:
-            counts[s] += 1
 
     # Check for documents ingested after the last run — if so, status is stale
     try:
@@ -276,413 +256,95 @@ async def get_governance_status(
     )
 
 
-@router.get("/events", response_model=list[GovernanceEventResponse])
-async def list_governance_events(
+@router.get("/parties", response_model=list[PartyIdentityResponse])
+async def list_party_identities(
     project_id: uuid.UUID,
     user_id: AuthenticatedUser,
-) -> list[GovernanceEventResponse]:
-    """Return all governance events for a project ordered by effective date."""
+) -> list[PartyIdentityResponse]:
+    """Return all party identities and their roles for a project."""
     supabase = get_supabase_client()
     _verify_project_access(supabase, project_id, user_id)
 
     try:
-        response = (
-            supabase.table("governance_events")
+        identities_result = (
+            supabase.table("party_identities")
             .select("*")
             .eq("project_id", str(project_id))
-            .order("effective_date", desc=False)
+            .order("is_internal", desc=True)
+            .order("party_category")
+            .order("legal_name")
             .execute()
         )
     except Exception as exc:
-        logger.error("governance_events_fetch_failed", project_id=str(project_id), error=str(exc))
+        logger.error("party_identities_fetch_failed",
+                     project_id=str(project_id), error=str(exc))
         return error_response(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_code="GOVERNANCE_EVENTS_FAILED",
-            message=f"Failed to retrieve governance events: {exc}",
+            error_code="PARTY_IDENTITIES_FAILED",
+            message=f"Failed to retrieve party identities: {exc}",
         )
 
-    return [
-        GovernanceEventResponse(
-            id=uuid.UUID(row["id"]),
-            project_id=uuid.UUID(row["project_id"]),
-            event_type=row["event_type"],
-            effective_date=row["effective_date"],
-            end_date=row.get("end_date"),
-            party_id=uuid.UUID(row["party_id"]),
-            role=row["role"],
-            appointed_by_party_id=(
-                uuid.UUID(row["appointed_by_party_id"])
-                if row.get("appointed_by_party_id") else None
-            ),
-            authority_dimension=row["authority_dimension"],
-            contract_source=row.get("contract_source"),
-            scope=row.get("scope"),
-            terminus_node=row["terminus_node"],
-            source_document_id=(
-                uuid.UUID(row["source_document_id"])
-                if row.get("source_document_id") else None
-            ),
-            extraction_status=row["extraction_status"],
-            created_at=row["created_at"],
-        )
-        for row in response.data
-    ]
+    identities = identities_result.data or []
+    if not identities:
+        return []
 
-
-@router.patch("/events/{event_id}", response_model=GovernanceEventResponse)
-async def update_governance_event(
-    project_id: uuid.UUID,
-    event_id: uuid.UUID,
-    body: GovernanceEventUpdateRequest,
-    user_id: AuthenticatedUser,
-) -> GovernanceEventResponse:
-    """
-    Confirm, correct, or flag a governance event.
-    Only fields provided in the request body are updated.
-    """
-    supabase = get_supabase_client()
-    _verify_project_access(supabase, project_id, user_id)
-
-    # Build update payload from only the fields that were provided
-    updates: dict = {}
-    if body.extraction_status is not None:
-        updates["extraction_status"] = body.extraction_status
-    if body.role is not None:
-        updates["role"] = body.role
-    if body.effective_date is not None:
-        updates["effective_date"] = body.effective_date.isoformat()
-    if body.end_date is not None:
-        updates["end_date"] = body.end_date.isoformat()
-    if body.scope is not None:
-        updates["scope"] = body.scope
-    if body.contract_source is not None:
-        updates["contract_source"] = body.contract_source
-
-    if not updates:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No fields provided to update.",
-        )
+    identity_ids = [row["id"] for row in identities]
 
     try:
-        response = (
-            supabase.table("governance_events")
-            .update(updates)
-            .eq("id", str(event_id))
-            .eq("project_id", str(project_id))
-            .execute()
-        )
-    except Exception as exc:
-        logger.error("governance_event_update_failed", event_id=str(event_id), error=str(exc))
-        return error_response(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_code="GOVERNANCE_EVENT_UPDATE_FAILED",
-            message=f"Failed to update governance event: {exc}",
-        )
-
-    if not response.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Governance event not found.",
-        )
-
-    row = response.data[0]
-
-    logger.info(
-        "governance_event_updated",
-        event_id=str(event_id),
-        extraction_status=row["extraction_status"],
-    )
-
-    return GovernanceEventResponse(
-        id=uuid.UUID(row["id"]),
-        project_id=uuid.UUID(row["project_id"]),
-        event_type=row["event_type"],
-        effective_date=row["effective_date"],
-        end_date=row.get("end_date"),
-        party_id=uuid.UUID(row["party_id"]),
-        role=row["role"],
-        appointed_by_party_id=(
-            uuid.UUID(row["appointed_by_party_id"])
-            if row.get("appointed_by_party_id") else None
-        ),
-        authority_dimension=row["authority_dimension"],
-        contract_source=row.get("contract_source"),
-        scope=row.get("scope"),
-        terminus_node=row["terminus_node"],
-        source_document_id=(
-            uuid.UUID(row["source_document_id"])
-            if row.get("source_document_id") else None
-        ),
-        extraction_status=row["extraction_status"],
-        created_at=row["created_at"],
-    )
-
-
-@router.post("/events", response_model=GovernanceEventResponse, status_code=status.HTTP_201_CREATED)
-async def create_governance_event(
-    project_id: uuid.UUID,
-    body: GovernanceEventCreateRequest,
-    user_id: AuthenticatedUser,
-) -> GovernanceEventResponse:
-    """
-    Manually add a governance event not extracted by the Compliance SME.
-    Always created with extraction_status = confirmed unless overridden.
-    """
-    supabase = get_supabase_client()
-    _verify_project_access(supabase, project_id, user_id)
-
-    try:
-        response = (
-            supabase.table("governance_events")
-            .insert({
-                "project_id": str(project_id),
-                "event_type": body.event_type,
-                "effective_date": body.effective_date.isoformat(),
-                "end_date": body.end_date.isoformat() if body.end_date else None,
-                "party_id": str(body.party_id),
-                "role": body.role,
-                "appointed_by_party_id": (
-                    str(body.appointed_by_party_id) if body.appointed_by_party_id else None
-                ),
-                "authority_dimension": body.authority_dimension,
-                "contract_source": body.contract_source,
-                "scope": body.scope,
-                "terminus_node": body.terminus_node,
-                "source_document_id": (
-                    str(body.source_document_id) if body.source_document_id else None
-                ),
-                "extraction_status": body.extraction_status,
-            })
-            .execute()
-        )
-    except Exception as exc:
-        logger.error("governance_event_create_failed", project_id=str(project_id), error=str(exc))
-        return error_response(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_code="GOVERNANCE_EVENT_CREATE_FAILED",
-            message=f"Failed to create governance event: {exc}",
-        )
-
-    row = response.data[0]
-
-    logger.info(
-        "governance_event_created",
-        project_id=str(project_id),
-        event_id=row["id"],
-        event_type=row["event_type"],
-    )
-
-    return GovernanceEventResponse(
-        id=uuid.UUID(row["id"]),
-        project_id=uuid.UUID(row["project_id"]),
-        event_type=row["event_type"],
-        effective_date=row["effective_date"],
-        end_date=row.get("end_date"),
-        party_id=uuid.UUID(row["party_id"]),
-        role=row["role"],
-        appointed_by_party_id=(
-            uuid.UUID(row["appointed_by_party_id"])
-            if row.get("appointed_by_party_id") else None
-        ),
-        authority_dimension=row["authority_dimension"],
-        contract_source=row.get("contract_source"),
-        scope=row.get("scope"),
-        terminus_node=row["terminus_node"],
-        source_document_id=(
-            uuid.UUID(row["source_document_id"])
-            if row.get("source_document_id") else None
-        ),
-        extraction_status=row["extraction_status"],
-        created_at=row["created_at"],
-    )
-
-
-@router.get("/parties", response_model=list[GovernancePartyResponse])
-async def list_governance_parties(
-    project_id: uuid.UUID,
-    user_id: AuthenticatedUser,
-) -> list[GovernancePartyResponse]:
-    """Return all governance parties (entity registry) for a project."""
-    supabase = get_supabase_client()
-    _verify_project_access(supabase, project_id, user_id)
-
-    try:
-        response = (
-            supabase.table("governance_parties")
+        roles_result = (
+            supabase.table("party_roles")
             .select("*")
-            .eq("project_id", str(project_id))
-            .order("entity_type", desc=False)
-            .order("canonical_name", desc=False)
+            .in_("party_identity_id", identity_ids)
+            .order("effective_from")
             .execute()
         )
     except Exception as exc:
-        logger.error("governance_parties_fetch_failed", project_id=str(project_id), error=str(exc))
-        return error_response(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_code="GOVERNANCE_PARTIES_FAILED",
-            message=f"Failed to retrieve governance parties: {exc}",
-        )
+        logger.error("party_roles_fetch_failed",
+                     project_id=str(project_id), error=str(exc))
+        roles_result = None
 
-    return [
-        GovernancePartyResponse(
-            id=uuid.UUID(row["id"]),
-            project_id=uuid.UUID(row["project_id"]),
-            entity_type=row["entity_type"],
-            canonical_name=row["canonical_name"],
-            aliases=row.get("aliases") or [],
-            contractual_role=row.get("contractual_role"),
-            terminus_node=row["terminus_node"],
-            confirmation_status=row["confirmation_status"],
-            created_at=row["created_at"],
-        )
-        for row in response.data
-    ]
+    roles_by_party: dict[str, list] = {}
+    for role in (roles_result.data if roles_result else []):
+        pid = role["party_identity_id"]
+        roles_by_party.setdefault(pid, []).append(role)
 
-
-@router.patch("/parties/{party_id}", response_model=GovernancePartyResponse)
-async def update_governance_party(
-    project_id: uuid.UUID,
-    party_id: uuid.UUID,
-    body: GovernancePartyUpdateRequest,
-    user_id: AuthenticatedUser,
-) -> GovernancePartyResponse:
-    """Confirm or flag a governance party in the entity registry."""
-    supabase = get_supabase_client()
-    _verify_project_access(supabase, project_id, user_id)
-
-    updates: dict = {}
-    if body.confirmation_status is not None:
-        valid = {"confirmed", "flagged", "inferred"}
-        if body.confirmation_status not in valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"confirmation_status must be one of: {valid}",
+    output = []
+    for row in identities:
+        party_roles_data = roles_by_party.get(row["id"], [])
+        roles = [
+            PartyRoleResponse(
+                id=uuid.UUID(r["id"]),
+                party_identity_id=uuid.UUID(r["party_identity_id"]),
+                project_id=uuid.UUID(r["project_id"]),
+                role_title=r["role_title"],
+                role_category=r.get("role_category") or "unclassified",
+                governing_instrument=r.get("governing_instrument"),
+                governing_instrument_type=r.get("governing_instrument_type"),
+                effective_from=r.get("effective_from"),
+                effective_to=r.get("effective_to"),
+                authority_scope=r.get("authority_scope"),
+                financial_threshold=r.get("financial_threshold"),
+                financial_currency=r.get("financial_currency"),
+                appointment_status=r.get("appointment_status", "proposed"),
+                source_clause=r.get("source_clause"),
+                confirmation_status=r.get("confirmation_status", "confirmed"),
+                created_at=r["created_at"],
             )
-        updates["confirmation_status"] = body.confirmation_status
-
-    if not updates:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No fields provided to update.",
+            for r in party_roles_data
+        ]
+        output.append(
+            PartyIdentityResponse(
+                id=uuid.UUID(row["id"]),
+                project_id=uuid.UUID(row["project_id"]),
+                entity_type=row["entity_type"],
+                legal_name=row["legal_name"],
+                trading_names=row.get("trading_names") or [],
+                registration_number=row.get("registration_number"),
+                party_category=row.get("party_category") or "unclassified",
+                is_internal=bool(row.get("is_internal", False)),
+                identification_status=row.get("identification_status", "confirmed"),
+                roles=roles,
+                created_at=row["created_at"],
+            )
         )
-
-    try:
-        response = (
-            supabase.table("governance_parties")
-            .update(updates)
-            .eq("id", str(party_id))
-            .eq("project_id", str(project_id))
-            .execute()
-        )
-    except Exception as exc:
-        logger.error("governance_party_update_failed", party_id=str(party_id), error=str(exc))
-        return error_response(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_code="GOVERNANCE_PARTY_UPDATE_FAILED",
-            message=f"Failed to update governance party: {exc}",
-        )
-
-    if not response.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Governance party not found.",
-        )
-
-    row = response.data[0]
-    return GovernancePartyResponse(
-        id=uuid.UUID(row["id"]),
-        project_id=uuid.UUID(row["project_id"]),
-        entity_type=row["entity_type"],
-        canonical_name=row["canonical_name"],
-        aliases=row.get("aliases") or [],
-        contractual_role=row.get("contractual_role"),
-        terminus_node=row["terminus_node"],
-        confirmation_status=row["confirmation_status"],
-        created_at=row["created_at"],
-    )
-
-
-@router.post("/confirm-parties", response_model=GovernanceRunResponse,
-             status_code=status.HTTP_202_ACCEPTED)
-async def confirm_parties(
-    project_id: uuid.UUID,
-    body: ConfirmPartiesRequest,
-    user_id: AuthenticatedUser,
-    background_tasks: BackgroundTasks,
-) -> GovernanceRunResponse:
-    """
-    Confirm the entity registry and trigger Phase 2 governance establishment.
-    Requires at least one confirmed party to proceed.
-    """
-    from src.agents.governance_runner import run_governance_establishment
-
-    supabase = get_supabase_client()
-    _verify_project_access(supabase, project_id, user_id)
-
-    # Verify at least one confirmed party exists
-    try:
-        confirmed_result = (
-            supabase.table("governance_parties")
-            .select("id", count="exact")
-            .eq("project_id", str(project_id))
-            .eq("confirmation_status", "confirmed")
-            .execute()
-        )
-        confirmed_count = confirmed_result.count or 0
-    except Exception as exc:
-        return error_response(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_code="GOVERNANCE_CONFIRM_FAILED",
-            message=f"Failed to check confirmed parties: {exc}",
-        )
-
-    if confirmed_count == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No confirmed parties. Confirm at least one party before establishing governance.",
-        )
-
-    now = datetime.now(timezone.utc)
-
-    try:
-        response = (
-            supabase.table("governance_run_log")
-            .insert({
-                "project_id": str(project_id),
-                "run_type": "full",
-                "triggered_at": now.isoformat(),
-                "status": "running",
-                "phase": 2,
-            })
-            .execute()
-        )
-    except Exception as exc:
-        return error_response(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            error_code="GOVERNANCE_RUN_FAILED",
-            message=f"Failed to create Phase 2 run: {exc}",
-        )
-
-    run = response.data[0]
-
-    background_tasks.add_task(
-        run_governance_establishment,
-        str(project_id),
-        run["id"],
-    )
-
-    logger.info(
-        "governance_phase2_triggered",
-        project_id=str(project_id),
-        run_id=run["id"],
-        confirmed_parties=confirmed_count,
-    )
-
-    return GovernanceRunResponse(
-        run_id=uuid.UUID(run["id"]),
-        project_id=project_id,
-        run_type=run["run_type"],
-        status=run["status"],
-        triggered_at=run["triggered_at"],
-    )
+    return output

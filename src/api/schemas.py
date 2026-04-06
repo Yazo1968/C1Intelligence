@@ -165,13 +165,6 @@ class GovernanceRunRequest(BaseModel):
     run_type: str = Field(default="full", pattern="^(full|incremental)$")
 
 
-class ConfirmPartiesRequest(BaseModel):
-    pass  # Empty body — confirms all non-flagged parties for the project
-
-
-class GovernancePartyUpdateRequest(BaseModel):
-    confirmation_status: str | None = None  # confirmed / inferred / flagged
-
 
 class GovernanceRunResponse(BaseModel):
     run_id: uuid.UUID
@@ -189,58 +182,67 @@ class GovernanceStatusResponse(BaseModel):
     events_confirmed: int
     events_flagged: int
     events_inferred: int
-    parties_count: int = 0
+    parties_count: int = 0  # Count from party_identities
 
 
-class GovernancePartyResponse(BaseModel):
+class PartyRoleResponse(BaseModel):
     id: uuid.UUID
+    party_identity_id: uuid.UUID
     project_id: uuid.UUID
-    entity_type: str  # organisation / individual
-    canonical_name: str
-    aliases: list[str]
-    contractual_role: str | None
-    terminus_node: bool
-    confirmation_status: str  # confirmed / inferred / flagged
-    created_at: str
-
-
-class GovernanceEventResponse(BaseModel):
-    id: uuid.UUID
-    project_id: uuid.UUID
-    event_type: str
-    effective_date: date
-    end_date: date | None
-    party_id: uuid.UUID
-    role: str
-    appointed_by_party_id: uuid.UUID | None
-    authority_dimension: str
-    contract_source: str | None
-    scope: str | None
-    terminus_node: bool
-    source_document_id: uuid.UUID | None
-    extraction_status: str
+    role_title: str
+    role_category: str
+    governing_instrument: str | None
+    governing_instrument_type: str | None
+    effective_from: date | None
+    effective_to: date | None
+    authority_scope: str | None
+    financial_threshold: str | None
+    financial_currency: str | None
+    appointment_status: str   # proposed | pending | executed
+    source_clause: str | None
+    confirmation_status: str  # confirmed | assumed
     created_at: datetime
 
 
-class GovernanceEventUpdateRequest(BaseModel):
-    extraction_status: str = Field(pattern="^(confirmed|flagged|inferred)$")
-    role: str | None = None
-    effective_date: date | None = None
-    end_date: date | None = None
-    scope: str | None = None
-    contract_source: str | None = None
+class PartyIdentityResponse(BaseModel):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    entity_type: str           # organisation | individual
+    legal_name: str
+    trading_names: list[str]
+    registration_number: str | None
+    party_category: str
+    is_internal: bool
+    identification_status: str  # confirmed | assumed
+    roles: list[PartyRoleResponse]
+    created_at: datetime
 
 
-class GovernanceEventCreateRequest(BaseModel):
-    event_type: str = Field(pattern="^(appointment|delegation|termination|replacement|modification|suspension)$")
-    effective_date: date
-    end_date: date | None = None
-    party_id: uuid.UUID
-    role: str
-    appointed_by_party_id: uuid.UUID | None = None
-    authority_dimension: str = Field(pattern="^(layer_1|layer_2a|layer_2b)$")
-    contract_source: str | None = None
-    scope: str | None = None
-    terminus_node: bool = False
-    source_document_id: uuid.UUID | None = None
-    extraction_status: str = Field(default="confirmed", pattern="^(confirmed|flagged|inferred)$")
+class ReconciliationQuestionResponse(BaseModel):
+    id: uuid.UUID
+    project_id: uuid.UUID
+    run_id: uuid.UUID
+    question_type: str
+    question_text: str
+    parties_referenced: list[uuid.UUID]
+    documents_referenced: list[uuid.UUID]
+    options_presented: list[str]
+    answer_selected: str | None
+    user_free_text: str | None
+    answered_at: datetime | None
+    sequence_number: int
+    created_at: datetime
+
+
+class ReconciliationAnswerRequest(BaseModel):
+    answer_selected: str
+    user_free_text: str | None = None
+
+
+class InterviewStatusResponse(BaseModel):
+    project_id: uuid.UUID
+    run_id: uuid.UUID
+    total_questions: int
+    answered_questions: int
+    pending_questions: int
+    interview_complete: bool
