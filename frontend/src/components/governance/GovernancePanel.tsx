@@ -137,37 +137,35 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
     }
   }, [status, fetchParties, fetchInterview]);
 
-  const pollUntilResolved = useCallback(async () => {
-    const maxAttempts = 36;
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+  // Continuous polling whenever status is processing
+  useEffect(() => {
+    if (status?.status !== 'processing') return;
+    const interval = setInterval(async () => {
       try {
         const s = await getGovernanceStatus(projectId);
         setStatus(s);
-        if (
-          s.status === 'parties_identified' ||
-          s.status === 'interview_in_progress'
-        ) {
-          return;
-        }
-        if (s.status === 'established' || s.status === 'stale') {
-          return;
-        }
-        if (s.status === 'failed' || s.status === 'not_established') {
-          return;
+        if (s.status !== 'processing') {
+          clearInterval(interval);
+          if (s.status === 'parties_identified' || s.status === 'interview_in_progress') {
+            fetchParties();
+            fetchInterview();
+          }
         }
       } catch {
-        return;
+        // keep polling on error
       }
-    }
-  }, [projectId]);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [status?.status, projectId, fetchParties, fetchInterview]);
 
   const handleRun = async () => {
     setRunning(true);
     setError(null);
     try {
       await runGovernance(projectId, 'full');
-      await pollUntilResolved();
+      // Immediately update status to show processing — polling useEffect takes over
+      const s = await getGovernanceStatus(projectId);
+      setStatus(s);
     } catch {
       setError('Failed to trigger governance run. Please try again.');
     } finally {
