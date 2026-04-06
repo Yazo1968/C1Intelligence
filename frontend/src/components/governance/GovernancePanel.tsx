@@ -9,12 +9,14 @@ import {
   getNextInterviewQuestion,
   submitInterviewAnswer,
   extractAuthorityEvents,
+  listAuthorityEvents,
 } from '../../api/governance';
 import type {
   GovernanceStatusResponse,
   PartyIdentityResponse,
   ReconciliationQuestionResponse,
   InterviewStatusResponse,
+  AuthorityEventResponse,
 } from '../../api/types';
 import { supabase } from '../../auth/supabase';
 
@@ -96,6 +98,8 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
   const [submitting, setSubmitting] = useState(false);
   const [interviewLoading, setInterviewLoading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [authorityEvents, setAuthorityEvents] = useState<AuthorityEventResponse[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     setStatusLoading(true);
@@ -141,6 +145,18 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
     }
   }, [projectId]);
 
+  const fetchAuthorityEvents = useCallback(async () => {
+    setEventsLoading(true);
+    try {
+      const events = await listAuthorityEvents(projectId);
+      setAuthorityEvents(events);
+    } catch {
+      // non-critical — log silently
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [projectId]);
+
   useEffect(() => { fetchStatus(); }, [fetchStatus]);
 
   useEffect(() => {
@@ -149,6 +165,12 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
       fetchInterview();
     }
   }, [status, fetchParties, fetchInterview]);
+
+  useEffect(() => {
+    if (status?.status === 'established' || status?.status === 'stale') {
+      fetchAuthorityEvents();
+    }
+  }, [status, fetchAuthorityEvents]);
 
   // Continuous polling whenever status is processing
   useEffect(() => {
@@ -652,13 +674,101 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
         </div>
       )}
 
-      {/* Authority Event Log placeholder -- populated in Phase 8 */}
       {(status?.status === 'established' || status?.status === 'stale') && (
-        <div className="bg-white border border-gray-200 rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-navy-900 mb-1">Authority Event Log</h3>
-          <p className="text-xs text-gray-500">
-            The authority event log will be displayed here once Phase 8 is complete.
-          </p>
+        <div className="bg-white border border-gray-200 rounded-lg">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-semibold text-navy-900">Authority Event Log</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Chronological record of all authority events extracted from project documents.
+            </p>
+          </div>
+          {eventsLoading ? (
+            <div className="flex justify-center py-12"><Spinner className="h-6 w-6" /></div>
+          ) : authorityEvents.length === 0 ? (
+            <div className="p-5">
+              <EmptyState
+                title="No authority events"
+                description="No authority events have been extracted yet."
+              />
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {authorityEvents.map((event) => (
+                <div key={event.id} className="px-5 py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-navy-900">
+                          {event.party_legal_name}
+                        </span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                          event.appointment_status === 'executed'
+                            ? 'bg-green-50 text-green-700'
+                            : event.appointment_status === 'pending'
+                            ? 'bg-amber-50 text-amber-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {event.appointment_status.charAt(0).toUpperCase() +
+                            event.appointment_status.slice(1)}
+                        </span>
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium capitalize">
+                          {event.event_type.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">{event.role_title}</p>
+                      {event.event_date && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {event.event_date}
+                          {!event.event_date_certain && ' (approximate)'}
+                        </p>
+                      )}
+                      {event.authority_after && (
+                        <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                          {event.authority_after}
+                        </p>
+                      )}
+                      {event.financial_threshold_after && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Financial threshold: {event.financial_threshold_after}{' '}
+                          {event.financial_currency ?? ''}
+                        </p>
+                      )}
+                      {event.initiated_by_legal_name && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Initiated by: {event.initiated_by_legal_name}
+                          {event.authorised_by_legal_name &&
+                            ` \u00B7 Authorised by: ${event.authorised_by_legal_name}`}
+                        </p>
+                      )}
+                      {event.missing_action && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          \u26A0 {event.missing_action}
+                        </p>
+                      )}
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                        event.instrument_status === 'retrieved'
+                          ? 'bg-green-50 text-green-600'
+                          : event.instrument_status === 'referenced_only'
+                          ? 'bg-amber-50 text-amber-600'
+                          : 'bg-red-50 text-red-600'
+                      }`}>
+                        {event.instrument_status === 'retrieved'
+                          ? 'Retrieved'
+                          : event.instrument_status === 'referenced_only'
+                          ? 'Referenced only'
+                          : 'No instrument'}
+                      </span>
+                      {event.confirmation_status === 'assumed' && (
+                        <p className="text-xs text-amber-600 mt-1">Assumed</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

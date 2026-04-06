@@ -686,3 +686,61 @@ async def extract_authority_events(
         status=run["status"],
         triggered_at=run["triggered_at"],
     )
+
+
+@router.get("/authority-events")
+async def list_authority_events(
+    project_id: uuid.UUID,
+    user_id: AuthenticatedUser,
+) -> list[dict]:
+    """Return all authority events for a project with party and role names."""
+    supabase = get_supabase_client()
+    _verify_project_access(supabase, project_id, user_id)
+
+    try:
+        result = (
+            supabase.table("authority_events")
+            .select(
+                "id, event_type, appointment_status, event_date, "
+                "event_date_certain, authority_after, financial_threshold_after, "
+                "financial_currency, instrument_status, confirmation_status, "
+                "missing_action, source_clause, "
+                "party_identities!party_identity_id(legal_name, party_category), "
+                "party_roles!party_role_id(role_title), "
+                "initiated:party_identities!initiated_by_party_id(legal_name), "
+                "authorised:party_identities!authorised_by_party_id(legal_name)"
+            )
+            .eq("project_id", str(project_id))
+            .order("event_date", desc=False)
+            .execute()
+        )
+    except Exception as exc:
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="AUTHORITY_EVENTS_FETCH_FAILED",
+            message=f"Failed to fetch authority events: {exc}",
+        )
+
+    events = []
+    for row in (result.data or []):
+        events.append({
+            "id": row["id"],
+            "event_type": row["event_type"],
+            "appointment_status": row["appointment_status"],
+            "event_date": row.get("event_date"),
+            "event_date_certain": row.get("event_date_certain", True),
+            "party_legal_name": (row.get("party_identities") or {}).get("legal_name", ""),
+            "party_category": (row.get("party_identities") or {}).get("party_category", ""),
+            "role_title": (row.get("party_roles") or {}).get("role_title", ""),
+            "authority_after": row.get("authority_after"),
+            "financial_threshold_after": row.get("financial_threshold_after"),
+            "financial_currency": row.get("financial_currency"),
+            "initiated_by_legal_name": (row.get("initiated") or {}).get("legal_name"),
+            "authorised_by_legal_name": (row.get("authorised") or {}).get("legal_name"),
+            "instrument_status": row.get("instrument_status", "retrieved"),
+            "confirmation_status": row.get("confirmation_status", "confirmed"),
+            "missing_action": row.get("missing_action"),
+            "source_clause": row.get("source_clause"),
+        })
+
+    return events

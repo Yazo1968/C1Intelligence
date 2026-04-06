@@ -225,3 +225,23 @@ export interface InterviewStatusResponse {
   pending: number;
   complete: boolean;
 }
+
+export interface AuthorityEventResponse {
+  id: string;
+  event_type: string;
+  appointment_status: 'proposed' | 'pending' | 'executed';
+  event_date: string | null;
+  event_date_certain: boolean;
+  party_legal_name: string;
+  party_category: string;
+  role_title: string;
+  authority_after: string | null;
+  financial_threshold_after: string | null;
+  financial_currency: string | null;
+  initiated_by_legal_name: string | null;
+  authorised_by_legal_name: string | null;
+  instrument_status: 'retrieved' | 'referenced_only' | 'absent';
+  confirmation_status: 'confirmed' | 'assumed';
+  missing_action: string | null;
+  source_clause: string | null;
+}

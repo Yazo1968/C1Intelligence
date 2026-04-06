@@ -6,6 +6,7 @@ import type {
   ReconciliationQuestionResponse,
   ReconciliationAnswerRequest,
   InterviewStatusResponse,
+  AuthorityEventResponse,
 } from './types';
 
 export async function runGovernance(
@@ -81,5 +82,13 @@ export async function extractAuthorityEvents(
   return apiClient.post<GovernanceRunResponse>(
     `/projects/${projectId}/governance/extract-events`,
     {},
+  );
+}
+
+export async function listAuthorityEvents(
+  projectId: string,
+): Promise<AuthorityEventResponse[]> {
+  return apiClient.get<AuthorityEventResponse[]>(
+    `/projects/${projectId}/governance/authority-events`,
   );
 }
