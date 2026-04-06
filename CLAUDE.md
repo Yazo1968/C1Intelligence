@@ -125,6 +125,20 @@ Read this skill before building or rebuilding any file under `skills/`.
 Routing coverage check (chunk-domain keyword alignment — deterministic, no LLM). SME invocation trace (tools_called records invoke_sme:{domain} — deterministic). Raw SME output preservation (captured in agentic loop before synthesis). Evidence Auditor (run_evidence_audit() — zero API calls, reads only pre-recorded deterministic data). Consolidated Evidence Map in every response (built from sources_used, tools_called, raw_sme_outputs, and evidence_record — not from agent self-reporting).
 Design principle: every integrity check reads deterministic system state. No integrity layer asks an agent to audit itself.
 
+**Governance Authority Log (three-level model):**
+Level 1 — party_identities: legal identity register, one record per legal
+entity, party_category taxonomy (27 categories), is_internal flag.
+Level 2 — party_roles: one record per role per party, multi-role per party
+supported, appointment_status (proposed/pending/executed).
+Level 3 — authority_events: chronological authority event log, 10 event
+types, initiated_by and authorised_by actor fields, missing_action for
+pending/proposed events.
+Supporting tables: assumption_register (user declarations with provenance),
+reconciliation_questions (interview record).
+get_party_authority() tool: deterministic, zero LLM calls, reads
+authority_events chronologically to return a party's authority position
+at any given date. Called by Compliance SME before any authority assessment.
+
 **Domains:**
 - Legal & Contractual SME: 7 skills (contract_assembly,
   entitlement_basis, key_dates_and_securities,
@@ -174,16 +188,20 @@ removed — risk output is built into every orchestrator response.
 
 ## Database State
 
-**18 migrations applied (001–018):**
+**21 migrations applied (001–021):**
 - 014: `round_number` in `query_log`
 - 015: `SET search_path` on all 5 RPC functions
 - 016: HNSW halfvec(3072) indexes on `document_chunks` and `reference_chunks`
 - 017: `evidence_records` column on `query_log`; EvidenceRecord schema enforcement
-- 018: `governance_parties`, `governance_events`, `governance_run_log` tables
+- 018: `governance_run_log` table (retained from prototype)
+- 021: `party_identities`, `party_roles`, `authority_events`,
+  `assumption_register`, `reconciliation_questions` tables created.
+  Prototype tables `governance_parties` and `governance_events` dropped.
 
-**15 tables** including `query_jobs`, `reference_documents` (with `layer_type`
-2a/2b + `jurisdiction` columns), `contradiction_flags`, `governance_parties`,
-`governance_events`, `governance_run_log`.
+**18 tables** including `query_jobs`, `reference_documents` (with `layer_type`
+2a/2b + `jurisdiction` columns), `contradiction_flags`, `governance_run_log`,
+`party_identities`, `party_roles`, `authority_events`, `assumption_register`,
+`reconciliation_questions`.
 
 **4 RPC functions:** `search_chunks_semantic`, `search_chunks_fulltext`,
 `search_chunks_reference_semantic`, `search_chunks_reference_fulltext`
