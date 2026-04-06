@@ -270,8 +270,6 @@ def run_party_identification(project_id: str, run_id: str) -> None:
 
     Called as a FastAPI BackgroundTask from the /run endpoint.
     """
-    from src.agents.specialist_config import SPECIALIST_CONFIGS
-    from src.agents.base_specialist import BaseSpecialist
     from src.clients import get_supabase_client
 
     supabase = get_supabase_client()
@@ -289,31 +287,22 @@ def run_party_identification(project_id: str, run_id: str) -> None:
     }
 
     try:
-        config = SPECIALIST_CONFIGS["compliance"]
-        sme = BaseSpecialist(config=config)
-
-        findings = sme.run(
-            query=PARTY_ID_QUERY,
-            project_id=project_id,
-            retrieved_chunks=[],
-            round_1_findings=None,
-        )
+        _output, _rounds = _run_governance_llm(PARTY_ID_QUERY, project_id)
 
         logger.info(
             "governance_phase1_sme_complete",
             project_id=project_id,
             run_id=run_id,
-            confidence=findings.confidence,
-            findings_length=len(findings.findings),
+            output_length=len(_output),
         )
 
-        data = _extract_json(findings.findings)
+        data = _extract_json(_output)
         if data is None:
             _mark_run_failed(
                 supabase, run_id,
                 "Phase 1: could not extract JSON from SME output. "
-                f"Output length: {len(findings.findings)}. "
-                f"Preview: {findings.findings[:200]}"
+                f"Output length: {len(_output)}. "
+                f"Preview: {_output[:200]}"
             )
             return
 
@@ -465,7 +454,7 @@ def run_party_identification(project_id: str, run_id: str) -> None:
 
         supabase.table("governance_run_log").update({
             "status": "parties_identified",
-            "documents_scanned": len(findings.sources_used),
+            "documents_scanned": _rounds,
             "completed_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", run_id).execute()
 
@@ -705,8 +694,6 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
     Called as a FastAPI BackgroundTask from the /interview endpoint
     once the reconciliation interview is complete.
     """
-    from src.agents.specialist_config import SPECIALIST_CONFIGS
-    from src.agents.base_specialist import BaseSpecialist
     from src.clients import get_supabase_client
 
     supabase = get_supabase_client()
@@ -781,31 +768,22 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
             entity_registry_text=entity_registry_text
         )
 
-        config = SPECIALIST_CONFIGS["compliance"]
-        sme = BaseSpecialist(config=config)
-
-        findings = sme.run(
-            query=query,
-            project_id=project_id,
-            retrieved_chunks=[],
-            round_1_findings=None,
-        )
+        _output, _rounds = _run_governance_llm(query, project_id)
 
         logger.info(
             "governance_phase2_sme_complete",
             project_id=project_id,
             run_id=run_id,
-            confidence=findings.confidence,
-            findings_length=len(findings.findings),
+            output_length=len(_output),
         )
 
-        data = _extract_json(findings.findings)
+        data = _extract_json(_output)
         if data is None:
             _mark_run_failed(
                 supabase, run_id,
                 "Phase 2: could not extract JSON from SME output. "
-                f"Output length: {len(findings.findings)}. "
-                f"Preview: {findings.findings[:200]}"
+                f"Output length: {len(_output)}. "
+                f"Preview: {_output[:200]}"
             )
             return
 
@@ -942,7 +920,7 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
         supabase.table("governance_run_log").update({
             "status": "complete",
             "events_extracted": written,
-            "documents_scanned": len(findings.sources_used),
+            "documents_scanned": _rounds,
             "completed_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", run_id).execute()
 
@@ -966,6 +944,97 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
+
+_JSON_SYSTEM_PROMPT = (
+    "You are a structured data extraction engine. "
+    "You output ONLY valid JSON objects. "
+    "You never output any text before or after the JSON. "
+    "Your response always starts with { and ends with }. "
+    "No markdown. No code fences. No explanation. Only JSON."
+)
+
+_SEARCH_TOOL = {
+    "name": "search_chunks",
+    "description": (
+        "Search for relevant document chunks in the project's "
+        "document warehouse using semantic similarity."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "description": "The search query.",
+            },
+            "top_k": {
+                "type": "integer",
+                "description": "Number of results to return (default 10).",
+            },
+        },
+        "required": ["query"],
+    },
+}
+
+
+def _run_governance_llm(user_query: str, project_id: str) -> tuple[str, int]:
+    """
+    Run a direct Anthropic API call with JSON-only system prompt and an
+    agentic tool-use loop for search_chunks. Returns (output_text, rounds).
+    """
+    import anthropic as _anthropic
+    from src.config import settings as _settings
+
+    _client = _anthropic.Anthropic(api_key=_settings.anthropic_api_key)
+
+    _messages = [{"role": "user", "content": user_query}]
+
+    _response = _client.messages.create(
+        model="claude-sonnet-4-5-20250514",
+        max_tokens=8000,
+        system=_JSON_SYSTEM_PROMPT,
+        tools=[_SEARCH_TOOL],
+        messages=_messages,
+    )
+
+    _rounds = 0
+    _max_rounds = 5
+
+    while _response.stop_reason == "tool_use" and _rounds < _max_rounds:
+        _rounds += 1
+        _tool_results = []
+        for _block in _response.content:
+            if _block.type == "tool_use" and _block.name == "search_chunks":
+                from src.agents.tools import execute_tool as _execute_tool
+                _result = _execute_tool(
+                    "search_chunks",
+                    dict(_block.input),
+                    project_id,
+                )
+                _tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": _block.id,
+                    "content": str(_result),
+                })
+
+        _messages.append({"role": "assistant", "content": _response.content})
+        _messages.append({"role": "user", "content": _tool_results})
+
+        _response = _client.messages.create(
+            model="claude-sonnet-4-5-20250514",
+            max_tokens=8000,
+            system=_JSON_SYSTEM_PROMPT,
+            tools=[_SEARCH_TOOL],
+            messages=_messages,
+        )
+
+    # Extract text output from final response
+    _output = ""
+    for _block in _response.content:
+        if hasattr(_block, "text"):
+            _output += _block.text
+
+    return _output, _rounds
+
 
 def _mark_run_failed(supabase, run_id: str, reason: str) -> None:
     """Update run_log to failed status."""
