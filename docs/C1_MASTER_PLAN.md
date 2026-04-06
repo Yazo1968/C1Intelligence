@@ -460,3 +460,32 @@ Phase 3:  1da9344, 8362368
 Phase 4:  daca8d9, 8c6893b, b7aeea6
 Phase 5:  5e0de3b, 51f5023
 Phase 6:  18e29c7 (+ 6.2 and 6.3 commits to follow)
+
+---
+
+## Governance Authority Log — Active Workstream
+
+**Status:** Design approved — ready for execution
+**Design document:** `docs/C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md`
+**Migration 021:** Applied — five new tables (party_identities, party_roles,
+authority_events, assumption_register, reconciliation_questions).
+Prototype tables governance_parties and governance_events dropped.
+
+**Build sequence (9 phases):**
+Phase 0: Housekeeping — dead code removal ✅ this session
+Phase 1: Migration 021 ✅ applied directly via Supabase MCP
+Phase 2: governance_runner.py Phase 1 rewrite — next session
+Phase 3: Reconciliation interview backend — next session
+Phase 4: Reconciliation interview frontend — next session
+Phase 5: governance_runner.py Phase 2 rewrite — next session
+Phase 6: Compliance agent integration — next session
+Phase 7: skill_loader rewrite — next session
+Phase 8: Frontend authority log display — next session
+Phase 9: Governing documents — next session
+
+**Prep work completed this session:**
+- Migration 021 applied
+- docs archived: C1_AGGREGATION_INTEGRITY_PLAN_v2.md,
+  C1_GOVERNANCE_EXECUTION_PLAN.md, C1_Orchestrators_and_SMEs_enhancement.md
+- Dead code removed: src/agents/specialists/, Procfile, risk_mode parameter
+- Active docs: C1_MASTER_PLAN.md, C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md
