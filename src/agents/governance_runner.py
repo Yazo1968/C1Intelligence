@@ -169,7 +169,10 @@ Rules:
 - missing_action: describe what is required to execute this event — populate only
   for pending or proposed events; null for executed events.
 - Include ALL identified events — confirmed, pending, and proposed.
-- Output valid JSON only. No trailing commas. No markdown. No explanation.
+- CRITICAL: Output ONLY the raw JSON object. No preamble, no explanation,
+    no markdown fences, no code blocks. The very first character of your
+    response must be { and the very last character must be }. Any text
+    before or after the JSON object means you have failed this task.
 """
 
 # ---------------------------------------------------------------------------
@@ -335,7 +338,9 @@ def run_party_identification(project_id: str, run_id: str) -> None:
                     "project_id": project_id,
                     "entity_type": "organisation",
                     "legal_name": legal_name,
-                    "trading_names": item.get("trading_names") or [],
+                    "trading_names": list(dict.fromkeys(
+                        t for t in (item.get("trading_names") or []) if t
+                    )),
                     "registration_number": item.get("registration_number") or None,
                     "party_category": item.get("party_category") or "unclassified",
                     "is_internal": bool(item.get("is_internal", False)),
@@ -399,7 +404,9 @@ def run_party_identification(project_id: str, run_id: str) -> None:
                     "project_id": project_id,
                     "entity_type": "individual",
                     "legal_name": legal_name,
-                    "trading_names": item.get("trading_names") or [],
+                    "trading_names": list(dict.fromkeys(
+                        t for t in (item.get("trading_names") or []) if t
+                    )),
                     "registration_number": item.get("registration_number") or None,
                     "party_category": item.get("party_category") or "unclassified",
                     "is_internal": bool(item.get("is_internal", False)),

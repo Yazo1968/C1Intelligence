@@ -69,6 +69,14 @@ const APPOINTMENT_COLOURS: Record<string, string> = {
   proposed: 'bg-gray-100 text-gray-600',
 };
 
+const INDIVIDUAL_PARENT_CATEGORY: Record<string, string> = {
+  employer_representative: 'employer',
+  contractors_representative: 'main_contractor',
+  resident_engineer: 'contract_administrator',
+  clerk_of_works: 'contract_administrator',
+  planning_consultant: 'project_management_consultant',
+};
+
 export function GovernancePanel({ projectId }: GovernancePanelProps) {
   const [status, setStatus] = useState<GovernanceStatusResponse | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -374,12 +382,14 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
                 <button
                   className="px-5 py-2 text-sm font-medium bg-green-700 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   onClick={handleExtractEvents}
-                  disabled={extracting}
+                  disabled={extracting || status?.status === 'established' || status?.status === 'stale'}
                 >
                   {extracting ? (
                     <span className="flex items-center gap-2">
                       <Spinner className="h-3 w-3" />Extracting...
                     </span>
+                  ) : status?.status === 'established' || status?.status === 'stale' ? (
+                    'Authority Events Extracted \u2713'
                   ) : (
                     'Extract Authority Events'
                   )}
@@ -481,81 +491,164 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
                 description="Party identification is still running or produced no results."
               />
             </div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {parties.map((party) => (
-                <div key={party.id} className="px-5 py-4">
-                  <div
-                    className="flex items-start justify-between gap-4 cursor-pointer"
-                    onClick={() => setExpandedParty(expandedParty === party.id ? null : party.id)}
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-navy-900">{party.legal_name}</span>
-                        {party.is_internal && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">Internal</span>
-                        )}
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                          party.identification_status === 'confirmed'
-                            ? 'bg-green-50 text-green-700'
-                            : 'bg-amber-50 text-amber-700'
-                        }`}>
-                          {party.identification_status.charAt(0).toUpperCase() + party.identification_status.slice(1)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {CATEGORY_LABELS[party.party_category] ?? party.party_category} · {party.entity_type} · {party.roles.length} role{party.roles.length !== 1 ? 's' : ''}
-                      </p>
-                      {party.trading_names.length > 0 && (
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          Also known as: {party.trading_names.join(', ')}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-xs text-gray-400 shrink-0 mt-1">
-                      {expandedParty === party.id ? '\u25B2' : '\u25BC'}
-                    </span>
-                  </div>
+          ) : (() => {
+            const organisations = parties.filter(p => p.entity_type === 'organisation');
+            const individuals = parties.filter(p => p.entity_type === 'individual');
 
-                  {expandedParty === party.id && party.roles.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      {party.roles.map((role) => (
-                        <div key={role.id} className="bg-gray-50 rounded-md px-4 py-3 text-xs">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="font-medium text-navy-900">{role.role_title}</p>
-                              {role.governing_instrument && (
-                                <p className="text-gray-500 mt-0.5">
-                                  {role.governing_instrument}
-                                  {role.source_clause && ` -- ${role.source_clause}`}
-                                </p>
-                              )}
-                              {role.authority_scope && (
-                                <p className="text-gray-600 mt-1">{role.authority_scope}</p>
-                              )}
-                              {role.financial_threshold && (
-                                <p className="text-gray-500 mt-0.5">
-                                  Threshold: {role.financial_threshold} {role.financial_currency ?? ''}
-                                </p>
-                              )}
-                              {(role.effective_from || role.effective_to) && (
-                                <p className="text-gray-400 mt-0.5">
-                                  {role.effective_from ?? '--'} → {role.effective_to ?? 'ongoing'}
-                                </p>
-                              )}
-                            </div>
-                            <span className={`shrink-0 px-2 py-0.5 rounded-full font-medium ${APPOINTMENT_COLOURS[role.appointment_status] ?? 'bg-gray-100 text-gray-600'}`}>
-                              {role.appointment_status.charAt(0).toUpperCase() + role.appointment_status.slice(1)}
+            const individualsForOrg = (_orgId: string, orgCategory: string) => {
+              const expectedIndividualCategory = Object.entries(INDIVIDUAL_PARENT_CATEGORY)
+                .filter(([, parentCat]) => parentCat === orgCategory)
+                .map(([indCat]) => indCat);
+              return individuals.filter(ind =>
+                expectedIndividualCategory.includes(ind.party_category)
+              );
+            };
+
+            const unmatchedIndividuals = individuals.filter(ind => {
+              const parentCat = INDIVIDUAL_PARENT_CATEGORY[ind.party_category];
+              if (!parentCat) return true;
+              return !organisations.some(org => org.party_category === parentCat);
+            });
+
+            return (
+              <div>
+                {[...organisations, ...unmatchedIndividuals].map((party) => {
+                  const isOrg = party.entity_type === 'organisation';
+                  const nestedIndividuals = isOrg
+                    ? individualsForOrg(party.id, party.party_category)
+                    : [];
+
+                  return (
+                    <div key={party.id} className="px-5 py-4 border-b border-gray-100 last:border-0">
+                      <div
+                        className="flex items-start justify-between gap-4 cursor-pointer"
+                        onClick={() => setExpandedParty(expandedParty === party.id ? null : party.id)}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-navy-900">{party.legal_name}</span>
+                            {party.is_internal && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-medium">Internal</span>
+                            )}
+                            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                              party.identification_status === 'confirmed'
+                                ? 'bg-green-50 text-green-700'
+                                : 'bg-amber-50 text-amber-700'
+                            }`}>
+                              {party.identification_status.charAt(0).toUpperCase() + party.identification_status.slice(1)}
                             </span>
                           </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {CATEGORY_LABELS[party.party_category] ?? party.party_category} · {party.entity_type}
+                            {party.roles.length > 0 && ` · ${party.roles.length} role${party.roles.length !== 1 ? 's' : ''}`}
+                            {nestedIndividuals.length > 0 && ` · ${nestedIndividuals.length} named individual${nestedIndividuals.length !== 1 ? 's' : ''}`}
+                          </p>
+                          {party.trading_names.length > 0 && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              Also known as: {[...new Set(party.trading_names)].join(', ')}
+                            </p>
+                          )}
                         </div>
-                      ))}
+                        <span className="text-xs text-gray-400 shrink-0 mt-1">
+                          {expandedParty === party.id ? '\u25B2' : '\u25BC'}
+                        </span>
+                      </div>
+
+                      {expandedParty === party.id && party.roles.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {party.roles.map((role) => (
+                            <div key={role.id} className="bg-gray-50 rounded-md px-4 py-3 text-xs">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="font-medium text-navy-900">{role.role_title}</p>
+                                  {role.governing_instrument && (
+                                    <p className="text-gray-500 mt-0.5">
+                                      {role.governing_instrument}
+                                      {role.source_clause && ` -- ${role.source_clause}`}
+                                    </p>
+                                  )}
+                                  {role.authority_scope && (
+                                    <p className="text-gray-600 mt-1">{role.authority_scope}</p>
+                                  )}
+                                  {role.financial_threshold && (
+                                    <p className="text-gray-500 mt-0.5">
+                                      Threshold: {role.financial_threshold} {role.financial_currency ?? ''}
+                                    </p>
+                                  )}
+                                  {(role.effective_from || role.effective_to) && (
+                                    <p className="text-gray-400 mt-0.5">
+                                      {role.effective_from ?? '--'} → {role.effective_to ?? 'ongoing'}
+                                    </p>
+                                  )}
+                                </div>
+                                <span className={`shrink-0 px-2 py-0.5 rounded-full font-medium ${
+                                  APPOINTMENT_COLOURS[role.appointment_status] ?? 'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {role.appointment_status.charAt(0).toUpperCase() + role.appointment_status.slice(1)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {nestedIndividuals.length > 0 && (
+                        <div className="mt-3 space-y-2 pl-4 border-l-2 border-gray-100">
+                          {nestedIndividuals.map((ind) => (
+                            <div key={ind.id}>
+                              <div
+                                className="flex items-start justify-between gap-4 cursor-pointer py-2"
+                                onClick={(e) => { e.stopPropagation(); setExpandedParty(expandedParty === ind.id ? null : ind.id); }}
+                              >
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-medium text-navy-900">{ind.legal_name}</span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">
+                                      {CATEGORY_LABELS[ind.party_category] ?? ind.party_category}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    Individual · {ind.roles.length} role{ind.roles.length !== 1 ? 's' : ''}
+                                  </p>
+                                </div>
+                                <span className="text-xs text-gray-400 shrink-0 mt-1">
+                                  {expandedParty === ind.id ? '\u25B2' : '\u25BC'}
+                                </span>
+                              </div>
+                              {expandedParty === ind.id && ind.roles.length > 0 && (
+                                <div className="space-y-2">
+                                  {ind.roles.map((role) => (
+                                    <div key={role.id} className="bg-gray-50 rounded-md px-4 py-3 text-xs">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                          <p className="font-medium text-navy-900">{role.role_title}</p>
+                                          {role.governing_instrument && (
+                                            <p className="text-gray-500 mt-0.5">{role.governing_instrument}</p>
+                                          )}
+                                          {role.authority_scope && (
+                                            <p className="text-gray-600 mt-1">{role.authority_scope}</p>
+                                          )}
+                                        </div>
+                                        <span className={`shrink-0 px-2 py-0.5 rounded-full font-medium ${
+                                          APPOINTMENT_COLOURS[role.appointment_status] ?? 'bg-gray-100 text-gray-600'
+                                        }`}>
+                                          {role.appointment_status.charAt(0).toUpperCase() + role.appointment_status.slice(1)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 
