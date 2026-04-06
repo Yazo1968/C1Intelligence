@@ -45,9 +45,22 @@ export async function getInterviewStatus(
 export async function getNextInterviewQuestion(
   projectId: string,
 ): Promise<ReconciliationQuestionResponse | null> {
-  return apiClient.get<ReconciliationQuestionResponse | null>(
-    `/projects/${projectId}/governance/interview/next-question`,
-  );
+  try {
+    return await apiClient.get<ReconciliationQuestionResponse>(
+      `/projects/${projectId}/governance/interview/next-question`,
+    );
+  } catch (err: unknown) {
+    // 404 means all questions answered — not an error
+    if (
+      err instanceof Error &&
+      (err.message.includes('404') ||
+       err.message.toLowerCase().includes('all questions answered') ||
+       (err as { errorCode?: string }).errorCode === 'NOT_FOUND')
+    ) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 export async function submitInterviewAnswer(

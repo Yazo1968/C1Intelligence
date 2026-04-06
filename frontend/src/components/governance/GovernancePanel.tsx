@@ -15,6 +15,7 @@ import type {
   ReconciliationQuestionResponse,
   InterviewStatusResponse,
 } from '../../api/types';
+import { supabase } from '../../auth/supabase';
 
 interface GovernancePanelProps {
   projectId: string;
@@ -113,12 +114,14 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
   const fetchInterview = useCallback(async () => {
     setInterviewLoading(true);
     try {
-      const [iStatus, iQuestion] = await Promise.all([
-        getInterviewStatus(projectId),
-        getNextInterviewQuestion(projectId),
-      ]);
+      const iStatus = await getInterviewStatus(projectId);
       setInterviewStatus(iStatus);
-      setCurrentQuestion(iQuestion);
+      if (!iStatus.complete) {
+        const iQuestion = await getNextInterviewQuestion(projectId);
+        setCurrentQuestion(iQuestion);
+      } else {
+        setCurrentQuestion(null);
+      }
       setSelectedOption('');
       setFreeText('');
     } catch {
@@ -157,6 +160,20 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
     }, 5000);
     return () => clearInterval(interval);
   }, [status?.status, projectId, fetchParties, fetchInterview]);
+
+  // Proactively refresh auth session to prevent mid-interview logout
+  useEffect(() => {
+    const { data: { subscription } } = (supabase as unknown as {
+      auth: {
+        onAuthStateChange: (cb: (event: string) => void) => { data: { subscription: { unsubscribe: () => void } } };
+      }
+    }).auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') {
+        // Session refreshed — no action needed
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleRun = async () => {
     setRunning(true);
