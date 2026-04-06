@@ -184,7 +184,7 @@ class BaseSpecialist:
                 # On final round (max reached), call without tools to force text response
                 call_kwargs: dict = {
                     "model": CLAUDE_MODEL,
-                    "max_tokens": 4000,
+                    "max_tokens": 8000,
                     "system": [
                         {
                             "type": "text",
