@@ -754,13 +754,12 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
         for identity in identities:
             iid = identity["id"]
             party_roles_list = roles_by_identity.get(iid, [])
-            role_summary = "; ".join(
-                f"{r['role_title']} ({r['appointment_status']})"
-                for r in party_roles_list
-            ) or "no roles recorded"
+            role_titles = ", ".join(
+                r['role_title'] for r in party_roles_list[:2]
+            ) or "unspecified"
             registry_lines.append(
-                f"- {identity['legal_name']} ({identity['entity_type']}, "
-                f"{identity['party_category']}) — roles: {role_summary}"
+                f"- {identity['legal_name']} ({identity['party_category']})"
+                f": {role_titles}"
             )
         entity_registry_text = "\n".join(registry_lines)
 
