@@ -114,10 +114,11 @@ Rules:
 GOVERNANCE_EST_QUERY_TEMPLATE = """
 Use your search_chunks and get_document tools to retrieve all project documents
 containing authority events: appointment letters, delegation letters, termination
-notices, replacement notices, letters of award, and any correspondence that
-establishes, changes, or ends a party's authority.
+notices, replacement notices, novation agreements, letters of award, board
+resolutions, and any correspondence that establishes, changes, or ends a
+party's authority.
 
-The confirmed entity registry is:
+The confirmed party registry is:
 {entity_registry_text}
 
 After completing your document retrieval, output ONLY a JSON object in the
@@ -127,27 +128,47 @@ following structure. No other text before or after the JSON.
   "events": [
     {{
       "event_type": "appointment",
-      "effective_date": "YYYY-MM-DD",
+      "party_legal_name": "Must match a legal_name from the registry above exactly",
+      "role_title": "The role this event relates to — match the role_title from the registry if possible",
+      "appointment_status": "executed",
+      "event_date": "YYYY-MM-DD",
+      "event_date_certain": true,
       "end_date": null,
-      "party_canonical_name": "Must match a canonical_name from the registry above",
-      "role": "The functional role or authority position",
-      "appointed_by_canonical_name": null,
-      "authority_dimension": "layer_1",
-      "contract_source": "Instrument title",
-      "scope": "What the appointment covers",
-      "terminus_node": false,
-      "extraction_status": "confirmed"
+      "initiated_by_legal_name": "Legal name of party who initiated this event",
+      "authorised_by_legal_name": null,
+      "authority_before": "What the party could do before this event — null for first appointment",
+      "authority_after": "What the party can do as a result of this event",
+      "financial_threshold_before": null,
+      "financial_threshold_after": null,
+      "source_instrument": "Title of the document evidencing this event",
+      "source_clause": "Clause or section reference if stated",
+      "instrument_status": "retrieved",
+      "confirmation_status": "confirmed",
+      "missing_action": null
     }}
   ]
 }}
 
 Rules:
-- event_type: appointment / delegation / termination / replacement / modification / suspension
-- effective_date: ISO format YYYY-MM-DD. Use null if unknown.
-- end_date: null if ongoing or not stated.
-- party_canonical_name: MUST match exactly a canonical_name from the registry.
-- authority_dimension: "layer_1" (contractual) / "layer_2a" (internal DOA) / "layer_2b" (statutory)
-- extraction_status: "confirmed" or "inferred"
+- event_type must be one of: nomination, appointment, authority_grant, scope_addition,
+  scope_reduction, role_transfer, novation, replacement, suspension, termination.
+- party_legal_name MUST match exactly a legal_name from the registry above.
+- role_title should match a role_title from that party's roles in the registry. If
+  uncertain, use the party's primary role title.
+- appointment_status: "executed" if a binding instrument was retrieved; "pending" if
+  action was initiated but authorisation is unconfirmed; "proposed" if named only.
+- event_date: ISO format YYYY-MM-DD. Use null if unknown.
+- event_date_certain: false if the date is inferred or approximate.
+- initiated_by_legal_name: the party who issued or proposed the action.
+- authorised_by_legal_name: the party whose approval gave the action legal effect.
+  Use null if not applicable or not confirmed from retrieved documents.
+- instrument_status: "retrieved" if the source document is in the warehouse;
+  "referenced_only" if mentioned but not retrieved; "absent" if no document found.
+- confirmation_status: "confirmed" if grounded in a retrieved document; "assumed"
+  only if declaring something not in any retrieved document.
+- missing_action: describe what is required to execute this event — populate only
+  for pending or proposed events; null for executed events.
+- Include ALL identified events — confirmed, pending, and proposed.
 - Output valid JSON only. No trailing commas. No markdown. No explanation.
 """
 
@@ -650,12 +671,13 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
     """
     Phase 2 of the governance execution layer.
 
-    Fetches confirmed parties from governance_parties.
+    Reads party_identities and party_roles for the project.
     Invokes the Compliance SME with the governance establishment skill.
-    Parses the JSON output and writes to governance_events.
+    Parses the JSON output and writes to authority_events.
     Updates governance_run_log to complete on success, failed on error.
 
-    Called as a FastAPI BackgroundTask from the /confirm-parties endpoint.
+    Called as a FastAPI BackgroundTask from the /interview endpoint
+    once the reconciliation interview is complete.
     """
     from src.agents.specialist_config import SPECIALIST_CONFIGS
     from src.agents.base_specialist import BaseSpecialist
@@ -670,26 +692,62 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
     )
 
     try:
-        parties_result = (
-            supabase.table("governance_parties")
-            .select("id, canonical_name, entity_type, contractual_role, confirmation_status")
+        # Load party_identities
+        identities_result = (
+            supabase.table("party_identities")
+            .select("id, legal_name, trading_names, party_category, entity_type")
             .eq("project_id", project_id)
             .execute()
         )
-        parties = parties_result.data or []
+        identities = identities_result.data or []
 
-        if not parties:
-            _mark_run_failed(supabase, run_id, "No parties in registry — run Phase 1 first.")
+        if not identities:
+            _mark_run_failed(
+                supabase, run_id,
+                "No party identities found — run Phase 1 first."
+            )
             return
 
-        party_id_map: dict[str, str] = {}
+        # Load party_roles for all identities
+        roles_result = (
+            supabase.table("party_roles")
+            .select("id, party_identity_id, role_title, appointment_status")
+            .eq("project_id", project_id)
+            .execute()
+        )
+        roles = roles_result.data or []
+
+        # Build lookup maps
+        # legal_name → identity_id
+        identity_map: dict[str, str] = {}
+        # identity_id → list of roles
+        roles_by_identity: dict[str, list[dict]] = {}
+
+        for identity in identities:
+            identity_map[identity["legal_name"]] = identity["id"]
+            # Also map trading names
+            for trading_name in (identity.get("trading_names") or []):
+                if trading_name and trading_name not in identity_map:
+                    identity_map[trading_name] = identity["id"]
+            roles_by_identity[identity["id"]] = []
+
+        for role in roles:
+            iid = role["party_identity_id"]
+            if iid in roles_by_identity:
+                roles_by_identity[iid].append(role)
+
+        # Build entity registry text for the SME query
         registry_lines: list[str] = []
-        for p in parties:
-            party_id_map[p["canonical_name"]] = p["id"]
+        for identity in identities:
+            iid = identity["id"]
+            party_roles_list = roles_by_identity.get(iid, [])
+            role_summary = "; ".join(
+                f"{r['role_title']} ({r['appointment_status']})"
+                for r in party_roles_list
+            ) or "no roles recorded"
             registry_lines.append(
-                f"- {p['canonical_name']} ({p['entity_type']}) — "
-                f"role: {p.get('contractual_role') or 'unspecified'} — "
-                f"status: {p['confirmation_status']}"
+                f"- {identity['legal_name']} ({identity['entity_type']}, "
+                f"{identity['party_category']}) — roles: {role_summary}"
             )
         entity_registry_text = "\n".join(registry_lines)
 
@@ -728,73 +786,129 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
         events = data.get("events", [])
         written = 0
 
-        for event in events:
-            party_name = str(event.get("party_canonical_name", "")).strip()
-            party_id = party_id_map.get(party_name)
+        VALID_EVENT_TYPES = {
+            "nomination", "appointment", "authority_grant",
+            "scope_addition", "scope_reduction", "role_transfer",
+            "novation", "replacement", "suspension", "termination",
+        }
+        VALID_APPOINTMENT_STATUS = {"proposed", "pending", "executed"}
+        VALID_INSTRUMENT_STATUS = {"retrieved", "referenced_only", "absent"}
+        VALID_CONFIRMATION_STATUS = {"confirmed", "assumed"}
 
-            if not party_id:
+        for event in events:
+            party_legal_name = str(event.get("party_legal_name", "")).strip()
+            party_identity_id = identity_map.get(party_legal_name)
+
+            if not party_identity_id:
                 logger.warning(
                     "governance_event_party_not_found",
-                    party_canonical_name=party_name,
+                    party_legal_name=party_legal_name,
                     project_id=project_id,
                 )
                 continue
 
-            appointed_by_name = event.get("appointed_by_canonical_name")
-            appointed_by_id = (
-                party_id_map.get(str(appointed_by_name))
-                if appointed_by_name and str(appointed_by_name).lower() not in ("null", "none", "")
-                else None
-            )
+            # Resolve party_role_id — required FK
+            role_title = str(event.get("role_title", "")).strip()
+            party_roles_for_identity = roles_by_identity.get(party_identity_id, [])
+            party_role_id: str | None = None
 
-            effective_date = _parse_date(event.get("effective_date"))
-            end_date = _parse_date(event.get("end_date"))
+            if role_title:
+                # Exact match first
+                for r in party_roles_for_identity:
+                    if r["role_title"].lower() == role_title.lower():
+                        party_role_id = r["id"]
+                        break
+                # Partial match fallback
+                if not party_role_id:
+                    for r in party_roles_for_identity:
+                        if role_title.lower() in r["role_title"].lower():
+                            party_role_id = r["id"]
+                            break
 
-            event_type = str(event.get("event_type", "")).strip()
-            valid_types = {
-                "appointment", "delegation", "termination",
-                "replacement", "modification", "suspension"
-            }
-            if event_type not in valid_types:
+            # Use first role as last resort if still not found
+            if not party_role_id and party_roles_for_identity:
+                party_role_id = party_roles_for_identity[0]["id"]
                 logger.warning(
-                    "governance_event_invalid_type",
-                    event_type=event_type,
-                    party=party_name,
+                    "governance_event_role_fallback",
+                    party_legal_name=party_legal_name,
+                    role_title=role_title,
+                    fallback_role=party_roles_for_identity[0]["role_title"],
+                )
+
+            if not party_role_id:
+                logger.warning(
+                    "governance_event_no_role_found",
+                    party_legal_name=party_legal_name,
+                    project_id=project_id,
                 )
                 continue
 
-            authority_dimension = event.get("authority_dimension", "layer_1")
-            if authority_dimension not in {"layer_1", "layer_2a", "layer_2b"}:
-                authority_dimension = "layer_1"
+            # Resolve actor IDs
+            initiated_by_name = event.get("initiated_by_legal_name")
+            initiated_by_id = (
+                identity_map.get(str(initiated_by_name))
+                if initiated_by_name and str(initiated_by_name).lower() not in ("null", "none", "")
+                else None
+            )
 
-            extraction_status = event.get("extraction_status", "inferred")
-            if extraction_status not in {"confirmed", "inferred", "flagged"}:
-                extraction_status = "inferred"
+            authorised_by_name = event.get("authorised_by_legal_name")
+            authorised_by_id = (
+                identity_map.get(str(authorised_by_name))
+                if authorised_by_name and str(authorised_by_name).lower() not in ("null", "none", "")
+                else None
+            )
+
+            # Validate enum fields
+            event_type = str(event.get("event_type", "")).strip()
+            if event_type not in VALID_EVENT_TYPES:
+                logger.warning(
+                    "governance_event_invalid_type",
+                    event_type=event_type,
+                    party=party_legal_name,
+                )
+                continue
+
+            appt_status = event.get("appointment_status", "proposed")
+            if appt_status not in VALID_APPOINTMENT_STATUS:
+                appt_status = "proposed"
+
+            instrument_status = event.get("instrument_status", "retrieved")
+            if instrument_status not in VALID_INSTRUMENT_STATUS:
+                instrument_status = "retrieved"
+
+            conf_status = event.get("confirmation_status", "confirmed")
+            if conf_status not in VALID_CONFIRMATION_STATUS:
+                conf_status = "confirmed"
+
+            event_date = _parse_date(event.get("event_date"))
+            end_date = _parse_date(event.get("end_date"))
 
             try:
-                supabase.table("governance_events").insert({
+                supabase.table("authority_events").insert({
                     "project_id": project_id,
+                    "party_role_id": party_role_id,
+                    "party_identity_id": party_identity_id,
                     "event_type": event_type,
-                    "effective_date": (
-                        effective_date.isoformat()
-                        if effective_date
-                        else datetime.now(timezone.utc).date().isoformat()
-                    ),
+                    "appointment_status": appt_status,
+                    "event_date": event_date.isoformat() if event_date else None,
+                    "event_date_certain": bool(event.get("event_date_certain", True)),
                     "end_date": end_date.isoformat() if end_date else None,
-                    "party_id": party_id,
-                    "role": event.get("role") or "unspecified",
-                    "appointed_by_party_id": appointed_by_id,
-                    "authority_dimension": authority_dimension,
-                    "contract_source": event.get("contract_source") or None,
-                    "scope": event.get("scope") or None,
-                    "terminus_node": bool(event.get("terminus_node", False)),
-                    "extraction_status": extraction_status,
+                    "initiated_by_party_id": initiated_by_id,
+                    "authorised_by_party_id": authorised_by_id,
+                    "authority_before": event.get("authority_before") or None,
+                    "authority_after": event.get("authority_after") or None,
+                    "financial_threshold_before": event.get("financial_threshold_before") or None,
+                    "financial_threshold_after": event.get("financial_threshold_after") or None,
+                    "source_clause": event.get("source_clause") or None,
+                    "instrument_status": instrument_status,
+                    "confirmation_status": conf_status,
+                    "missing_action": event.get("missing_action") or None,
                 }).execute()
                 written += 1
             except Exception as exc:
                 logger.error(
-                    "governance_event_insert_failed",
-                    party=party_name,
+                    "governance_authority_event_insert_failed",
+                    party=party_legal_name,
                     event_type=event_type,
                     error=str(exc),
                 )
