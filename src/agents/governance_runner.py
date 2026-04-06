@@ -180,15 +180,17 @@ def _extract_json(text: str) -> dict | None:
     """
     Flexibly extract and parse a JSON object from SME output text.
 
-    Tries three strategies in order:
+    Tries four strategies in order:
     1. Parse the entire text as JSON (ideal — JSON-only output)
-    2. Find a ```json ... ``` code block (standard backtick markdown)
-    3. Find the first complete top-level JSON object with regex
-
-    Returns parsed dict or None on all failures.
+    2. Find a ```json ... ``` code block
+    3. Find the first { and match to its correct closing } by counting braces
+    4. Greedy fallback — last resort
     """
-    # Strategy 1: entire text is JSON
+    import re as _re
+
     stripped = text.strip()
+
+    # Strategy 1: entire text is JSON
     try:
         result = json.loads(stripped)
         if isinstance(result, dict):
@@ -196,25 +198,42 @@ def _extract_json(text: str) -> dict | None:
     except json.JSONDecodeError:
         pass
 
-    # Strategy 2: ```json ... ``` code block
-    match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', stripped, re.DOTALL)
+    # Strategy 2: ```json ... ``` code block — extract content between fences
+    match = _re.search(r'```(?:json)?\s*(\{)', stripped, _re.DOTALL)
     if match:
-        try:
-            result = json.loads(match.group(1))
-            if isinstance(result, dict):
-                return result
-        except json.JSONDecodeError:
-            pass
+        start = match.start(1)
+        depth = 0
+        for i, ch in enumerate(stripped[start:], start):
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    candidate = stripped[start:i + 1]
+                    try:
+                        result = json.loads(candidate)
+                        if isinstance(result, dict):
+                            return result
+                    except json.JSONDecodeError:
+                        break
 
-    # Strategy 3: first top-level { ... } block
-    match = re.search(r'(\{.*\})', stripped, re.DOTALL)
-    if match:
-        try:
-            result = json.loads(match.group(1))
-            if isinstance(result, dict):
-                return result
-        except json.JSONDecodeError:
-            pass
+    # Strategy 3: find first { and walk to matching closing } by brace count
+    first_brace = stripped.find('{')
+    if first_brace != -1:
+        depth = 0
+        for i, ch in enumerate(stripped[first_brace:], first_brace):
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    candidate = stripped[first_brace:i + 1]
+                    try:
+                        result = json.loads(candidate)
+                        if isinstance(result, dict):
+                            return result
+                    except json.JSONDecodeError:
+                        break
 
     logger.error(
         "governance_json_extract_failed",
