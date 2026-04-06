@@ -424,11 +424,10 @@ f09ae3d D2 multi_contract_account_reconciliation.md — new skill
 a2105b2 D4 grounding_schema.json — Financial & Accounting SME domain
 f1520bb D5 specialist_config + financial directive — code wiring
 
-**Known backlog item:**
-`skill_loader._generate_project_context()` contains a FIDIC-specific
-query against the `contracts` table (`fidic_edition` column). Pre-existing
-form-specific reference in form-agnostic code. Does not affect the
-Enhancement Plan. Must be resolved before C1 is used on non-FIDIC projects.
+**Known backlog item — RESOLVED:**
+`skill_loader._generate_project_context()` previously contained a FIDIC-specific
+query against the `contracts` table (`fidic_edition` column). Resolved in Phase 7
+(commit de445da) — now reads party_identities + party_roles.
 
 ---
 
@@ -474,14 +473,14 @@ Prototype tables governance_parties and governance_events dropped.
 **Build sequence (9 phases):**
 Phase 0: Housekeeping — dead code removal ✅ this session
 Phase 1: Migration 021 ✅ applied directly via Supabase MCP
-Phase 2: governance_runner.py Phase 1 rewrite — next session
-Phase 3: Reconciliation interview backend — next session
-Phase 4: Reconciliation interview frontend — next session
-Phase 5: governance_runner.py Phase 2 rewrite — next session
-Phase 6: Compliance agent integration — next session
-Phase 7: skill_loader rewrite — next session
-Phase 8: Frontend authority log display — next session
-Phase 9: Governing documents — next session
+Phase 2: governance_runner.py Phase 1 rewrite ✅ commit 1250038
+Phase 3: Reconciliation interview backend ✅ commits 680638b, e28a7ed
+Phase 4: Reconciliation interview frontend ✅ commits d7aa392, 5cf1262
+Phase 5: governance_runner.py Phase 2 rewrite ✅ commit 95bc27c
+Phase 6: Compliance agent integration ✅ commit 7a8726b
+Phase 7: skill_loader rewrite ✅ commit de445da
+Phase 8: Frontend authority log display — deferred (placeholder in GovernancePanel)
+Phase 9: Governing documents ✅ commits 0e4e0d7 + this session
 
 **Prep work completed this session:**
 - Migration 021 applied
