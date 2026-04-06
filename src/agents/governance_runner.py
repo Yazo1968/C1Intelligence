@@ -171,7 +171,7 @@ Rules:
 - Include ALL identified events — confirmed, pending, and proposed.
 - CRITICAL: Output ONLY the raw JSON object. No preamble, no explanation,
     no markdown fences, no code blocks. The very first character of your
-    response must be { and the very last character must be }. Any text
+    response must be {{ and the very last character must be }}. Any text
     before or after the JSON object means you have failed this task.
 """
 
