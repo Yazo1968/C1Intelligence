@@ -34,30 +34,80 @@ following structure. No other text before or after the JSON.
 {
   "organisations": [
     {
-      "canonical_name": "Full formal legal name exactly as in the contract",
-      "aliases": ["Short name", "Abbreviation"],
-      "contractual_role": "Role title as it appears in the contract",
-      "terminus_node": false,
-      "confirmation_status": "confirmed"
+      "legal_name": "Full registered legal name exactly as in the contract execution block",
+      "trading_names": ["Short name", "Abbreviation", "Any other variant found"],
+      "registration_number": null,
+      "party_category": "Select from the closed list below",
+      "is_internal": false,
+      "identification_status": "confirmed",
+      "roles": [
+        {
+          "role_title": "Role title exactly as it appears in the source instrument",
+          "role_category": "Select from the party_category closed list",
+          "governing_instrument": "Name and date of the instrument that creates this role",
+          "governing_instrument_type": "Select: main_contract | appointment_letter | delegation_letter | novation_agreement | board_resolution | correspondence | other",
+          "effective_from": "YYYY-MM-DD or null if unknown",
+          "effective_to": null,
+          "authority_scope": "Brief plain-language description of what this role authorises the party to do",
+          "financial_threshold": null,
+          "financial_currency": null,
+          "appointment_status": "Select: proposed | pending | executed",
+          "source_clause": "Clause or section reference if stated, else null",
+          "confirmation_status": "confirmed"
+        }
+      ]
     }
   ],
   "individuals": [
     {
-      "canonical_name": "Full name",
-      "aliases": ["Alternative name"],
-      "contractual_role": "Role title",
-      "terminus_node": true,
-      "confirmation_status": "inferred"
+      "legal_name": "Full name",
+      "trading_names": ["Alternative name if any"],
+      "registration_number": null,
+      "party_category": "Select from closed list",
+      "is_internal": false,
+      "identification_status": "confirmed",
+      "roles": [ ... same role structure as above ... ]
     }
   ]
 }
 
+Party category closed list — select the single best match:
+Internal (Employer's organisation):
+  employer | employer_representative | funder | parent_affiliate
+Contract Administration:
+  contract_administrator | resident_engineer | independent_certifier
+Main Contractor:
+  main_contractor | contractors_representative
+Subcontractors:
+  nominated_subcontractor | domestic_subcontractor |
+  specialist_subcontractor | supplier_manufacturer
+Consultants:
+  design_consultant | cost_consultant | project_management_consultant |
+  planning_consultant | clerk_of_works
+Statutory and Regulatory:
+  competent_authority | utility_authority | statutory_inspector
+Dispute Resolution:
+  dab_daab | arbitral_tribunal | expert_mediator
+Financial and Legal:
+  insurer | surety | legal_counsel
+Other:
+  unclassified
+
+Appointment status:
+  proposed  — party named or nominated; no binding appointment instrument found
+  pending   — initiation document found; authorisation document not found
+  executed  — binding instrument retrieved from warehouse
+
+Confirmation status:
+  confirmed — extracted from a retrieved document
+  inferred  — deduced from context without a direct retrieved appointment instrument
+
 Rules:
-- confirmation_status: "confirmed" = named explicitly in a retrieved document;
-  "inferred" = deduced from context without a retrieved appointment instrument.
-- terminus_node: true = cannot issue binding instructions downward;
-  false = can instruct, delegate, or direct parties below it.
-- Include ALL identified entities. If no individuals are found use [].
+- legal_name is the authoritative name from the contract execution block.
+- trading_names includes every name variant found across all retrieved documents.
+- is_internal = true only if the party is part of the Employer's own organisation.
+- A party may have multiple role entries in the roles array.
+- If no individuals are found, use [].
 - Output valid JSON only. No trailing commas. No markdown. No explanation.
 """
 
@@ -172,7 +222,7 @@ def run_party_identification(project_id: str, run_id: str) -> None:
     Phase 1 of the governance execution layer.
 
     Invokes the Compliance SME with the party identification skill.
-    Parses the JSON output and writes to governance_parties.
+    Parses the JSON output and writes to party_identities and party_roles.
     Updates governance_run_log to parties_identified on success, failed on error.
 
     Called as a FastAPI BackgroundTask from the /run endpoint.
@@ -188,6 +238,12 @@ def run_party_identification(project_id: str, run_id: str) -> None:
         project_id=project_id,
         run_id=run_id,
     )
+
+    VALID_APPOINTMENT_STATUSES = {"proposed", "pending", "executed"}
+    VALID_INSTRUMENT_TYPES = {
+        "main_contract", "appointment_letter", "delegation_letter",
+        "novation_agreement", "board_resolution", "correspondence", "other",
+    }
 
     try:
         config = SPECIALIST_CONFIGS["compliance"]
@@ -228,49 +284,135 @@ def run_party_identification(project_id: str, run_id: str) -> None:
                 run_id=run_id,
             )
 
-        for org in organisations:
-            canonical_name = str(org.get("canonical_name", "")).strip()
-            if not canonical_name:
+        total_parties = 0
+
+        for item in organisations:
+            legal_name = str(item.get("legal_name", "")).strip()
+            if not legal_name:
                 continue
             try:
-                supabase.table("governance_parties").insert({
+                result = supabase.table("party_identities").insert({
                     "project_id": project_id,
                     "entity_type": "organisation",
-                    "canonical_name": canonical_name,
-                    "aliases": org.get("aliases") or [],
-                    "contractual_role": org.get("contractual_role") or None,
-                    "terminus_node": bool(org.get("terminus_node", False)),
-                    "confirmation_status": org.get("confirmation_status", "inferred"),
+                    "legal_name": legal_name,
+                    "trading_names": item.get("trading_names") or [],
+                    "registration_number": item.get("registration_number") or None,
+                    "party_category": item.get("party_category") or "unclassified",
+                    "is_internal": bool(item.get("is_internal", False)),
+                    "identification_status": item.get("identification_status", "confirmed"),
+                    "assumption_id": None,
                 }).execute()
+                party_identity_id = result.data[0]["id"]
+                total_parties += 1
             except Exception as exc:
                 logger.error(
-                    "governance_party_insert_failed",
-                    canonical_name=canonical_name,
+                    "governance_identity_insert_failed",
+                    legal_name=legal_name,
                     error=str(exc),
                 )
+                continue
 
-        for ind in individuals:
-            canonical_name = str(ind.get("canonical_name", "")).strip()
-            if not canonical_name:
+            for role in item.get("roles", []):
+                appt_status = role.get("appointment_status") or "proposed"
+                if appt_status not in VALID_APPOINTMENT_STATUSES:
+                    appt_status = "proposed"
+                instr_type = role.get("governing_instrument_type") or "other"
+                if instr_type not in VALID_INSTRUMENT_TYPES:
+                    instr_type = "other"
+                eff_from = _parse_date(role.get("effective_from"))
+                eff_to = _parse_date(role.get("effective_to"))
+                try:
+                    supabase.table("party_roles").insert({
+                        "party_identity_id": party_identity_id,
+                        "project_id": project_id,
+                        "role_title": role.get("role_title") or "unspecified",
+                        "role_category": role.get("role_category") or "unclassified",
+                        "governing_instrument": role.get("governing_instrument") or None,
+                        "governing_instrument_type": instr_type,
+                        "effective_from": eff_from.isoformat() if eff_from else None,
+                        "effective_to": eff_to.isoformat() if eff_to else None,
+                        "authority_scope": role.get("authority_scope") or None,
+                        "financial_threshold": role.get("financial_threshold") or None,
+                        "financial_currency": role.get("financial_currency") or None,
+                        "appointment_status": appt_status,
+                        "source_clause": role.get("source_clause") or None,
+                        "confirmation_status": role.get("confirmation_status", "confirmed"),
+                        "assumption_id": None,
+                        "source_document_id": None,
+                        "counterparty_id": None,
+                        "preceding_role_id": None,
+                    }).execute()
+                except Exception as exc:
+                    logger.error(
+                        "governance_role_insert_failed",
+                        legal_name=legal_name,
+                        role_title=role.get("role_title"),
+                        error=str(exc),
+                    )
+
+        for item in individuals:
+            legal_name = str(item.get("legal_name", "")).strip()
+            if not legal_name:
                 continue
             try:
-                supabase.table("governance_parties").insert({
+                result = supabase.table("party_identities").insert({
                     "project_id": project_id,
                     "entity_type": "individual",
-                    "canonical_name": canonical_name,
-                    "aliases": ind.get("aliases") or [],
-                    "contractual_role": ind.get("contractual_role") or None,
-                    "terminus_node": bool(ind.get("terminus_node", True)),
-                    "confirmation_status": ind.get("confirmation_status", "inferred"),
+                    "legal_name": legal_name,
+                    "trading_names": item.get("trading_names") or [],
+                    "registration_number": item.get("registration_number") or None,
+                    "party_category": item.get("party_category") or "unclassified",
+                    "is_internal": bool(item.get("is_internal", False)),
+                    "identification_status": item.get("identification_status", "confirmed"),
+                    "assumption_id": None,
                 }).execute()
+                party_identity_id = result.data[0]["id"]
+                total_parties += 1
             except Exception as exc:
                 logger.error(
-                    "governance_party_insert_failed",
-                    canonical_name=canonical_name,
+                    "governance_identity_insert_failed",
+                    legal_name=legal_name,
                     error=str(exc),
                 )
+                continue
 
-        total_parties = len(organisations) + len(individuals)
+            for role in item.get("roles", []):
+                appt_status = role.get("appointment_status") or "proposed"
+                if appt_status not in VALID_APPOINTMENT_STATUSES:
+                    appt_status = "proposed"
+                instr_type = role.get("governing_instrument_type") or "other"
+                if instr_type not in VALID_INSTRUMENT_TYPES:
+                    instr_type = "other"
+                eff_from = _parse_date(role.get("effective_from"))
+                eff_to = _parse_date(role.get("effective_to"))
+                try:
+                    supabase.table("party_roles").insert({
+                        "party_identity_id": party_identity_id,
+                        "project_id": project_id,
+                        "role_title": role.get("role_title") or "unspecified",
+                        "role_category": role.get("role_category") or "unclassified",
+                        "governing_instrument": role.get("governing_instrument") or None,
+                        "governing_instrument_type": instr_type,
+                        "effective_from": eff_from.isoformat() if eff_from else None,
+                        "effective_to": eff_to.isoformat() if eff_to else None,
+                        "authority_scope": role.get("authority_scope") or None,
+                        "financial_threshold": role.get("financial_threshold") or None,
+                        "financial_currency": role.get("financial_currency") or None,
+                        "appointment_status": appt_status,
+                        "source_clause": role.get("source_clause") or None,
+                        "confirmation_status": role.get("confirmation_status", "confirmed"),
+                        "assumption_id": None,
+                        "source_document_id": None,
+                        "counterparty_id": None,
+                        "preceding_role_id": None,
+                    }).execute()
+                except Exception as exc:
+                    logger.error(
+                        "governance_role_insert_failed",
+                        legal_name=legal_name,
+                        role_title=role.get("role_title"),
+                        error=str(exc),
+                    )
 
         supabase.table("governance_run_log").update({
             "status": "parties_identified",
