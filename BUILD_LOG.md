@@ -1458,3 +1458,52 @@ frontend/src/api/governance.ts
 frontend/src/components/governance/GovernancePanel.tsx
 docs/C1_GOVERNANCE_EXECUTION_PLAN.md (new)
 BUILD_LOG.md
+
+---
+
+## Session — Governance Authority Log Design + Prep
+
+**Date:** April 2026
+**Status:** COMPLETE
+
+### What was done
+
+**Design:**
+- C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md written and committed (429d205)
+- Three-level data model: party_identities, party_roles, authority_events
+- Supporting tables: assumption_register, reconciliation_questions
+- Party category taxonomy (20 categories), event type taxonomy (10 types)
+- Appointment status model: Proposed / Pending / Executed
+- Reconciliation interview design (8 question types)
+- Compliance agent integration pattern (get_party_authority deterministic function)
+- Full audit of existing codebase — bugs, dead code, design flaws documented
+
+**Migration 021 (applied directly via Supabase MCP):**
+- Created: party_identities, party_roles, authority_events,
+  assumption_register, reconciliation_questions
+- Dropped: governance_parties, governance_events (prototype tables)
+- Updated: governance_run_log (reconciliation fields added)
+- Total migrations: 21 (001-021)
+
+**Docs cleanup:**
+- Archived: C1_AGGREGATION_INTEGRITY_PLAN_v2.md,
+  C1_GOVERNANCE_EXECUTION_PLAN.md, C1_Orchestrators_and_SMEs_enhancement.md
+- Active docs remaining: C1_MASTER_PLAN.md, C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md
+
+**Dead code removed:**
+- src/agents/specialists/ — empty directory
+- Procfile — superseded by railway.json
+- risk_mode parameter — from schemas.py, queries.py
+
+### Next session
+Execute Phases 2-9 of the Governance Authority Log build sequence.
+Read C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md before any action.
+
+### Commit log
+Design doc:     429d205
+Docs archive:   2c258b5
+Specialists rm: 4f82323
+Procfile rm:    b7d7551
+risk_mode rm:   36a8bd6
+Master plan:    c42953d
+BUILD_LOG:      this commit
