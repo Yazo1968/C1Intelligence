@@ -130,11 +130,13 @@ Routing coverage check (chunk-domain keyword alignment — deterministic, no LLM
 Design principle: every integrity check reads deterministic system state. No integrity layer asks an agent to audit itself.
 
 **Governance Feature:**
-Under redesign. Design document: docs/C1_GOVERNANCE_REDESIGN.md.
-The previous three-level model (party_identities, party_roles,
-authority_events) is superseded. Migration 022 will obliterate
-the old tables and create the new schema.
-Active workstream: Phase 0 — obliteration and clean-slate build.
+Redesign complete. Design document: docs/C1_GOVERNANCE_REDESIGN.md v2.1.
+Function 1 — Entity Directory: batch chunk processing, name extraction,
+discrepancy detection, user confirmation flow.
+Function 2 — Event Log: per-entity fulltext search, event extraction,
+consolidation, question generation, user confirmation.
+`get_entity_authority(entity_name, date)` tool available to all agents.
+Reads confirmed `entities` and `entity_events` tables. Deterministic, zero LLM calls.
 
 **Domains:**
 - Legal & Contractual SME: 7 skills (contract_assembly,
@@ -185,21 +187,16 @@ removed — risk output is built into every orchestrator response.
 
 ## Database State
 
-**21 migrations applied (001–021):**
+**22 migrations applied (001–022):**
 - 014: `round_number` in `query_log`
 - 015: `SET search_path` on all 5 RPC functions
 - 016: HNSW halfvec(3072) indexes on `document_chunks` and `reference_chunks`
 - 017: `evidence_records` column on `query_log`; EvidenceRecord schema
-- 018: `governance_run_log` table
-- 021: `party_identities`, `party_roles`, `authority_events`,
-  `assumption_register`, `reconciliation_questions`
-  (all superseded — to be dropped in Migration 022)
-
-**Next migration: 022 — governance redesign**
-Drops all old governance tables. Creates new schema:
-`entity_directory_runs`, `entities`, `entity_discrepancies`,
-`event_log_runs`, `entity_events`, `event_log_questions`.
-See `docs/C1_GOVERNANCE_REDESIGN.md` for full specification.
+- 018: `governance_run_log` table (superseded — dropped in 022)
+- 019–021: old governance execution schema (superseded — dropped in 022)
+- 022: governance redesign — 8 old tables dropped, 6 new tables created
+  (`entity_directory_runs`, `entities`, `entity_discrepancies`,
+  `event_log_runs`, `entity_events`, `event_log_questions`)
 
 **4 RPC functions:** `search_chunks_semantic`, `search_chunks_fulltext`,
 `search_chunks_reference_semantic`, `search_chunks_reference_fulltext`

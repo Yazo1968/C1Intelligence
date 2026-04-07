@@ -464,14 +464,20 @@ Phase 6:  18e29c7 (+ 6.2 and 6.3 commits to follow)
 
 ## Governance Feature — Redesigned
 
-**Status:** Previous implementation superseded. Clean-slate redesign
-approved April 2026.
-**Design document:** docs/C1_GOVERNANCE_REDESIGN.md
-**Next task:** Phase 0 — obliterate all old governance code, tables,
-and files per the redesign document Section 2.
+**Status:** ALL PHASES COMPLETE.
+**Design document:** docs/C1_GOVERNANCE_REDESIGN.md v2.1
+
+- Phase 0 (Obliterate): COMPLETE
+- Phase 1 (Function 1 Backend): COMPLETE
+- Phase 2 (Function 1 Frontend): COMPLETE
+- Phase 3 (Function 2 Backend): COMPLETE
+- Phase 4 (Function 2 Frontend): COMPLETE
+- Phase 5 (Compliance Agent Integration): COMPLETE
+
+**Active workstream:** NONE — platform at stable state pending next initiative.
 
 The v1 implementation (Phases 0–9, commits 1250038 through 5fa1735)
-is retired. The architecture was fundamentally flawed:
+was retired. The architecture was fundamentally flawed:
 single unbounded LLM call for event extraction, token limit failures
 on real projects, incorrect unit of work. The redesign addresses
 these at the architectural level.

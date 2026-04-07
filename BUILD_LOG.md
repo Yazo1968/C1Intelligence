@@ -1648,3 +1648,66 @@ Old design archived: docs/archive/C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md
 HEAD: 5fa1735
 21 migrations (001–021)
 Next: Migration 022 — governance redesign Phase 0
+
+---
+
+## Session: Governance Redesign — Phases 0–5 Complete
+**Date:** April 2026
+**Strategic Partner:** Claude (chat)
+**Execution Agent:** Claude Code
+
+### Objective
+Full implementation of the Governance Feature Redesign (C1_GOVERNANCE_REDESIGN.md v2.1).
+Clean-slate obliteration of v1 governance and complete rebuild.
+
+### Phase 0 — Obliterate
+- 0.1 `8a5ab2c` — Migration 022: 8 old tables dropped, 6 new tables created
+  (`entity_directory_runs`, `entities`, `entity_discrepancies`,
+  `event_log_runs`, `entity_events`, `event_log_questions`)
+- 0.2 `6b0efa0` — Deleted `governance_runner.py` and old `governance.py` routes
+- 0.3 `f5aecc4` — Cleaned `schemas.py`, `main.py`, `tools.py`, `skill_loader.py`
+- 0.4 `a534ed9` — Deleted `governance_establishment.md` and `party_and_role_identification.md`
+- 0.5 `1d2b4e9` — Frontend cleaned: `types.ts`, `governance.ts`, `GovernancePanel.tsx`, `ProjectWorkspacePage.tsx`
+
+### Phase 1 — Function 1 Backend
+- 1.1 `193e3d2` — `entity_extractor.py`: batch chunk processor (30 chunks/call)
+- 1.2 `f104c34` — `consolidator.py`: name grouping, discrepancy detection
+- 1.3 `afd1c32` — Function 1 Pydantic schemas (5 classes)
+- 1.4 `85cd82f` — Function 1 API routes (7 endpoints)
+
+### Phase 2 — Function 1 Frontend
+- 2.1 `db6ab11` — Function 1 TypeScript interfaces (5)
+- 2.2 `a4f0e6b` — Function 1 API client (7 functions)
+- 2.3 `da36527` — GovernancePanel: States A, B-Running, B-Review, confirmed read-only
+
+### Phase 3 — Function 2 Backend
+- 3.1 `a0f20d1` — `event_extractor.py`: per-entity fulltext search + batched LLM extraction
+- 3.2 `f9ffa8d` — `consolidator.py` extended: event dedup, sequencing, question generation
+- 3.3 `6225e57` — Function 2 Pydantic schemas (5 classes)
+- 3.4 `aa42d86` — Function 2 API routes (7 endpoints)
+
+### Phase 4 — Function 2 Frontend
+- 4.1 `dedb428` — Function 2 TypeScript interfaces (5)
+- 4.2 `ce2fb20` — Function 2 API client (7 functions)
+- 4.3 `663b452` — State C entity directory + EventLogPanel slide-over + QuestionCard + EventCard
+
+### Phase 5 — Compliance Agent Integration
+- 5.1 `af6ff3d` — `get_entity_authority` tool: deterministic lookup, zero LLM calls
+- 5.2 `9ece625` — `_generate_project_context()` rebuilt to read confirmed `entities` table
+
+### Bugs caught by Claude Code before writing (saved from runtime failures)
+1. Task 1.1: `.eq("layer_type", "1")` — `document_chunks` has no `layer_type` column. Removed.
+2. Task 1.4: `.eq("user_id", ...)` — `projects` table uses `owner_id`. Corrected.
+3. Task 2.2: `as Record<string, unknown>` TS cast on required-field type rejected. Replaced with `{ ...body }` spread.
+4. Task 2.3: `GovernancePanel.tsx` omitted from task 0.5 obliteration prompt despite being listed in spec Section 2.5. Added as stub.
+5. Task 3.4: Local `import datetime` inside `confirm_directory()` made redundant by module-level import added in same task. Removed.
+
+### End state
+- 22 numbered migrations (001–022)
+- 6 new governance tables live in Supabase
+- All old governance tables, files, and frontend code obliterated
+- Function 1 (Entity Directory) end-to-end: DB → 4 backend files → 14 API routes → full frontend UI
+- Function 2 (Event Log) end-to-end: DB → 4 backend files → 14 API routes → full frontend UI
+- `get_entity_authority` tool available to all agents
+- `_generate_project_context()` injects confirmed entity names into agent system prompts
+- HEAD: `9ece625`
