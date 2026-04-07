@@ -121,7 +121,11 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
         const status = await getDirectoryStatus(projectId);
         if (cancelled) return;
         setRun(status);
-        if (status.status === 'running') {
+        if (
+          status.status === 'running' ||
+          status.status === 'extracting' ||
+          status.status === 'consolidating'
+        ) {
           startPolling();
         } else if (
           status.status === 'awaiting_confirmation' ||
