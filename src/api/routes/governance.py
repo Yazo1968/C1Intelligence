@@ -32,6 +32,7 @@ from src.agents.governance.event_extractor import (
 )
 from src.agents.governance.consolidator import (
     consolidate,
+    consolidate_from_db,
     consolidate_events,
 )
 from src.clients import get_supabase_client
@@ -71,27 +72,33 @@ def _require_project(project_id: str, user_id: uuid.UUID) -> None:
 # Background task — runs extraction + consolidation, writes to DB
 # ---------------------------------------------------------------------------
 
-def _run_extraction_background(project_id: str, run_id_placeholder: str) -> None:
+def _run_extraction_background(project_id: str, run_id: str) -> None:
     """
-    Called via BackgroundTasks. Runs entity extraction and consolidation,
-    then writes entities and discrepancies to Supabase and sets run status
-    to awaiting_confirmation.
+    Two-stage background task:
+      Stage 1 (extracting): run_entity_extraction writes batches to
+        entity_raw_extractions progressively. run record status = 'extracting'.
+      Stage 2 (consolidating): consolidate_from_db reads staging table,
+        groups variants, detects discrepancies, writes to entities +
+        entity_discrepancies. run record status = 'consolidating'.
+    On completion: status flips to 'awaiting_confirmation'.
     """
     supabase = get_supabase_client()
     try:
-        # 1. Extract
-        extraction = run_entity_extraction(project_id)
+        # ── Stage 1: Extract ────────────────────────────────────────────────
+        extraction = run_entity_extraction(project_id, run_id)
 
         if extraction.error:
-            # run record already marked failed inside run_entity_extraction
+            # extractor already marked run as failed
             return
 
-        run_id = extraction.run_id
+        # ── Stage 2: Consolidate ────────────────────────────────────────────
+        supabase.table("entity_directory_runs").update({
+            "status": "consolidating",
+        }).eq("id", run_id).execute()
 
-        # 2. Consolidate
-        directory = consolidate(extraction)
+        directory = consolidate_from_db(project_id, run_id)
 
-        # 3. Write entities
+        # Write consolidated entities
         entity_rows = []
         for org in directory.organisations:
             entity_rows.append({
@@ -115,7 +122,7 @@ def _run_extraction_background(project_id: str, run_id_placeholder: str) -> None
         if entity_rows:
             supabase.table("entities").insert(entity_rows).execute()
 
-        # 4. Write discrepancies
+        # Write discrepancies
         disc_rows = []
         for disc in directory.discrepancies:
             disc_rows.append({
@@ -130,7 +137,7 @@ def _run_extraction_background(project_id: str, run_id_placeholder: str) -> None
         if disc_rows:
             supabase.table("entity_discrepancies").insert(disc_rows).execute()
 
-        # 5. Update run to awaiting_confirmation
+        # Flip to awaiting_confirmation
         org_count = len(directory.organisations)
         ind_count = len(directory.individuals)
         supabase.table("entity_directory_runs").update({
@@ -145,13 +152,17 @@ def _run_extraction_background(project_id: str, run_id_placeholder: str) -> None
         )
 
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Background extraction failed: project=%s", project_id)
-        # Best-effort: mark any running run as failed
+        logger.exception("Background extraction failed: project=%s run=%s", project_id, run_id)
         try:
             supabase.table("entity_directory_runs").update({
                 "status": "failed",
                 "error_message": str(exc),
-            }).eq("project_id", project_id).eq("status", "running").execute()
+            }).eq("id", run_id).eq("status", "consolidating").execute()
+            # Also cover extracting state in case failure was in Stage 1
+            supabase.table("entity_directory_runs").update({
+                "status": "failed",
+                "error_message": str(exc),
+            }).eq("id", run_id).eq("status", "extracting").execute()
         except Exception:  # noqa: BLE001
             pass
 
@@ -178,7 +189,7 @@ async def trigger_directory_run(
         supabase.table("entity_directory_runs")
         .insert({
             "project_id": project_id,
-            "status": "running",
+            "status": "extracting",
             "total_chunks": 0,
             "chunks_processed": 0,
         })
