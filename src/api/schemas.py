@@ -201,6 +201,9 @@ class PatchEntityRequest(BaseModel):
     canonical_name: str | None = None
     confirmation_status: str | None = None   # confirmed | rejected
     user_note: str | None = None
+    name_variants: list[str] | None = None
+    # Full replacement of name_variants array.
+    # Frontend sends the complete updated list.
 
 class ResolveDiscrepancyRequest(BaseModel):
     resolution: str                          # same_entity | different_entities | correction
