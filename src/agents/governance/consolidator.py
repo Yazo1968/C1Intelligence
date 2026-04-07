@@ -441,3 +441,91 @@ def consolidate_events(raw_events: list[RawEvent]) -> ConsolidatedEventLog:
     questions = _generate_questions(proposed)
 
     return ConsolidatedEventLog(events=proposed, questions=questions)
+
+
+# =============================================================================
+# Function 1 — DB-backed consolidation (two-stage path)
+# =============================================================================
+
+def consolidate_from_db(project_id: str, run_id: str) -> ConsolidatedDirectory:
+    """
+    Stage 2 consolidation. Reads raw extractions from entity_raw_extractions
+    for this run, then applies the same grouping and discrepancy detection
+    as consolidate().
+
+    Called by the governance background task after run_entity_extraction()
+    returns successfully. Zero LLM calls. Writes nothing — caller writes
+    the ConsolidatedDirectory to entities + entity_discrepancies.
+    """
+    from src.clients import get_supabase_client
+
+    supabase = get_supabase_client()
+    resp = (
+        supabase.table("entity_raw_extractions")
+        .select("entity_type, name, title, context")
+        .eq("project_id", project_id)
+        .eq("run_id", run_id)
+        .execute()
+    )
+    rows = resp.data or []
+
+    # Re-build RawEntity lists from DB rows
+    raw_orgs: list[RawEntity] = []
+    raw_inds: list[RawEntity] = []
+    for row in rows:
+        if row["entity_type"] == "organisation":
+            raw_orgs.append(
+                RawEntity(
+                    name=row["name"],
+                    context=row.get("context") or "",
+                )
+            )
+        elif row["entity_type"] == "individual":
+            raw_inds.append(
+                RawEntity(
+                    name=row["name"],
+                    context=row.get("context") or "",
+                    title=row.get("title"),
+                )
+            )
+
+    # Re-use the existing grouping and discrepancy logic unchanged
+    directory = ConsolidatedDirectory()
+
+    org_groups = _group_entities(raw_orgs)
+    for _key, entities in org_groups:
+        canonical = _pick_canonical(entities)
+        variants = _collect_variants(entities, canonical)
+        directory.organisations.append(
+            ProposedEntity(
+                entity_type="organisation",
+                canonical_name=canonical,
+                name_variants=variants,
+                title=None,
+                context_sample=entities[0].context,
+            )
+        )
+    directory.discrepancies.extend(
+        _detect_organisation_discrepancies(org_groups)
+    )
+
+    ind_groups = _group_entities(raw_inds)
+    for _key, entities in ind_groups:
+        canonical = _pick_canonical(entities)
+        variants = _collect_variants(entities, canonical)
+        titles = [e.title for e in entities if e.title]
+        title = Counter(titles).most_common(1)[0][0] if titles else None
+        directory.individuals.append(
+            ProposedEntity(
+                entity_type="individual",
+                canonical_name=canonical,
+                name_variants=variants,
+                title=title,
+                context_sample=entities[0].context,
+            )
+        )
+    directory.discrepancies.extend(
+        _detect_individual_discrepancies(ind_groups)
+    )
+
+    return directory
