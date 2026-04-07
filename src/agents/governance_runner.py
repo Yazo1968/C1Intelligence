@@ -726,6 +726,9 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
         run_id=run_id,
     )
 
+    written = 0
+    _rounds = 0
+
     try:
         # Load party_identities
         identities_result = (
@@ -809,7 +812,6 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
             return
 
         events = data.get("events", [])
-        written = 0
 
         VALID_EVENT_TYPES = {
             "nomination", "appointment", "authority_grant",
@@ -908,6 +910,35 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
             event_date = _parse_date(event.get("event_date"))
             end_date = _parse_date(event.get("end_date"))
 
+            # Dedup: skip if an identical event already exists for this party,
+            # role, event_type, and event_date
+            try:
+                existing_event = (
+                    supabase.table("authority_events")
+                    .select("id")
+                    .eq("project_id", project_id)
+                    .eq("party_identity_id", party_identity_id)
+                    .eq("party_role_id", party_role_id)
+                    .eq("event_type", event_type)
+                    .eq("event_date", event_date.isoformat() if event_date else "null")
+                    .execute()
+                )
+                if existing_event.data:
+                    logger.info(
+                        "governance_event_duplicate_skipped",
+                        party=party_legal_name,
+                        event_type=event_type,
+                        event_date=str(event_date),
+                    )
+                    continue
+            except Exception as dedup_exc:
+                logger.warning(
+                    "governance_event_dedup_check_failed",
+                    party=party_legal_name,
+                    error=str(dedup_exc),
+                )
+                # On dedup check failure, proceed with insert rather than skip
+
             try:
                 supabase.table("authority_events").insert({
                     "project_id": project_id,
@@ -938,13 +969,6 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
                     error=str(exc),
                 )
 
-        supabase.table("governance_run_log").update({
-            "status": "complete",
-            "events_extracted": written,
-            "documents_scanned": _rounds,
-            "completed_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", run_id).execute()
-
         logger.info(
             "governance_phase2_complete",
             project_id=project_id,
@@ -960,6 +984,42 @@ def run_governance_establishment(project_id: str, run_id: str) -> None:
             error=str(exc),
         )
         _mark_run_failed(supabase, run_id, str(exc))
+    finally:
+        try:
+            # Determine final status — complete if any events written,
+            # failed if zero events and not already marked failed
+            current_status_result = (
+                supabase.table("governance_run_log")
+                .select("status")
+                .eq("id", run_id)
+                .single()
+                .execute()
+            )
+            current_status = (
+                current_status_result.data.get("status")
+                if current_status_result.data else "running"
+            )
+            # Only update if still running — don't overwrite failed status
+            if current_status == "running":
+                final_status = "complete" if written > 0 else "failed"
+                supabase.table("governance_run_log").update({
+                    "status": final_status,
+                    "events_extracted": written,
+                    "documents_scanned": _rounds,
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                }).eq("id", run_id).execute()
+                logger.info(
+                    "governance_phase2_run_log_closed",
+                    run_id=run_id,
+                    final_status=final_status,
+                    events_written=written,
+                )
+        except Exception as finally_exc:
+            logger.error(
+                "governance_phase2_run_log_close_failed",
+                run_id=run_id,
+                error=str(finally_exc),
+            )
 
 
 # ---------------------------------------------------------------------------
