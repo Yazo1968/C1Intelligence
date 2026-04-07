@@ -190,6 +190,7 @@ export interface PatchEntityRequest {
   canonical_name?: string;
   confirmation_status?: 'confirmed' | 'rejected';
   user_note?: string;
+  name_variants?: string[];
 }
 
 export interface ResolveDiscrepancyRequest {

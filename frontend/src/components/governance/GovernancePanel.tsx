@@ -156,7 +156,7 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
 
   async function handlePatchEntity(
     entityId: string,
-    updates: { canonical_name?: string; confirmation_status?: 'confirmed' | 'rejected'; user_note?: string },
+    updates: { canonical_name?: string; confirmation_status?: 'confirmed' | 'rejected'; user_note?: string; name_variants?: string[] },
   ) {
     try {
       await patchEntity(projectId, entityId, updates);
@@ -396,6 +396,7 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
             eventLogRuns={eventLogRuns}
             onBuildEventLog={handleBuildEventLog}
             onOpenEventLog={handleOpenEventLog}
+            onPatch={handlePatchEntity}
           />
           <StateCEntitySection
             title="Individuals"
@@ -405,6 +406,7 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
             eventLogRuns={eventLogRuns}
             onBuildEventLog={handleBuildEventLog}
             onOpenEventLog={handleOpenEventLog}
+            onPatch={handlePatchEntity}
           />
           {/* Event Log slide-over panel */}
           {selectedEntityId && (
@@ -508,7 +510,7 @@ function EntityConsolidationBoard({
 interface EntityConsolidationCardProps {
   entity: EntityResponse;
   onAbsorb: (targetId: string, sourceId: string) => void;
-  onPatch: (id: string, updates: { canonical_name?: string; confirmation_status?: 'confirmed' | 'rejected' }) => void;
+  onPatch: (id: string, updates: { canonical_name?: string; confirmation_status?: 'confirmed' | 'rejected'; name_variants?: string[] }) => void;
 }
 
 function EntityConsolidationCard({
@@ -607,19 +609,13 @@ function EntityConsolidationCard({
               </p>
             </div>
           )}
-          {/* Alias chips */}
-          {entity.name_variants.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {entity.name_variants.map((v) => (
-                <span
-                  key={v}
-                  className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
-                >
-                  {v}
-                </span>
-              ))}
-            </div>
-          )}
+          {/* Alias editor */}
+          <AliasEditor
+            variants={entity.name_variants}
+            onUpdate={(updated) =>
+              onPatch(entity.id, { name_variants: updated })
+            }
+          />
           {dragOver && (
             <p className="text-xs text-navy-900 font-medium">
               Drop to merge into this entity
@@ -670,6 +666,7 @@ interface StateCEntitySectionProps {
   eventLogRuns: Record<string, EventLogRunResponse>;
   onBuildEventLog: (entityId: string) => void;
   onOpenEventLog: (entityId: string) => void;
+  onPatch: (id: string, updates: { canonical_name?: string; confirmation_status?: 'confirmed' | 'rejected'; user_note?: string; name_variants?: string[] }) => void;
 }
 
 function StateCEntitySection({
@@ -680,6 +677,7 @@ function StateCEntitySection({
   eventLogRuns,
   onBuildEventLog,
   onOpenEventLog,
+  onPatch,
 }: StateCEntitySectionProps) {
   const confirmed = entities.filter((e) => e.confirmation_status === 'confirmed');
   return (
@@ -703,7 +701,7 @@ function StateCEntitySection({
                   key={entity.id}
                   className="flex items-center justify-between gap-4 px-5 py-3"
                 >
-                  <div>
+                  <div className="min-w-0 flex-1 pr-3">
                     <p className="text-sm font-medium text-gray-900">
                       {entity.title && !entity.canonical_name.startsWith(entity.title)
                         ? `${entity.title} `
@@ -712,6 +710,18 @@ function StateCEntitySection({
                     {entity.short_address && (
                       <p className="text-xs text-gray-400">{entity.short_address}</p>
                     )}
+                    {entity.name_variants.length > 0 && (
+                      <p className="text-xs text-gray-400">
+                        Also known as: {entity.name_variants.join(', ')}
+                      </p>
+                    )}
+                    <AliasEditor
+                      variants={entity.name_variants}
+                      compact
+                      onUpdate={(updated) =>
+                        onPatch(entity.id, { name_variants: updated })
+                      }
+                    />
                   </div>
                   <div className="shrink-0">
                     {!run && (
@@ -1143,6 +1153,117 @@ function EventCard({ event, onPatch, readOnly = false }: EventCardProps) {
               Cancel
             </Button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── AliasEditor ───────────────────────────────────────────────────────────────
+
+interface AliasEditorProps {
+  variants: string[];
+  onUpdate: (updated: string[]) => void;
+  compact?: boolean;
+}
+
+function AliasEditor({ variants, onUpdate, compact = false }: AliasEditorProps) {
+  const [input, setInput] = useState('');
+  const [expanded, setExpanded] = useState(false);
+
+  function handleAdd() {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    if (variants.map((v) => v.toLowerCase()).includes(trimmed.toLowerCase())) return;
+    onUpdate([...variants, trimmed]);
+    setInput('');
+  }
+
+  function handleRemove(variant: string) {
+    onUpdate(variants.filter((v) => v !== variant));
+  }
+
+  return (
+    <div className="space-y-1">
+      {/* Existing aliases */}
+      {variants.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {variants.map((v) => (
+            <span
+              key={v}
+              className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+            >
+              {v}
+              <button
+                onClick={() => handleRemove(v)}
+                className="text-gray-400 hover:text-red-500 leading-none"
+                title="Remove alias"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Add alias */}
+      {!compact && (
+        <div className="flex gap-1">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); }}}
+            placeholder="Add alias..."
+            className="flex-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-navy-900/20"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!input.trim()}
+            className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+          >
+            + Add
+          </button>
+        </div>
+      )}
+
+      {/* Compact mode: show expand toggle for State C */}
+      {compact && (
+        <div>
+          {expanded && (
+            <div className="flex gap-1 mt-1">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); setExpanded(false); }}}
+                placeholder="Add alias..."
+                autoFocus
+                className="flex-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-navy-900/20"
+              />
+              <button
+                onClick={() => { handleAdd(); setExpanded(false); }}
+                disabled={!input.trim()}
+                className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+              >
+                Add
+              </button>
+              <button
+                onClick={() => { setExpanded(false); setInput(''); }}
+                className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-400 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+          {!expanded && (
+            <button
+              onClick={() => setExpanded(true)}
+              className="text-xs text-gray-400 hover:text-navy-900 hover:underline"
+            >
+              + Add alias
+            </button>
+          )}
         </div>
       )}
     </div>
