@@ -1,9 +1,9 @@
 # C1 Intelligence — Governance Feature Redesign
 # Clean Slate Design Document
 
-**Version:** 2.0
+**Version:** 2.1
 **Date:** April 2026
-**Status:** Approved for implementation
+**Status:** Approved for implementation — UI specification complete
 **Author:** Strategic Partner (Claude)
 **Approved by:** Yasser Darweesh
 
@@ -491,43 +491,406 @@ All endpoints under `/projects/{project_id}/governance/`.
 
 ---
 
-## 7. Frontend — GovernancePanel Redesign
+## 7. Frontend — GovernancePanel Complete UI Specification
 
-### 7.1 States
+---
 
-The panel has three top-level states:
+### 7.1 Panel Layout
 
-**State A — No directory yet**
-Single button: "Build Entity Directory"
-Brief explanation of what this does.
+The Governance tab renders a single full-width panel.
+No tabs within the panel. No side navigation.
+Content changes entirely based on the current state.
 
-**State B — Directory in progress or awaiting confirmation**
-Progress indicator (chunks processed / total chunks).
-Once complete: two lists (organisations, individuals) with
-confirm/edit/reject controls. Discrepancy cards if any exist.
-"Confirm Directory" button (disabled until all discrepancies resolved).
+The panel always has:
+- A header card showing the current state label and primary action button
+- A content area below that changes per state
+- An error banner that appears above the content area when an error occurs
 
-**State C — Directory confirmed**
-Collapsed summary of confirmed entities.
-Each entity has an icon button "Build Event Log."
-Entities with a confirmed event log show a timeline icon.
-Entities with a running extraction show a spinner.
-Entities with no event log show an empty icon.
+---
 
-### 7.2 Event Log drawer or panel
+### 7.2 State A — No Directory
 
-When the user triggers or views an event log for an entity, a panel
-(or slide-over drawer) opens for that entity showing:
-- Entity name and variants
-- Chronological event timeline
-- Questions requiring resolution
-- "Confirm Event Log" button
+Rendered when: no `entity_directory_runs` record exists for this project,
+or the most recent run has status `failed`.
 
-### 7.3 No polling loops
+**Header card:**
+- Title: "Entity Directory"
+- Status badge: "Not Built" (grey)
+- Description: "C1 reads every project document and identifies all
+  organisations and individuals by name. No roles, scope, or
+  relationships are inferred — names only. You review and confirm
+  the result before proceeding."
+- Primary button: "Build Entity Directory" (navy)
 
-The frontend polls the status endpoint every 5 seconds while a run is
-in progress. When status transitions to `awaiting_confirmation`, polling
-stops and the confirmation UI is shown.
+**Content area:**
+Empty. No other content shown in this state.
+
+**On button click:**
+- Button shows spinner + "Building..."
+- POST /directory/run
+- Panel transitions to State B-running
+
+---
+
+### 7.3 State B-Running — Extraction in Progress
+
+Rendered when: most recent run has status `running`.
+
+**Header card:**
+- Title: "Entity Directory"
+- Status badge: "Processing" (blue)
+- Progress bar: chunks_processed / total_chunks
+  - Label: "Reading documents — [N] of [N] chunks processed"
+  - Percentage shown on the right
+  - Animated progress fill
+- Sub-label: "This may take a few minutes depending on project size."
+- No action button (extraction is running, nothing to click)
+
+**Content area:**
+Empty. Progress bar in header is the only UI element.
+
+**Polling:**
+GET /directory/status every 5 seconds.
+When status transitions to `awaiting_confirmation` → render State B-Review.
+When status transitions to `failed` → render State A with error banner.
+
+---
+
+### 7.4 State B-Review — Awaiting Confirmation
+
+Rendered when: most recent run has status `awaiting_confirmation`.
+
+**Header card:**
+- Title: "Entity Directory"
+- Status badge: "Ready for Review" (amber)
+- Summary line: "Found [N] organisations and [N] individuals.
+  [N] discrepancies require resolution before confirming."
+  (discrepancy count omitted if zero)
+- Primary button: "Confirm Directory" (green)
+  - Disabled if any discrepancies are unresolved
+  - Disabled if zero entities are confirmed
+  - On click: POST /directory/confirm → transition to State C
+
+**Content area — three sections in order:**
+
+#### Section 1: Discrepancies (shown only if discrepancies exist)
+
+Header: "Resolve Discrepancies ([N] remaining)"
+Collapsed by default if N > 5. Expanded by default if N ≤ 5.
+
+Each discrepancy renders as a card:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ ⚠  Possible duplicate                                   │
+│ "ALBATEC CONSTRUCTION LLC" and                          │
+│ "Albatec Construction and Development LLC"              │
+│ Both names found in project documents.                  │
+│                                                         │
+│ [Same entity — merge]  [Different entities]  [Correct]  │
+└─────────────────────────────────────────────────────────┘
+```
+
+Resolution options per discrepancy type:
+- `name_variant`: "Same entity — use [name_a] as canonical" /
+  "Same entity — use [name_b] as canonical" / "Enter correct name"
+- `possible_duplicate`: "Same entity — merge" /
+  "Different entities — keep both" / "Enter correct canonical name"
+- `ambiguous_individual`: "Confirm this individual exists" /
+  "Reject — not a person" / "Enter full correct name"
+
+On resolution: PATCH discrepancy → card collapses with a green tick.
+When all discrepancies resolved: "Confirm Directory" button enables.
+
+#### Section 2: Organisations
+
+Header: "Organisations ([N])"
+Expandable/collapsible section — expanded by default.
+
+Each organisation renders as a row:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ ○  YOSH DEVELOPMENT LLC                                          │
+│    Also found as: "Yosh Development", "YOSH Dev"                 │
+│    Abu Dhabi, UAE                          [Confirm] [Edit] [✕]  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Row states:
+- Proposed: white background, grey left border
+- Confirmed: white background, green left border, green tick icon
+- Rejected: light grey background, strikethrough name, grey text
+
+Actions:
+- **Confirm**: marks `confirmation_status = confirmed`. Row shows green tick.
+- **Edit**: opens inline edit — name field pre-filled with canonical_name,
+  name_variants shown as read-only chips. Save button.
+- **✕ (Reject)**: marks `confirmation_status = rejected`. Row dims.
+
+Bulk action: "Confirm All" link at top right of section — confirms all
+proposed organisations in one click.
+
+#### Section 3: Individuals
+
+Header: "Individuals ([N])"
+Same structure as Organisations section.
+
+Row format:
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ ○  Eng. Akram Chalich                                            │
+│    Also found as: "A. Chalich", "AKRAM CHALICH"                  │
+│                                            [Confirm] [Edit] [✕]  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Title (Eng/Mr/Dr) shown as a prefix if available.
+No address field for individuals.
+
+---
+
+### 7.5 State C — Directory Confirmed
+
+Rendered when: most recent run has status `confirmed`.
+
+**Header card:**
+- Title: "Entity Directory"
+- Status badge: "Confirmed" (green)
+- Summary: "[N] organisations · [N] individuals"
+- Last confirmed: "Confirmed [date]"
+- Secondary button: "Rebuild Directory" (outlined, grey)
+  On click: confirmation dialog "This will replace the current directory
+  and invalidate any existing event logs. Continue?" → POST /directory/run
+
+**Content area — two sections:**
+
+#### Section 1: Organisations
+
+Header: "Organisations ([N])"
+Expandable. Collapsed by default — these are confirmed, nothing to action.
+
+Each organisation renders as a row with an event log status indicator:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ ✓  YOSH DEVELOPMENT LLC                                          │
+│    Abu Dhabi, UAE                                                │
+│                              [Event Log: Confirmed ✓] [View →]  │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│ ✓  ALBATEC CONSTRUCTION AND DEVELOPMENT LLC                      │
+│                                                                  │
+│                              [Event Log: 3 events ⏳] [View →]  │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│ ✓  PEGASUS                                                       │
+│                                                                  │
+│                                    [Build Event Log  +]         │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Event log status labels per entity:
+- No event log run: "Build Event Log +" button (outlined, navy)
+- Running: spinner + "Extracting events..."
+- Awaiting confirmation: "[N] events · [N] questions" + "Review →" button (amber)
+- Confirmed: "Confirmed · [N] events ✓" + "View →" button (green, outlined)
+- Failed: "Extraction failed" + "Retry" button (red, outlined)
+
+#### Section 2: Individuals
+
+Same structure as Organisations section in State C.
+
+---
+
+### 7.6 Event Log Panel
+
+When the user clicks "Build Event Log", "Review →", or "View →" on any
+entity, a slide-over panel opens from the right side of the screen,
+covering approximately 60% of the viewport width.
+
+The main GovernancePanel remains visible on the left.
+
+**Panel structure:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ ✕  ALBATEC CONSTRUCTION AND DEVELOPMENT LLC          [Confirm]  │
+│    Also known as: Albatec, ALBATEC CONST.                       │
+├─────────────────────────────────────────────────────────────────┤
+│ [Questions requiring resolution (2)]  ▼                         │
+├─────────────────────────────────────────────────────────────────┤
+│ Event Log  (chronological)                                      │
+│                                                                 │
+│ 19 June 2023  ●  Appointment                    [✓] [✎] [✕]   │
+│ Construction Contract — YD_PROC_...                            │
+│ Before: No contractual standing                                │
+│ After:  Appointed as Main Contractor...                        │
+│ ▸ Source excerpt                                               │
+│                                                                 │
+│ [date unknown]  ●  Scope addition               [✓] [✎] [✕]   │
+│ ...                                                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Panel header:**
+- Entity name (large)
+- Name variants as small grey chips
+- Close button (✕) top left
+- "Confirm Event Log" button top right
+  - Disabled if any unanswered questions remain
+  - Disabled if extraction is still running
+  - On click: POST /entities/{id}/events/confirm → panel closes,
+    entity row in main panel updates to "Confirmed" state
+
+**Questions section (shown only if questions exist):**
+Collapsible card above the event log.
+Header: "Questions requiring resolution ([N])"
+Each question:
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ ⚠  Date conflict                                                │
+│ Two events on 19 June 2023 show contradicting authority         │
+│ positions. Which is correct?                                    │
+│                                                                 │
+│ ○ The appointment event (Contractor appointed 19 June 2023)    │
+│ ○ The nomination event (nominated only, no execution)          │
+│ ○ Both are correct — different events on the same date         │
+│                                                                 │
+│ Additional comments: [____________________________]             │
+│                                              [Submit answer]    │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Question types and their option formats:
+- `date_conflict`: radio options — which event is correct
+- `missing_authorisation`: radio — "authorisation exists but not in documents" /
+  "authorisation was verbal / informal" / "authorisation is absent"
+- `overlapping_roles`: radio — "first event superseded" /
+  "second event superseded" / "both valid simultaneously"
+- `termination_without_replacement`: radio — "role was not replaced" /
+  "replacement exists but not in documents" / "I will add it manually"
+- `gap_in_timeline`: radio — "no events occurred in this period" /
+  "events occurred but are not in the uploaded documents"
+- `ambiguous_event`: free text only
+
+**Event log section:**
+
+Events listed chronologically. Events with unknown dates appear at the
+bottom in document order.
+
+Each event card:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ 19 June 2023                                    APPOINTMENT     │
+│                                                                  │
+│ Before:  No contractual standing                                │
+│ After:   Appointed as Main Contractor under Construction        │
+│          Contract. Authority to execute and complete the Works. │
+│                                                                  │
+│ Initiated by: YOSH DEVELOPMENT LLC                              │
+│ Authorised by: YOSH DEVELOPMENT LLC                             │
+│                                                                  │
+│ Source: Construction Contract — YD_PROC_PRD-000097             │
+│ ▸ "...Albatec Construction and Development LLC (hereinafter     │
+│    the Contractor) is hereby appointed..."                      │
+│                                                                  │
+│                              [✓ Confirm]  [✎ Edit]  [✕ Reject] │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Event confirmation states:
+- Proposed: white background, grey left border
+- Confirmed: white background, green left border
+- Disputed: amber background, amber left border
+- Rejected: grey background, dimmed text, strikethrough on event type
+
+"✎ Edit" opens an inline edit form within the card:
+- event_type: dropdown (the 10 valid values)
+- event_date: date picker + "Date uncertain" checkbox
+- status_before: text area
+- status_after: text area
+- initiated_by: text input
+- authorised_by: text input
+- user_note: text area
+- Save / Cancel buttons
+
+**Panel footer:**
+"Build Event Log" button if no extraction has been run yet for this entity.
+"Re-extract" button if a confirmed log exists (with confirmation dialog).
+
+---
+
+### 7.7 Extraction Progress in Event Log Panel
+
+When extraction is running for an entity (triggered from State C or
+from the panel itself), the panel shows:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ ✕  ALBATEC CONSTRUCTION AND DEVELOPMENT LLC                      │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Extracting event log...                                         │
+│  Searching documents for mentions of this entity.               │
+│                                                                  │
+│  ████████████░░░░░░  Scanning chunk 18 of 30                    │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Polling: GET /entities/{id}/events/status every 5 seconds.
+On `awaiting_confirmation`: load events and questions, render full panel.
+On `failed`: show error message + "Retry" button.
+
+---
+
+### 7.8 Error States
+
+All errors appear as a red banner immediately below the header card:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ ✕  Extraction failed: Could not process documents. Check that   │
+│    project documents are fully ingested and try again.          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Errors are dismissible (✕ button on the banner).
+The error does not replace the current state — it overlays it.
+
+---
+
+### 7.9 Empty States
+
+**No documents uploaded:**
+If `total_chunks = 0` when extraction is triggered, return an error:
+"No documents found. Upload and ingest project documents before
+building the Entity Directory."
+
+**No entities found:**
+If extraction completes but finds zero organisations and zero individuals:
+"No entities were identified in the project documents. Check that
+documents are fully ingested and contain text content."
+
+**No events found for entity:**
+If event extraction completes but finds zero events:
+"No authority events were found for this entity in the project
+documents. This entity may appear by name only, without any
+documented authority events."
+
+---
+
+### 7.10 Responsive Behaviour
+
+The slide-over panel for the event log is only available on screens
+wider than 1024px. On smaller screens, the event log opens as a
+full-screen view replacing the main panel, with a back button to
+return to the directory.
+
 
 ---
 
