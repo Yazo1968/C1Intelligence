@@ -14,6 +14,7 @@ import { assessQuery, submitQuery, getQueryStatus, getContradictions } from '../
 import { listProjects } from '../api/projects';
 import type { DocumentResponse, QueryResponseSchema, ContradictionResponse, ProjectResponse } from '../api/types';
 import type { Round0Assessment } from '../api/queries';
+import { GovernancePanel } from '../components/governance/GovernancePanel';
 
 const QUERY_POLL_INTERVAL_MS = 5_000;
 const QUERY_POLL_MAX_MS = 15 * 60 * 1_000; // 15 minutes
@@ -217,6 +218,11 @@ export function ProjectWorkspacePage() {
 
             {queryResponse && <QueryResponse response={queryResponse} />}
           </div>
+        )}
+
+        {/* Governance Tab */}
+        {activeTab === 'governance' && projectId && (
+          <GovernancePanel projectId={projectId} />
         )}
 
         {/* Contradictions Tab */}
