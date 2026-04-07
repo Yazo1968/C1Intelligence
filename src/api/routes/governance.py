@@ -6,6 +6,7 @@ All routes under /projects/{project_id}/governance/
 
 from __future__ import annotations
 
+import datetime
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
@@ -18,9 +19,21 @@ from src.api.schemas import (
     EntityDiscrepancyResponse,
     PatchEntityRequest,
     ResolveDiscrepancyRequest,
+    EventLogRunResponse,
+    EntityEventResponse,
+    EventLogQuestionResponse,
+    PatchEventRequest,
+    AnswerQuestionRequest,
 )
 from src.agents.governance.entity_extractor import run_entity_extraction
-from src.agents.governance.consolidator import consolidate
+from src.agents.governance.event_extractor import (
+    run_event_extraction,
+    EntityInput,
+)
+from src.agents.governance.consolidator import (
+    consolidate,
+    consolidate_events,
+)
 from src.clients import get_supabase_client
 from src.logging_config import get_logger
 
@@ -437,7 +450,6 @@ async def confirm_directory(
                     "message": "At least one entity must be confirmed before locking the directory."},
         )
 
-    import datetime
     resp = (
         supabase.table("entity_directory_runs")
         .update({
@@ -448,3 +460,459 @@ async def confirm_directory(
         .execute()
     )
     return EntityDirectoryRunResponse(**resp.data[0])
+
+
+# ===========================================================================
+# Function 2 — Event Log
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Background task — event extraction + consolidation + DB writes
+# ---------------------------------------------------------------------------
+
+def _run_event_extraction_background(
+    project_id: str,
+    entity_id: str,
+    run_id: str,
+) -> None:
+    supabase = get_supabase_client()
+    try:
+        # Fetch entity record for name and variants
+        entity_resp = (
+            supabase.table("entities")
+            .select("canonical_name, name_variants")
+            .eq("id", entity_id)
+            .eq("project_id", project_id)
+            .maybe_single()
+            .execute()
+        )
+        if not entity_resp.data:
+            supabase.table("event_log_runs").update({
+                "status": "failed",
+                "error_message": "Entity record not found.",
+            }).eq("id", run_id).execute()
+            return
+
+        entity_data = entity_resp.data
+        entity_input = EntityInput(
+            entity_id=entity_id,
+            project_id=project_id,
+            canonical_name=entity_data["canonical_name"],
+            name_variants=entity_data.get("name_variants") or [],
+        )
+
+        # Extract
+        extraction = run_event_extraction(entity_input)
+
+        # Update chunks_scanned
+        supabase.table("event_log_runs").update({
+            "chunks_scanned": extraction.chunks_scanned,
+        }).eq("id", run_id).execute()
+
+        if extraction.error:
+            supabase.table("event_log_runs").update({
+                "status": "failed",
+                "error_message": extraction.error,
+            }).eq("id", run_id).execute()
+            return
+
+        # Consolidate
+        event_log = consolidate_events(extraction.raw_events)
+
+        # Write events
+        event_rows = []
+        for event in event_log.events:
+            event_rows.append({
+                "project_id": project_id,
+                "entity_id": entity_id,
+                "run_id": run_id,
+                "event_type": event.event_type,
+                "event_date": event.event_date,
+                "event_date_certain": event.event_date_certain,
+                "status_before": event.status_before,
+                "status_after": event.status_after,
+                "initiated_by": event.initiated_by,
+                "authorised_by": event.authorised_by,
+                "source_document": event.source_document,
+                "source_excerpt": event.source_excerpt,
+                "confirmation_status": "proposed",
+                "sequence_number": event.sequence_number,
+            })
+
+        inserted_event_ids: list[str] = []
+        if event_rows:
+            inserted = supabase.table("entity_events").insert(event_rows).execute()
+            inserted_event_ids = [row["id"] for row in (inserted.data or [])]
+
+        # Write questions — map event_indices to real inserted event IDs
+        question_rows = []
+        for question in event_log.questions:
+            referenced_ids = [
+                inserted_event_ids[i]
+                for i in question.event_indices
+                if i < len(inserted_event_ids)
+            ]
+            question_rows.append({
+                "project_id": project_id,
+                "run_id": run_id,
+                "entity_id": entity_id,
+                "question_text": question.question_text,
+                "question_type": question.question_type,
+                "events_referenced": referenced_ids,
+                "sequence_number": len(question_rows),
+            })
+        if question_rows:
+            supabase.table("event_log_questions").insert(question_rows).execute()
+
+        # Update run to awaiting_confirmation
+        supabase.table("event_log_runs").update({
+            "status": "awaiting_confirmation",
+            "events_extracted": len(event_rows),
+            "completed_at": datetime.datetime.utcnow().isoformat(),
+        }).eq("id", run_id).execute()
+
+        logger.info(
+            "Event extraction complete: entity=%s run=%s events=%d questions=%d",
+            entity_id, run_id, len(event_rows), len(question_rows),
+        )
+
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            "Background event extraction failed: entity=%s run=%s", entity_id, run_id
+        )
+        try:
+            supabase.table("event_log_runs").update({
+                "status": "failed",
+                "error_message": str(exc),
+            }).eq("id", run_id).execute()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Helper — require entity belongs to project and is confirmed
+# ---------------------------------------------------------------------------
+
+def _require_entity(project_id: str, entity_id: str) -> None:
+    supabase = get_supabase_client()
+    resp = (
+        supabase.table("entities")
+        .select("id, confirmation_status")
+        .eq("id", entity_id)
+        .eq("project_id", project_id)
+        .maybe_single()
+        .execute()
+    )
+    if not resp.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error_code": "ENTITY_NOT_FOUND", "message": "Entity not found."},
+        )
+    if resp.data["confirmation_status"] != "confirmed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error_code": "ENTITY_NOT_CONFIRMED",
+                "message": "Entity must be confirmed before running event extraction.",
+            },
+        )
+
+
+# ---------------------------------------------------------------------------
+# POST /entities/{entity_id}/events/run
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/entities/{entity_id}/events/run",
+    response_model=EventLogRunResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def trigger_event_run(
+    project_id: str,
+    entity_id: str,
+    background_tasks: BackgroundTasks,
+    user_id: AuthenticatedUser,
+) -> EventLogRunResponse:
+    _require_project(project_id, user_id)
+    _require_entity(project_id, entity_id)
+    supabase = get_supabase_client()
+
+    run_resp = (
+        supabase.table("event_log_runs")
+        .insert({
+            "project_id": project_id,
+            "entity_id": entity_id,
+            "status": "running",
+            "chunks_scanned": 0,
+            "events_extracted": 0,
+        })
+        .execute()
+    )
+    run = run_resp.data[0]
+
+    background_tasks.add_task(
+        _run_event_extraction_background, project_id, entity_id, run["id"]
+    )
+    return EventLogRunResponse(**run)
+
+
+# ---------------------------------------------------------------------------
+# GET /entities/{entity_id}/events/status
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/entities/{entity_id}/events/status",
+    response_model=EventLogRunResponse,
+)
+async def get_event_run_status(
+    project_id: str,
+    entity_id: str,
+    user_id: AuthenticatedUser,
+) -> EventLogRunResponse:
+    _require_project(project_id, user_id)
+    supabase = get_supabase_client()
+
+    resp = (
+        supabase.table("event_log_runs")
+        .select("*")
+        .eq("project_id", project_id)
+        .eq("entity_id", entity_id)
+        .order("triggered_at", desc=True)
+        .limit(1)
+        .maybe_single()
+        .execute()
+    )
+    if not resp.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error_code": "NO_RUN_FOUND",
+                    "message": "No event log run found for this entity."},
+        )
+    return EventLogRunResponse(**resp.data)
+
+
+# ---------------------------------------------------------------------------
+# GET /entities/{entity_id}/events
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/entities/{entity_id}/events",
+    response_model=list[EntityEventResponse],
+)
+async def list_events(
+    project_id: str,
+    entity_id: str,
+    user_id: AuthenticatedUser,
+) -> list[EntityEventResponse]:
+    _require_project(project_id, user_id)
+    supabase = get_supabase_client()
+
+    run_resp = (
+        supabase.table("event_log_runs")
+        .select("id")
+        .eq("project_id", project_id)
+        .eq("entity_id", entity_id)
+        .order("triggered_at", desc=True)
+        .limit(1)
+        .maybe_single()
+        .execute()
+    )
+    if not run_resp.data:
+        return []
+
+    run_id = run_resp.data["id"]
+    resp = (
+        supabase.table("entity_events")
+        .select("*")
+        .eq("project_id", project_id)
+        .eq("entity_id", entity_id)
+        .eq("run_id", run_id)
+        .order("sequence_number")
+        .execute()
+    )
+    return [EntityEventResponse(**row) for row in (resp.data or [])]
+
+
+# ---------------------------------------------------------------------------
+# GET /entities/{entity_id}/events/questions
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/entities/{entity_id}/events/questions",
+    response_model=list[EventLogQuestionResponse],
+)
+async def list_event_questions(
+    project_id: str,
+    entity_id: str,
+    user_id: AuthenticatedUser,
+) -> list[EventLogQuestionResponse]:
+    _require_project(project_id, user_id)
+    supabase = get_supabase_client()
+
+    run_resp = (
+        supabase.table("event_log_runs")
+        .select("id")
+        .eq("project_id", project_id)
+        .eq("entity_id", entity_id)
+        .order("triggered_at", desc=True)
+        .limit(1)
+        .maybe_single()
+        .execute()
+    )
+    if not run_resp.data:
+        return []
+
+    run_id = run_resp.data["id"]
+    resp = (
+        supabase.table("event_log_questions")
+        .select("*")
+        .eq("project_id", project_id)
+        .eq("run_id", run_id)
+        .is_("answer", "null")
+        .order("sequence_number")
+        .execute()
+    )
+    return [EventLogQuestionResponse(**row) for row in (resp.data or [])]
+
+
+# ---------------------------------------------------------------------------
+# PATCH /entities/{entity_id}/events/{event_id}
+# ---------------------------------------------------------------------------
+
+@router.patch(
+    "/entities/{entity_id}/events/{event_id}",
+    response_model=EntityEventResponse,
+)
+async def patch_event(
+    project_id: str,
+    entity_id: str,
+    event_id: str,
+    body: PatchEventRequest,
+    user_id: AuthenticatedUser,
+) -> EntityEventResponse:
+    _require_project(project_id, user_id)
+    supabase = get_supabase_client()
+
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error_code": "NO_FIELDS", "message": "No fields to update."},
+        )
+
+    resp = (
+        supabase.table("entity_events")
+        .update(updates)
+        .eq("id", event_id)
+        .eq("entity_id", entity_id)
+        .eq("project_id", project_id)
+        .execute()
+    )
+    if not resp.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error_code": "EVENT_NOT_FOUND", "message": "Event not found."},
+        )
+    return EntityEventResponse(**resp.data[0])
+
+
+# ---------------------------------------------------------------------------
+# POST /entities/{entity_id}/events/questions/{question_id}/answer
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/entities/{entity_id}/events/questions/{question_id}/answer",
+    response_model=EventLogQuestionResponse,
+)
+async def answer_question(
+    project_id: str,
+    entity_id: str,
+    question_id: str,
+    body: AnswerQuestionRequest,
+    user_id: AuthenticatedUser,
+) -> EventLogQuestionResponse:
+    _require_project(project_id, user_id)
+    supabase = get_supabase_client()
+
+    resp = (
+        supabase.table("event_log_questions")
+        .update({
+            "answer": body.answer,
+            "answered_at": datetime.datetime.utcnow().isoformat(),
+        })
+        .eq("id", question_id)
+        .eq("entity_id", entity_id)
+        .eq("project_id", project_id)
+        .execute()
+    )
+    if not resp.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error_code": "QUESTION_NOT_FOUND",
+                    "message": "Question not found."},
+        )
+    return EventLogQuestionResponse(**resp.data[0])
+
+
+# ---------------------------------------------------------------------------
+# POST /entities/{entity_id}/events/confirm
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/entities/{entity_id}/events/confirm",
+    response_model=EventLogRunResponse,
+)
+async def confirm_event_log(
+    project_id: str,
+    entity_id: str,
+    user_id: AuthenticatedUser,
+) -> EventLogRunResponse:
+    _require_project(project_id, user_id)
+    supabase = get_supabase_client()
+
+    run_resp = (
+        supabase.table("event_log_runs")
+        .select("id, status")
+        .eq("project_id", project_id)
+        .eq("entity_id", entity_id)
+        .order("triggered_at", desc=True)
+        .limit(1)
+        .maybe_single()
+        .execute()
+    )
+    if not run_resp.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error_code": "NO_RUN_FOUND", "message": "No event log run found."},
+        )
+    run_id = run_resp.data["id"]
+
+    # Guard: unanswered questions must be resolved first
+    unanswered = (
+        supabase.table("event_log_questions")
+        .select("id", count="exact")
+        .eq("project_id", project_id)
+        .eq("run_id", run_id)
+        .is_("answer", "null")
+        .execute()
+    )
+    if unanswered.count and unanswered.count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error_code": "UNANSWERED_QUESTIONS",
+                "message": f"{unanswered.count} questions must be answered before confirming.",
+            },
+        )
+
+    resp = (
+        supabase.table("event_log_runs")
+        .update({
+            "status": "confirmed",
+            "completed_at": datetime.datetime.utcnow().isoformat(),
+        })
+        .eq("id", run_id)
+        .execute()
+    )
+    return EventLogRunResponse(**resp.data[0])
+
