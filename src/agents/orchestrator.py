@@ -887,16 +887,19 @@ def _build_evidence_summary(finding: "SpecialistFindings") -> str:
 
     # Layer 2b gap
     if er.layer2b_status == LayerRetrievalStatus.NOT_RETRIEVED:
-        lines.append("- **Governing standard (Layer 2b):** Not retrieved — "
-                     "standard form provisions could not be confirmed from the warehouse.")
+        lines.append("- **Governing contract standard:** The applicable standard form of "
+                     "contract was not found in the document warehouse. Findings on "
+                     "standard form provisions are based on the project documents only.")
     elif er.layer2b_status == LayerRetrievalStatus.PARTIAL:
-        lines.append("- **Governing standard (Layer 2b):** Partially retrieved — "
-                     f"source: {er.layer2b_source or 'unspecified'}.")
+        lines.append("- **Governing contract standard:** Partially retrieved "
+                     f"— source: {er.layer2b_source or 'unspecified'}.")
 
     # Amendment document gap
     if er.layer1_amendment_document_status == LayerRetrievalStatus.NOT_RETRIEVED:
-        lines.append("- **Amendment document (Layer 1):** Not retrieved — "
-                     "project-specific contractual position cannot be confirmed.")
+        lines.append("- **Project-specific contract terms:** The Particular Conditions or "
+                     "equivalent amendment document was not separately retrieved. "
+                     "Standard form provisions apply unless varied by the main contract "
+                     "document.")
 
     # Layer 2a gap (only relevant when required by schema)
     if er.layer2a_status == LayerRetrievalStatus.NOT_RETRIEVED and er.layer2a_source is None:
@@ -907,14 +910,46 @@ def _build_evidence_summary(finding: "SpecialistFindings") -> str:
     # Provisions CANNOT CONFIRM
     if er.provisions_cannot_confirm:
         items = "; ".join(er.provisions_cannot_confirm)
-        lines.append(f"- **Cannot confirm:** {items}")
+        lines.append(f"- **Could not confirm from retrieved documents:** {items}")
 
     if not lines:
         return ""
 
-    summary = "*Grounding gaps detected in this domain assessment:*\n"
+    summary = "*The following limitations apply to this assessment:*\n"
     summary += "\n".join(lines)
     return summary
+
+
+def _strip_evidence_declaration(findings_text: str) -> str:
+    """
+    Remove the Evidence Declaration block from agent findings text
+    before rendering to the client-facing response.
+
+    The block has already been parsed into evidence_record by
+    _parse_evidence_declaration(). It must not appear in client output.
+
+    Handles heading variants: ## or ### followed by
+    "Evidence Declaration" or "EVIDENCE DECLARATION" (case-insensitive).
+    Strips from the heading line to the next heading of equal or higher
+    level, or to the first numbered section (e.g. "1. "), or to "---".
+    """
+    import re
+    # Match ## or ### Evidence Declaration block
+    # Strip to next heading (##/###), numbered section, or horizontal rule
+    cleaned = re.sub(
+        r'\n?#{2,3}\s+EVIDENCE DECLARATION\s*\n.*?(?=\n#{1,3}\s|\n\d+\.\s|\n---|\Z)',
+        '',
+        findings_text,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+    # Also strip any standalone Evidence Declaration line at the start
+    cleaned = re.sub(
+        r'^#{2,3}\s+EVIDENCE DECLARATION\s*\n.*?(?=\n#{1,3}\s|\n\d+\.\s|\n---|\Z)',
+        '',
+        cleaned,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
+    return cleaned.strip()
 
 
 def build_response_text(
@@ -951,10 +986,10 @@ def build_response_text(
     if routing_gaps:
         gap_names = [DOMAIN_DISPLAY_NAMES.get(d, d) for d in routing_gaps]
         sections.append(
-            f"> ⚠ **Coverage Notice:** The document warehouse contains signals "
-            f"for the following domains that were not engaged in this analysis: "
-            f"{', '.join(gap_names)}. This may indicate a partial assessment. "
-            f"Consider resubmitting the query or engaging these domains explicitly."
+            f"> ⚠ **Coverage Notice:** This analysis did not cover the following "
+            f"domains, which may have relevant content in the project documents: "
+            f"{', '.join(gap_names)}. Consider re-running the query with these "
+            f"domains selected for a more complete assessment."
         )
         sections.append("")
 
@@ -976,7 +1011,7 @@ def build_response_text(
             badge = finding.confidence
             sections.append(f"### {display_name} — {badge}")
             sections.append("")
-            sections.append(finding.findings)
+            sections.append(_strip_evidence_declaration(finding.findings))
             sections.append("")
             evidence_summary = _build_evidence_summary(finding)
             if evidence_summary:
@@ -991,15 +1026,6 @@ def build_response_text(
 
         sections.append("---")
         sections.append("")
-
-    # --- Consolidated Evidence Map ---
-    evidence_map = _build_consolidated_evidence_map(
-        findings, audit_result, routing_gaps
-    )
-    sections.append(evidence_map)
-    sections.append("")
-    sections.append("---")
-    sections.append("")
 
     # --- Contradictions ---
     sections.append("## Contradictions Detected")
