@@ -24,6 +24,7 @@ from src.api.schemas import (
     EventLogQuestionResponse,
     PatchEventRequest,
     AnswerQuestionRequest,
+    AbsorbEntityRequest,
 )
 from src.agents.governance.entity_extractor import run_entity_extraction
 from src.agents.governance.event_extractor import (
@@ -355,6 +356,123 @@ async def patch_entity(
             detail={"error_code": "ENTITY_NOT_FOUND", "message": "Entity not found."},
         )
     return EntityResponse(**resp.data[0])
+
+
+# ---------------------------------------------------------------------------
+# POST /directory/entities/{entity_id}/absorb — merge source into target
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/directory/entities/{entity_id}/absorb",
+    response_model=EntityResponse,
+)
+async def absorb_entity(
+    project_id: str,
+    entity_id: str,
+    body: AbsorbEntityRequest,
+    user_id: AuthenticatedUser,
+) -> EntityResponse:
+    """
+    Absorb source_entity_id into entity_id (the target).
+    - Source's canonical_name is appended to target's name_variants
+    - Source's name_variants are merged into target's name_variants
+    - Duplicates are removed from the merged variants list
+    - Source entity is marked confirmation_status = 'merged'
+    - Any event_log_runs referencing source are re-pointed to target
+    """
+    _require_project(project_id, user_id)
+    supabase = get_supabase_client()
+
+    # Fetch target
+    target_resp = (
+        supabase.table("entities")
+        .select("*")
+        .eq("id", entity_id)
+        .eq("project_id", project_id)
+        .maybe_single()
+        .execute()
+    )
+    if not target_resp.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error_code": "ENTITY_NOT_FOUND",
+                    "message": "Target entity not found."},
+        )
+
+    # Fetch source
+    source_resp = (
+        supabase.table("entities")
+        .select("*")
+        .eq("id", body.source_entity_id)
+        .eq("project_id", project_id)
+        .maybe_single()
+        .execute()
+    )
+    if not source_resp.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error_code": "SOURCE_NOT_FOUND",
+                    "message": "Source entity not found."},
+        )
+
+    target = target_resp.data
+    source = source_resp.data
+
+    if target["id"] == source["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error_code": "SAME_ENTITY",
+                    "message": "Target and source are the same entity."},
+        )
+
+    # Build merged name_variants: existing target variants + source canonical
+    # + source variants, deduplicated, excluding target canonical
+    existing_variants: list[str] = target.get("name_variants") or []
+    source_variants: list[str] = source.get("name_variants") or []
+    source_canonical: str = source["canonical_name"]
+    target_canonical: str = target["canonical_name"]
+
+    all_variants = existing_variants + [source_canonical] + source_variants
+    seen: set[str] = {target_canonical.lower()}
+    merged_variants: list[str] = []
+    for v in all_variants:
+        key = v.lower()
+        if key not in seen:
+            seen.add(key)
+            merged_variants.append(v)
+
+    # Update target
+    updated_resp = (
+        supabase.table("entities")
+        .update({
+            "name_variants": merged_variants,
+            "confirmation_status": "confirmed",
+        })
+        .eq("id", entity_id)
+        .execute()
+    )
+
+    # Mark source as merged
+    supabase.table("entities").update({
+        "confirmation_status": "merged",
+    }).eq("id", body.source_entity_id).execute()
+
+    # Re-point any event_log_runs from source to target
+    supabase.table("event_log_runs").update({
+        "entity_id": entity_id,
+    }).eq("entity_id", body.source_entity_id).execute()
+
+    # Re-point any entity_events from source to target
+    supabase.table("entity_events").update({
+        "entity_id": entity_id,
+    }).eq("entity_id", body.source_entity_id).execute()
+
+    logger.info(
+        "Entity absorbed: project=%s target=%s source=%s",
+        project_id, entity_id, body.source_entity_id,
+    )
+
+    return EntityResponse(**updated_resp.data[0])
 
 
 # ---------------------------------------------------------------------------

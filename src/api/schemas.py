@@ -266,3 +266,9 @@ class PatchEventRequest(BaseModel):
 class AnswerQuestionRequest(BaseModel):
     answer: str
 
+class AbsorbEntityRequest(BaseModel):
+    source_entity_id: str
+    # The entity being absorbed (will be marked merged).
+    # Its canonical_name and name_variants are moved into the
+    # target entity's name_variants list.
+
