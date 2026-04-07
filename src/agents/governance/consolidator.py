@@ -13,6 +13,7 @@ Responsibilities:
 
 from __future__ import annotations
 
+import datetime
 import re
 import unicodedata
 from collections import Counter
@@ -250,3 +251,193 @@ def consolidate(extraction: ExtractionResult) -> ConsolidatedDirectory:
     )
 
     return directory
+
+
+# =============================================================================
+# Function 2 — Event Consolidation
+# =============================================================================
+
+from src.agents.governance.event_extractor import RawEvent
+
+
+@dataclass
+class ProposedEvent:
+    event_type: str
+    event_date: str | None
+    event_date_certain: bool
+    status_before: str | None
+    status_after: str | None
+    initiated_by: str | None
+    authorised_by: str | None
+    source_document: str | None
+    source_excerpt: str | None
+    sequence_number: int = 0
+    chunk_index: int = 0
+
+
+@dataclass
+class ProposedQuestion:
+    question_type: str      # date_conflict | missing_authorisation | overlapping_roles |
+                            # termination_without_replacement | gap_in_timeline | ambiguous_event
+    question_text: str
+    event_indices: list[int] = field(default_factory=list)   # indices into ProposedEvent list
+
+
+@dataclass
+class ConsolidatedEventLog:
+    events: list[ProposedEvent] = field(default_factory=list)
+    questions: list[ProposedQuestion] = field(default_factory=list)
+
+
+# ── Deduplication ─────────────────────────────────────────────────────────────
+
+def _dedup_events(raw_events: list[RawEvent]) -> list[RawEvent]:
+    """
+    Remove duplicate events: same event_type + same event_date + same status_after.
+    Keep the first occurrence (lowest chunk_index).
+    """
+    seen: set[tuple] = set()
+    unique: list[RawEvent] = []
+    for event in raw_events:
+        key = (
+            event.event_type,
+            event.event_date or "",
+            (event.status_after or "").lower().strip()[:80],
+        )
+        if key not in seen:
+            seen.add(key)
+            unique.append(event)
+    return unique
+
+
+# ── Sorting ───────────────────────────────────────────────────────────────────
+
+def _sort_events(events: list[RawEvent]) -> list[RawEvent]:
+    """
+    Sort events: known dates ascending first, then unknown dates by chunk_index.
+    """
+    def sort_key(e: RawEvent):
+        if e.event_date:
+            try:
+                parsed = datetime.date.fromisoformat(e.event_date)
+                return (0, parsed, e.chunk_index)
+            except ValueError:
+                pass
+        return (1, datetime.date.max, e.chunk_index)
+
+    return sorted(events, key=sort_key)
+
+
+# ── Question generation ───────────────────────────────────────────────────────
+
+def _generate_questions(events: list[ProposedEvent]) -> list[ProposedQuestion]:
+    questions: list[ProposedQuestion] = []
+
+    # date_conflict: two events on the same known date with different status_after
+    dated = [e for e in events if e.event_date and e.event_date_certain]
+    by_date: dict[str, list[int]] = {}
+    for i, e in enumerate(events):
+        if e.event_date and e.event_date_certain:
+            by_date.setdefault(e.event_date, []).append(i)
+    for date, indices in by_date.items():
+        if len(indices) >= 2:
+            statuses = {events[i].status_after for i in indices if events[i].status_after}
+            if len(statuses) > 1:
+                questions.append(ProposedQuestion(
+                    question_type="date_conflict",
+                    question_text=(
+                        f"Two or more events on {date} show different authority positions. "
+                        f"Which event correctly reflects the outcome on that date?"
+                    ),
+                    event_indices=indices,
+                ))
+
+    # missing_authorisation: appointment or authority_grant with no authorised_by
+    for i, e in enumerate(events):
+        if e.event_type in ("appointment", "authority_grant") and not e.authorised_by:
+            questions.append(ProposedQuestion(
+                question_type="missing_authorisation",
+                question_text=(
+                    f"The {e.event_type} event"
+                    + (f" on {e.event_date}" if e.event_date else "")
+                    + " has no recorded authorising party. "
+                    "Was this authorisation verbal, absent, or documented elsewhere?"
+                ),
+                event_indices=[i],
+            ))
+
+    # overlapping_roles: two appointment events with no termination between them
+    appointments = [i for i, e in enumerate(events) if e.event_type == "appointment"]
+    if len(appointments) >= 2:
+        for j in range(len(appointments) - 1):
+            idx_a = appointments[j]
+            idx_b = appointments[j + 1]
+            # Check if there is any termination/replacement between idx_a and idx_b
+            between = [
+                e.event_type for e in events[idx_a + 1 : idx_b]
+                if e.event_type in ("termination", "replacement", "suspension", "role_transfer")
+            ]
+            if not between:
+                questions.append(ProposedQuestion(
+                    question_type="overlapping_roles",
+                    question_text=(
+                        "Two appointment events appear without a termination or replacement "
+                        "between them. Was the first appointment superseded, or do both "
+                        "appointments apply simultaneously?"
+                    ),
+                    event_indices=[idx_a, idx_b],
+                ))
+
+    # termination_without_replacement: termination is the last event in the log
+    termination_indices = [
+        i for i, e in enumerate(events)
+        if e.event_type in ("termination", "suspension")
+    ]
+    if termination_indices:
+        last_term = termination_indices[-1]
+        if last_term == len(events) - 1:
+            questions.append(ProposedQuestion(
+                question_type="termination_without_replacement",
+                question_text=(
+                    "The log ends with a termination or suspension event. "
+                    "Was this entity replaced, or did the role cease entirely?"
+                ),
+                event_indices=[last_term],
+            ))
+
+    return questions
+
+
+# ── Main entry point ──────────────────────────────────────────────────────────
+
+def consolidate_events(raw_events: list[RawEvent]) -> ConsolidatedEventLog:
+    """
+    Consolidate raw event extraction results.
+    Called by the API route after run_event_extraction() returns.
+    Zero LLM calls. Zero Supabase writes.
+    """
+    if not raw_events:
+        return ConsolidatedEventLog()
+
+    deduped = _dedup_events(raw_events)
+    sorted_events = _sort_events(deduped)
+
+    proposed: list[ProposedEvent] = []
+    for seq, raw in enumerate(sorted_events):
+        proposed.append(ProposedEvent(
+            event_type=raw.event_type,
+            event_date=raw.event_date,
+            event_date_certain=raw.event_date_certain,
+            status_before=raw.status_before,
+            status_after=raw.status_after,
+            initiated_by=raw.initiated_by,
+            authorised_by=raw.authorised_by,
+            source_document=raw.source_document,
+            source_excerpt=raw.source_excerpt,
+            sequence_number=seq,
+            chunk_index=raw.chunk_index,
+        ))
+
+    questions = _generate_questions(proposed)
+
+    return ConsolidatedEventLog(events=proposed, questions=questions)
