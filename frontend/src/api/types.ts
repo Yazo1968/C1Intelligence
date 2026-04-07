@@ -144,3 +144,56 @@ export interface ApiError {
   query_id?: string;
 }
 
+// =============================================================================
+// Governance — Function 1: Entity Directory
+// =============================================================================
+
+export interface EntityDirectoryRunResponse {
+  id: string;
+  project_id: string;
+  status: 'running' | 'awaiting_confirmation' | 'confirmed' | 'failed';
+  chunks_processed: number;
+  total_chunks: number;
+  organisations_found: number;
+  individuals_found: number;
+  error_message: string | null;
+}
+
+export interface EntityResponse {
+  id: string;
+  project_id: string;
+  run_id: string;
+  entity_type: 'organisation' | 'individual';
+  canonical_name: string;
+  name_variants: string[];
+  short_address: string | null;
+  title: string | null;
+  confirmation_status: 'proposed' | 'confirmed' | 'merged' | 'rejected';
+  user_note: string | null;
+}
+
+export interface EntityDiscrepancyResponse {
+  id: string;
+  project_id: string;
+  run_id: string;
+  discrepancy_type: 'name_variant' | 'possible_duplicate' | 'ambiguous_individual';
+  description: string;
+  name_a: string;
+  name_b: string | null;
+  chunk_references: string[];
+  resolution: string | null;
+  resolved_canonical: string | null;
+  user_note: string | null;
+}
+
+export interface PatchEntityRequest {
+  canonical_name?: string;
+  confirmation_status?: 'confirmed' | 'rejected';
+  user_note?: string;
+}
+
+export interface ResolveDiscrepancyRequest {
+  resolution: 'same_entity' | 'different_entities' | 'correction';
+  resolved_canonical?: string;
+  user_note?: string;
+}
