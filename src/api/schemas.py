@@ -207,3 +207,62 @@ class ResolveDiscrepancyRequest(BaseModel):
     resolved_canonical: str | None = None
     user_note: str | None = None
 
+
+# =============================================================================
+# Governance — Function 2: Event Log
+# =============================================================================
+
+class EventLogRunResponse(BaseModel):
+    id: str
+    project_id: str
+    entity_id: str
+    status: str
+    triggered_at: str
+    completed_at: str | None = None
+    chunks_scanned: int
+    events_extracted: int
+    error_message: str | None = None
+
+class EntityEventResponse(BaseModel):
+    id: str
+    project_id: str
+    entity_id: str
+    run_id: str
+    event_type: str
+    event_date: str | None = None
+    event_date_certain: bool
+    status_before: str | None = None
+    status_after: str | None = None
+    initiated_by: str | None = None
+    authorised_by: str | None = None
+    source_document: str | None = None
+    source_excerpt: str | None = None
+    confirmation_status: str
+    user_note: str | None = None
+    sequence_number: int
+
+class EventLogQuestionResponse(BaseModel):
+    id: str
+    project_id: str
+    run_id: str
+    entity_id: str
+    question_text: str
+    question_type: str
+    events_referenced: list[str]
+    answer: str | None = None
+    sequence_number: int
+
+class PatchEventRequest(BaseModel):
+    event_type: str | None = None
+    event_date: str | None = None
+    event_date_certain: bool | None = None
+    status_before: str | None = None
+    status_after: str | None = None
+    initiated_by: str | None = None
+    authorised_by: str | None = None
+    confirmation_status: str | None = None   # confirmed | disputed | rejected
+    user_note: str | None = None
+
+class AnswerQuestionRequest(BaseModel):
+    answer: str
+
