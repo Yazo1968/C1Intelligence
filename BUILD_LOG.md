@@ -1579,3 +1579,72 @@ Standalone task — does not block compliance agent or query pipeline.
 ### Database state
 21 migrations unchanged. Five new tables from Migration 021 all populated
 by the new governance runner.
+
+---
+
+## Session — Output Quality Fixes + Governance Redesign Decision
+
+**Date:** April 2026
+**Status:** COMPLETE
+
+### Output Quality Fixes
+
+Six issues identified from live query output inspection and fixed:
+
+1. Evidence Declaration block was rendering in client-facing response —
+   stripped in orchestrator.py before render.
+2. Consolidated Evidence Map was rendering in client-facing response —
+   removed from response, retained in audit log only.
+3. chunk_index references appearing in agent output — prohibition
+   strengthened in base_orchestrator.py system prompt.
+4. Agent narrating its own process ("I now have a complete evidential
+   picture") — meta-commentary ban added to system prompt.
+5. Technical layer labels (Layer 2b, Layer 1) visible to users —
+   reworded to plain professional English.
+6. Risk Register not appearing in assessments — MANDATORY instruction
+   added to all three orchestrator directives.
+7. Confidence capping to GREY when Particular Conditions embedded in
+   contract — grounding schema cap changed GREY→AMBER for all three
+   orchestrators.
+
+Commits: c8b25b6, 034d9ae, 913c713, cfef971, 5938a3e
+
+### Governance Feature Bug Fixes (v1 — now retired)
+
+- Interview status field names misaligned backend/frontend — fixed.
+- Party identity duplicates on re-run — dedup check added.
+- Run log stuck on "running" after Railway timeout — finally block added.
+- Authority events duplicated on double-trigger — dedup check added.
+- Governance status shadowed by newer running runs — precedence logic fixed.
+- Extract-events endpoint had no concurrency guard — 409 guard added.
+
+Commits: a303b5b, c4ec7cc, 5fa1735
+
+### Governance Redesign Decision
+
+Root cause analysis of governance extraction failures revealed a
+fundamental architectural flaw: single unbounded LLM call attempting
+to read all project documents and extract all authority events at once.
+Token limit failure at 208,529 tokens (200,000 limit) on a single
+one-document test project. Would fail catastrophically on real projects
+with hundreds of documents.
+
+Decision: obliterate v1 implementation completely and redesign from
+first principles, guided by domain expertise.
+
+New design approved:
+- Function 1: batch chunk processing to identify entity names only —
+  no roles, no scope, no relationships. User confirms.
+- Function 2: per-entity event extraction using fulltext search on
+  confirmed entity names. Batch processing. User confirms.
+- Maps exactly to how a construction lawyer builds an authority register.
+- Scales to any project size — token usage bounded per call regardless
+  of warehouse size.
+
+Design document: docs/C1_GOVERNANCE_REDESIGN.md
+Old design archived: docs/archive/C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md
+
+### Platform state at session close
+HEAD: 5fa1735
+21 migrations (001–021)
+Next: Migration 022 — governance redesign Phase 0

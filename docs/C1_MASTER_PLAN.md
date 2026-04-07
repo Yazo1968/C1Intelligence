@@ -462,29 +462,20 @@ Phase 6:  18e29c7 (+ 6.2 and 6.3 commits to follow)
 
 ---
 
-## Governance Authority Log — Active Workstream
+## Governance Feature — Redesigned
 
-**Status:** Design approved — ready for execution
-**Design document:** `docs/C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md`
-**Migration 021:** Applied — five new tables (party_identities, party_roles,
-authority_events, assumption_register, reconciliation_questions).
-Prototype tables governance_parties and governance_events dropped.
+**Status:** Previous implementation superseded. Clean-slate redesign
+approved April 2026.
+**Design document:** docs/C1_GOVERNANCE_REDESIGN.md
+**Next task:** Phase 0 — obliterate all old governance code, tables,
+and files per the redesign document Section 2.
 
-**Build sequence (9 phases):**
-Phase 0: Housekeeping — dead code removal ✅ this session
-Phase 1: Migration 021 ✅ applied directly via Supabase MCP
-Phase 2: governance_runner.py Phase 1 rewrite ✅ commit 1250038
-Phase 3: Reconciliation interview backend ✅ commits 680638b, e28a7ed
-Phase 4: Reconciliation interview frontend ✅ commits d7aa392, 5cf1262
-Phase 5: governance_runner.py Phase 2 rewrite ✅ commit 95bc27c
-Phase 6: Compliance agent integration ✅ commit 7a8726b
-Phase 7: skill_loader rewrite ✅ commit de445da
-Phase 8: Frontend authority log display — deferred (placeholder in GovernancePanel)
-Phase 9: Governing documents ✅ commits 0e4e0d7 + this session
+The v1 implementation (Phases 0–9, commits 1250038 through 5fa1735)
+is retired. The architecture was fundamentally flawed:
+single unbounded LLM call for event extraction, token limit failures
+on real projects, incorrect unit of work. The redesign addresses
+these at the architectural level.
 
-**Prep work completed this session:**
-- Migration 021 applied
-- docs archived: C1_AGGREGATION_INTEGRITY_PLAN_v2.md,
-  C1_GOVERNANCE_EXECUTION_PLAN.md, C1_Orchestrators_and_SMEs_enhancement.md
-- Dead code removed: src/agents/specialists/, Procfile, risk_mode parameter
-- Active docs: C1_MASTER_PLAN.md, C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md
+See docs/C1_GOVERNANCE_REDESIGN.md for the complete specification.
+See docs/archive/C1_GOVERNANCE_AUTHORITY_LOG_DESIGN.md for the
+retired v1 design.

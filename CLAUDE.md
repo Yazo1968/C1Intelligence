@@ -89,6 +89,10 @@ API Engineer, Quality Guardian.
 platform work. Read this to understand what is in progress and what comes next.
 All previous plan documents are superseded.
 
+**`docs/C1_GOVERNANCE_REDESIGN.md`** — Active workstream.
+Clean-slate governance redesign. Phase 0 (obliteration) is next.
+Previous implementation superseded in full.
+
 ---
 
 ## Repository and Infrastructure
@@ -125,19 +129,12 @@ Read this skill before building or rebuilding any file under `skills/`.
 Routing coverage check (chunk-domain keyword alignment — deterministic, no LLM). SME invocation trace (tools_called records invoke_sme:{domain} — deterministic). Raw SME output preservation (captured in agentic loop before synthesis). Evidence Auditor (run_evidence_audit() — zero API calls, reads only pre-recorded deterministic data). Consolidated Evidence Map in every response (built from sources_used, tools_called, raw_sme_outputs, and evidence_record — not from agent self-reporting).
 Design principle: every integrity check reads deterministic system state. No integrity layer asks an agent to audit itself.
 
-**Governance Authority Log (three-level model):**
-Level 1 — party_identities: legal identity register, one record per legal
-entity, party_category taxonomy (27 categories), is_internal flag.
-Level 2 — party_roles: one record per role per party, multi-role per party
-supported, appointment_status (proposed/pending/executed).
-Level 3 — authority_events: chronological authority event log, 10 event
-types, initiated_by and authorised_by actor fields, missing_action for
-pending/proposed events.
-Supporting tables: assumption_register (user declarations with provenance),
-reconciliation_questions (interview record).
-get_party_authority() tool: deterministic, zero LLM calls, reads
-authority_events chronologically to return a party's authority position
-at any given date. Called by Compliance SME before any authority assessment.
+**Governance Feature:**
+Under redesign. Design document: docs/C1_GOVERNANCE_REDESIGN.md.
+The previous three-level model (party_identities, party_roles,
+authority_events) is superseded. Migration 022 will obliterate
+the old tables and create the new schema.
+Active workstream: Phase 0 — obliteration and clean-slate build.
 
 **Domains:**
 - Legal & Contractual SME: 7 skills (contract_assembly,
@@ -192,16 +189,17 @@ removed — risk output is built into every orchestrator response.
 - 014: `round_number` in `query_log`
 - 015: `SET search_path` on all 5 RPC functions
 - 016: HNSW halfvec(3072) indexes on `document_chunks` and `reference_chunks`
-- 017: `evidence_records` column on `query_log`; EvidenceRecord schema enforcement
-- 018: `governance_run_log` table (retained from prototype)
+- 017: `evidence_records` column on `query_log`; EvidenceRecord schema
+- 018: `governance_run_log` table
 - 021: `party_identities`, `party_roles`, `authority_events`,
-  `assumption_register`, `reconciliation_questions` tables created.
-  Prototype tables `governance_parties` and `governance_events` dropped.
+  `assumption_register`, `reconciliation_questions`
+  (all superseded — to be dropped in Migration 022)
 
-**18 tables** including `query_jobs`, `reference_documents` (with `layer_type`
-2a/2b + `jurisdiction` columns), `contradiction_flags`, `governance_run_log`,
-`party_identities`, `party_roles`, `authority_events`, `assumption_register`,
-`reconciliation_questions`.
+**Next migration: 022 — governance redesign**
+Drops all old governance tables. Creates new schema:
+`entity_directory_runs`, `entities`, `entity_discrepancies`,
+`event_log_runs`, `entity_events`, `event_log_questions`.
+See `docs/C1_GOVERNANCE_REDESIGN.md` for full specification.
 
 **4 RPC functions:** `search_chunks_semantic`, `search_chunks_fulltext`,
 `search_chunks_reference_semantic`, `search_chunks_reference_fulltext`
