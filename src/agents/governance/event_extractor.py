@@ -23,6 +23,46 @@ logger = logging.getLogger(__name__)
 BATCH_SIZE = 30
 FULLTEXT_CHUNK_LIMIT = 10_000   # retrieve all matching chunks — no cap
 
+_STOPWORDS = frozenset({"and", "the", "for", "of", "in", "at", "to", "a", "an"})
+_SKIP_SUFFIXES = frozenset({"llc", "ltd", "llp", "inc", "co", "corp", "pjsc",
+                             "est", "group", "holding", "holdings"})
+
+def _build_search_terms(entity: EntityInput) -> list[str]:
+    """
+    Build deduplicated ILIKE search terms from entity canonical name and variants.
+    For each full name, also generates a short-form term (the first meaningful
+    word >= 4 chars) to catch abbreviated mentions in documents.
+    """
+    all_names = [entity.canonical_name] + (entity.name_variants or [])
+    terms: list[str] = []
+    seen: set[str] = set()
+
+    for name in all_names:
+        name = name.strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key not in seen:
+            seen.add(key)
+            terms.append(name)
+
+        # Generate short-form: first word that is meaningful (>= 4 chars,
+        # not a stopword or legal suffix)
+        words = name.split()
+        for word in words:
+            clean = word.strip(".,;:()'\"").lower()
+            if (
+                len(clean) >= 4
+                and clean not in _STOPWORDS
+                and clean not in _SKIP_SUFFIXES
+            ):
+                if clean not in seen:
+                    seen.add(clean)
+                    terms.append(word.strip(".,;:()'\""))
+                break   # only first meaningful word per name
+
+    return terms
+
 
 # ── Input / output dataclasses ────────────────────────────────────────────────
 
@@ -124,34 +164,26 @@ def run_event_extraction(entity: EntityInput) -> EventExtractionResult:
     supabase = get_supabase_client()
     anthropic = get_anthropic_client()
 
-    # 1. Build search terms: canonical name + all variants
-    search_terms = [entity.canonical_name] + entity.name_variants
-    # Deduplicate while preserving order
-    seen: set[str] = set()
-    unique_terms: list[str] = []
-    for term in search_terms:
-        normalised = term.strip().lower()
-        if normalised and normalised not in seen:
-            seen.add(normalised)
-            unique_terms.append(term.strip())
+    # 2. Build search terms and find all matching chunks via ILIKE.
+    # ILIKE substring matching is used instead of tsquery because entity names
+    # are proper nouns — AND-logic tsquery misses abbreviated mentions.
+    search_terms = _build_search_terms(entity)
 
-    # 2. Search chunks for each term, collect unique chunk IDs
     chunk_map: dict[str, dict] = {}   # chunk_id → chunk row
-    for term in unique_terms:
+    for term in search_terms:
         try:
-            resp = supabase.rpc(
-                "search_chunks_fulltext",
-                {
-                    "p_project_id": entity.project_id,
-                    "p_query_text": term,
-                    "p_top_k": FULLTEXT_CHUNK_LIMIT,
-                },
-            ).execute()
+            resp = (
+                supabase.table("document_chunks")
+                .select("id, content, chunk_index, document_id")
+                .eq("project_id", entity.project_id)
+                .ilike("content", f"%{term}%")
+                .execute()
+            )
             for row in (resp.data or []):
                 chunk_map[row["id"]] = row
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                "Fulltext search failed for term '%s': %s", term, exc
+                "ILIKE search failed for term '%s': %s", term, exc
             )
 
     if not chunk_map:
