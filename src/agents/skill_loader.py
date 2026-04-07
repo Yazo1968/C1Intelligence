@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from src.clients import get_supabase_client
 from src.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -31,6 +32,52 @@ PLAYBOOKS_DIR: Path = REPO_ROOT / "playbooks"
 class SkillLoader:
     """Loads domain skill files and project playbooks into a system prompt."""
 
+    def _generate_project_context(self) -> str:
+        """
+        Generate a brief project context string from the confirmed Entity Directory.
+        Injected into the skill file system prompt to give agents awareness of
+        confirmed parties without any role inference.
+
+        Returns an empty string if the Entity Directory has not been built or
+        confirmed for this project. Never raises — agents must function without
+        governance data.
+        """
+        try:
+            supabase = get_supabase_client()
+            resp = (
+                supabase.table("entities")
+                .select("entity_type, canonical_name, title")
+                .eq("project_id", self._project_id)
+                .eq("confirmation_status", "confirmed")
+                .order("entity_type")
+                .order("canonical_name")
+                .execute()
+            )
+            entities = resp.data or []
+            if not entities:
+                return ""
+
+            orgs = [e["canonical_name"] for e in entities if e["entity_type"] == "organisation"]
+            inds = [
+                f"{e['title']} {e['canonical_name']}".strip() if e.get("title") else e["canonical_name"]
+                for e in entities if e["entity_type"] == "individual"
+            ]
+
+            lines: list[str] = ["CONFIRMED PROJECT ENTITIES (from Entity Directory):"]
+            if orgs:
+                lines.append("Organisations: " + ", ".join(orgs))
+            if inds:
+                lines.append("Individuals: " + ", ".join(inds))
+            lines.append(
+                "Note: These names are confirmed from project documents. "
+                "No roles or authority positions are implied — consult the "
+                "get_entity_authority tool for authority at a specific date."
+            )
+            return "\n".join(lines)
+
+        except Exception:  # noqa: BLE001
+            return ""
+
     def load(self, domain: str, project_id: str) -> str:
         """
         Load all skill files for a domain and the project playbook.
@@ -43,6 +90,7 @@ class SkillLoader:
             Concatenated markdown content with section headers.
             Empty string if no skill files or playbook found.
         """
+        self._project_id = project_id
         sections: list[str] = []
 
         # --- Layer 1: Domain skill files ---
@@ -114,7 +162,12 @@ class SkillLoader:
                     project_id=project_id,
                     error=str(exc),
                 )
-        return "\n\n".join(sections)
+
+        system_prompt = "\n\n".join(sections)
+        project_context = self._generate_project_context()
+        if project_context:
+            system_prompt = system_prompt + "\n\n" + project_context
+        return system_prompt
 
     def load_grounding_schema(self, domain: str) -> dict | None:
         """
