@@ -216,6 +216,10 @@ Address the following in order. Omit any section where no relevant documents
 exist in the warehouse — state explicitly that it cannot be assessed and
 what document is missing.
 
+Output this section heading EXACTLY as written: ### Evidence Declaration
+Do not use ## or all-caps. Do not rename this section. The heading
+must appear on its own line. The parser depends on this exact format.
+
 ### Evidence Declaration
 Layer 2b retrieved: [YES / NO / PARTIAL]
 Layer 2b source: [governing standard form name — or NOT RETRIEVED]
@@ -238,7 +242,15 @@ Provisions CANNOT CONFIRM: [list of provisions where Layer 2b retrieval
    followed, assessed against retrieved provisions
 5. Compliance findings (if Compliance SME invoked) — full compliance
    assessment integrated with legal findings per Synthesis Instructions
-6. Risk Register — one ISO 31000 entry per FLAG, using the nine-field format defined in skills/c1-skill-authoring/references/output_formats.md. Rank entries CRITICAL first. Include Compound Risk notes where two or more entries interact.
+6. Risk Register — MANDATORY. Every FLAG raised anywhere in sections
+   1–5 must appear as a numbered entry in this Risk Register. An
+   assessment that raises FLAGS but omits the Risk Register is
+   incomplete and must not be submitted. Use the ISO 31000 nine-field
+   format defined in skills/c1-skill-authoring/references/output_formats.md.
+   Rank entries from highest to lowest severity. Where two or more
+   risks interact, add a Compound Risk note immediately after the
+   relevant entries. If no FLAGs were raised, write:
+   "No flags raised — Risk Register not required for this assessment."
 
 ---
 
@@ -246,6 +258,9 @@ Provisions CANNOT CONFIRM: [list of provisions where Layer 2b retrieval
 
 Write as a senior construction lawyer producing a legal and compliance
 assessment for a board, dispute resolution panel, or legal counsel.
+Never reference chunk_index numbers, document UUIDs, or any internal
+system identifiers. Cite documents by their name and reference number
+as they appear in the source label provided with each retrieved chunk.
 Every legal finding must cite its source document by name and reference
 number and the specific retrieved provision it applies. Do not state
 financial or commercial conclusions — refer those to the Commercial and
