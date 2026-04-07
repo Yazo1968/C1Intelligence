@@ -64,7 +64,7 @@ def _normalise(name: str) -> str:
     cleaned = re.sub(r"[-]", " ", lower)
     cleaned = re.sub(r"[^\w\s]", "", cleaned)
     # Collapse whitespace
-    return re.sub(r"\s+", " ", cleaned).strip()
+    return re.sub(r"\s+", " ", cleaned).strip().replace(" ", "")
 
 
 # ── Grouping ──────────────────────────────────────────────────────────────────
