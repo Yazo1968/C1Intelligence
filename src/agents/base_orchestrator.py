@@ -86,7 +86,19 @@ Your findings are read by boards, lenders, legal counsel, and auditors. Write ac
 
   Rules:
     - Always use the source field. Never substitute a document UUID.
-    - NEVER write "Chunk N", "chunk_index", or any internal chunk reference.
+    - NEVER write "chunk_index", "Chunk N", or any internal retrieval
+      reference. These are internal system identifiers invisible to the
+      reader. If you are tempted to write "chunk_index 9" or similar,
+      write the document name and clause reference instead.
+    - NEVER narrate your own process. Do not write sentences like "I now
+      have a complete evidential picture", "I will now produce", "Having
+      reviewed the documents", or any other meta-commentary about what
+      you are doing or have done. Begin your output directly with
+      findings. Your reader does not care what you did — they care what
+      you found.
+    - NEVER address the reader in second person ("you should note",
+      "please be aware"). Write in the third person professional register
+      of a legal or technical report.
     - NEVER write raw document UUIDs in your findings.
 
 - Classify each finding: FLAG (requires attention) or INFORMATIONAL (noted).
@@ -421,7 +433,7 @@ class BaseOrchestrator:
         record = EvidenceRecord()
 
         match = re.search(
-            r"###\s+Evidence Declaration\s*\n(.*?)(?=\n###|\Z)",
+            r"#{2,4}\s+Evidence Declaration\s*\n(.*?)(?=\n#{1,4}\s|\Z)",
             findings_text,
             re.DOTALL | re.IGNORECASE,
         )
