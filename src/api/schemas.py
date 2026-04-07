@@ -158,3 +158,52 @@ class HealthResponse(BaseModel):
     status: str = "ok"
 
 
+# =============================================================================
+# Governance — Function 1: Entity Directory
+# =============================================================================
+
+class EntityDirectoryRunResponse(BaseModel):
+    id: str
+    project_id: str
+    status: str
+    chunks_processed: int
+    total_chunks: int
+    organisations_found: int
+    individuals_found: int
+    error_message: str | None = None
+
+class EntityResponse(BaseModel):
+    id: str
+    project_id: str
+    run_id: str
+    entity_type: str
+    canonical_name: str
+    name_variants: list[str]
+    short_address: str | None = None
+    title: str | None = None
+    confirmation_status: str
+    user_note: str | None = None
+
+class EntityDiscrepancyResponse(BaseModel):
+    id: str
+    project_id: str
+    run_id: str
+    discrepancy_type: str
+    description: str
+    name_a: str
+    name_b: str | None = None
+    chunk_references: list[str]
+    resolution: str | None = None
+    resolved_canonical: str | None = None
+    user_note: str | None = None
+
+class PatchEntityRequest(BaseModel):
+    canonical_name: str | None = None
+    confirmation_status: str | None = None   # confirmed | rejected
+    user_note: str | None = None
+
+class ResolveDiscrepancyRequest(BaseModel):
+    resolution: str                          # same_entity | different_entities | correction
+    resolved_canonical: str | None = None
+    user_note: str | None = None
+
