@@ -530,7 +530,6 @@ async def confirm_directory(
     _require_project(project_id, user_id)
     supabase = get_supabase_client()
 
-    # Guard: unresolved discrepancies must all be resolved first
     run_resp = (
         supabase.table("entity_directory_runs")
         .select("id")
@@ -547,21 +546,6 @@ async def confirm_directory(
                     "message": "No directory run found."},
         )
     run_id = run_resp.data["id"]
-
-    unresolved = (
-        supabase.table("entity_discrepancies")
-        .select("id", count="exact")
-        .eq("project_id", project_id)
-        .eq("run_id", run_id)
-        .is_("resolution", "null")
-        .execute()
-    )
-    if unresolved.count and unresolved.count > 0:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"error_code": "UNRESOLVED_DISCREPANCIES",
-                    "message": f"{unresolved.count} discrepancies must be resolved before confirming."},
-        )
 
     # Guard: at least one confirmed entity
     confirmed = (
