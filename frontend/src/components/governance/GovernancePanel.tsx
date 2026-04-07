@@ -601,7 +601,9 @@ function EntityConsolidationCard({
             <div className="flex items-center gap-2">
               {isConfirmed && <span className="text-emerald-500 text-xs shrink-0">✓</span>}
               <p className={`text-sm font-semibold text-gray-900 ${isRejected ? 'line-through' : ''}`}>
-                {entity.title ? `${entity.title} ` : ''}{entity.canonical_name}
+                {entity.title && !entity.canonical_name.startsWith(entity.title)
+                ? `${entity.title} `
+                : ''}{entity.canonical_name}
               </p>
             </div>
           )}
