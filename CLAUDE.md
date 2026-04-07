@@ -137,6 +137,9 @@ Function 2 — Event Log: per-entity fulltext search, event extraction,
 consolidation, question generation, user confirmation.
 `get_entity_authority(entity_name, date)` tool available to all agents.
 Reads confirmed `entities` and `entity_events` tables. Deterministic, zero LLM calls.
+Entity extraction is two-stage: Stage 1 (`extracting`) writes raw names
+to `entity_raw_extractions` after every batch; Stage 2 (`consolidating`)
+reads staging, groups variants, writes to `entities`.
 
 **Domains:**
 - Legal & Contractual SME: 7 skills (contract_assembly,
@@ -187,7 +190,7 @@ removed — risk output is built into every orchestrator response.
 
 ## Database State
 
-**22 migrations applied (001–022):**
+**23 migrations applied (001–023):**
 - 014: `round_number` in `query_log`
 - 015: `SET search_path` on all 5 RPC functions
 - 016: HNSW halfvec(3072) indexes on `document_chunks` and `reference_chunks`
@@ -197,6 +200,7 @@ removed — risk output is built into every orchestrator response.
 - 022: governance redesign — 8 old tables dropped, 6 new tables created
   (`entity_directory_runs`, `entities`, `entity_discrepancies`,
   `event_log_runs`, `entity_events`, `event_log_questions`)
+- 023: `entity_raw_extractions` staging table for two-stage entity extraction
 
 **4 RPC functions:** `search_chunks_semantic`, `search_chunks_fulltext`,
 `search_chunks_reference_semantic`, `search_chunks_reference_fulltext`

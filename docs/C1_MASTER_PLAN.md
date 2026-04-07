@@ -474,7 +474,8 @@ Phase 6:  18e29c7 (+ 6.2 and 6.3 commits to follow)
 - Phase 4 (Function 2 Frontend): COMPLETE
 - Phase 5 (Compliance Agent Integration): COMPLETE
 
-**Active workstream:** NONE — platform at stable state pending next initiative.
+**Active workstream:** Two-stage extraction complete (Migration 023 + Tasks A–F).
+Platform at stable state. No active workstream.
 
 The v1 implementation (Phases 0–9, commits 1250038 through 5fa1735)
 was retired. The architecture was fundamentally flawed:

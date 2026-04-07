@@ -1711,3 +1711,33 @@ Clean-slate obliteration of v1 governance and complete rebuild.
 - `get_entity_authority` tool available to all agents
 - `_generate_project_context()` injects confirmed entity names into agent system prompts
 - HEAD: `9ece625`
+
+---
+
+## Session: Two-Stage Entity Extraction
+**Date:** April 2026
+**Strategic Partner:** Claude (chat)
+**Execution Agent:** Claude Code
+
+### Objective
+Redesign Function 1 (Entity Directory) extraction from single-pass in-memory
+accumulation to a two-stage progressive model. Entity names now written to DB
+after every batch (Stage 1), giving live progress to the user. Consolidation
+runs as a separate Stage 2 after all batches complete.
+
+### Tasks
+- A `dff56ca` — Migration 023: `entity_raw_extractions` staging table
+- B `3cf5bda` — `entity_extractor.py` rebuilt: takes run_id, writes each batch to DB
+- C `059f813` — `consolidate_from_db()` added to consolidator: reads staging table
+- D `111d028` — Background task orchestrates two stages; statuses `extracting` + `consolidating`
+- E `ebfdade` — Frontend: widened status union, progress UI for both new states
+- Fix `5a8ed51` — useEffect polling resumes on page reload during extracting/consolidating
+
+### End state
+- 23 migrations (001–023)
+- `entity_raw_extractions` live in Supabase
+- Stage 1 status: `extracting` — batches write to DB, live counts update every 5s
+- Stage 2 status: `consolidating` — reads staging, groups variants, writes entities
+- Frontend shows live "N orgs, N individuals found so far" during extraction
+- Page reload mid-extraction resumes polling correctly
+- HEAD: `5a8ed51`
