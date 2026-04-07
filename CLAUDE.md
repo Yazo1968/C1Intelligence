@@ -144,6 +144,10 @@ Entity consolidation (B-Review state): drag-drop board. Drag one entity
 card onto another to absorb it. Source canonical name + variants are merged
 into target name_variants. Source marked 'merged'. No discrepancy resolution
 flow — visual merge only.
+Manual alias editing: AliasEditor on each entity card in both B-Review
+and State C. User can add any alias (e.g. nominated party reference numbers,
+short names) and remove existing variants. PATCH /directory/entities/{id}
+accepts name_variants as a full replacement array.
 
 **Domains:**
 - Legal & Contractual SME: 7 skills (contract_assembly,

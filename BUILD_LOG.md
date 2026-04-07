@@ -1776,3 +1776,27 @@ ALBA TEC / ALBATEC to appear as separate entities.
   source marked 'merged' and disappears from list
 - entity_discrepancies table retained as audit trail, no longer surfaced in UI
 - HEAD: `9ed148f`
+
+---
+
+## Session: Event Extraction Fixes + Manual Alias Editor
+**Date:** April 2026
+**Strategic Partner:** Claude (chat)
+**Execution Agent:** Claude Code
+
+### Fixes
+- `1df58fe` — ILIKE substring search replaces tsquery AND-logic in event_extractor.py.
+  Added _build_search_terms() generating full name + short-form per variant.
+  Resolves zero-chunks-scanned on all entities.
+- `eadfca1` — Removed discrepancy guard from confirm_directory (orphaned from old model)
+- `bf70e47` — API client: extract message from FastAPI detail object (fixes [object Object])
+- `8a07f1a` — Normalise strips spaces: ALBA TEC and ALBATEC now group correctly
+- `756e0ae` / `3d5a5bf` — Title dedup fix in StateCEntitySection and EntityConsolidationCard
+
+### Features
+- G1 `d8e69b2` — absorb endpoint: merges source entity into target
+- G2 `9ed148f` — Drag-drop EntityConsolidationBoard replaces B-Review discrepancy model
+- H1 `d69d8a4` — name_variants added to PatchEntityRequest (backend)
+- H2 `a9cbf2c` — AliasEditor on entity cards: add/remove aliases manually in both B-Review and State C
+
+### Head: `a9cbf2c`
