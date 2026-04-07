@@ -121,6 +121,43 @@ TOOL_DEFINITIONS: list[dict] = [
             "required": ["document_type"],
         },
     },
+    {
+        "name": "get_entity_authority",
+        "description": (
+            "Look up the confirmed authority position of a named entity at a "
+            "specific date. Returns the entity's current status and the chain "
+            "of confirmed events that led to it. "
+            "Use this when you need to determine what authority or standing a "
+            "party held at a given point in time — e.g., was the Engineer "
+            "appointed at the date of an instruction? Was the Contractor's "
+            "authority still in effect at the date of a claim? "
+            "Only works if the Entity Directory has been built and confirmed "
+            "for this project. Returns 'no_data' if the directory is not built "
+            "or if the entity is not found."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "entity_name": {
+                    "type": "string",
+                    "description": (
+                        "The name of the organisation or individual to look up. "
+                        "Use the name as it appears in the project documents — "
+                        "the tool will match against canonical names and known variants."
+                    ),
+                },
+                "date": {
+                    "type": "string",
+                    "description": (
+                        "The date at which to assess authority. Format: YYYY-MM-DD. "
+                        "The tool returns the entity's position as of this date "
+                        "based on all confirmed events up to and including this date."
+                    ),
+                },
+            },
+            "required": ["entity_name", "date"],
+        },
+    },
 ]
 
 ORCHESTRATOR_TOOL_DEFINITIONS: list[dict] = TOOL_DEFINITIONS + [
@@ -583,6 +620,149 @@ def _execute_invoke_sme(tool_input: dict, project_id: str) -> dict:
     }
 
 
+def _execute_get_entity_authority(tool_input: dict, project_id: str) -> dict:
+    """
+    Look up the confirmed authority position of a named entity at a given date.
+    Deterministic. Zero LLM calls. Reads only confirmed records.
+
+    Steps:
+    1. Find entity by canonical_name or name_variants match (case-insensitive).
+    2. Read all confirmed events up to and including the given date,
+       ordered by event_date + sequence_number.
+    3. Return the most recent status_after as the current authority position,
+       plus the full event chain.
+    """
+    import datetime as _dt
+
+    entity_name: str = tool_input.get("entity_name", "").strip()
+    date_str: str = tool_input.get("date", "").strip()
+
+    if not entity_name or not date_str:
+        return {
+            "found": False,
+            "reason": "entity_name and date are required.",
+        }
+
+    try:
+        _dt.date.fromisoformat(date_str)
+    except ValueError:
+        return {
+            "found": False,
+            "reason": f"Invalid date format: '{date_str}'. Use YYYY-MM-DD.",
+        }
+
+    supabase = get_supabase_client()
+
+    # 1. Find entity — canonical_name match first (case-insensitive via ilike)
+    entity_resp = (
+        supabase.table("entities")
+        .select("id, canonical_name, name_variants, entity_type, confirmation_status")
+        .eq("project_id", project_id)
+        .eq("confirmation_status", "confirmed")
+        .ilike("canonical_name", entity_name)
+        .limit(1)
+        .maybe_single()
+        .execute()
+    )
+    entity = entity_resp.data
+
+    # 2. If not found by canonical_name, try name_variants
+    if not entity:
+        # name_variants is a text[]. Use the contains operator via Supabase:
+        # filter: name_variants @> ARRAY[entity_name]
+        # Supabase Python client: use .contains()
+        variants_resp = (
+            supabase.table("entities")
+            .select("id, canonical_name, name_variants, entity_type, confirmation_status")
+            .eq("project_id", project_id)
+            .eq("confirmation_status", "confirmed")
+            .contains("name_variants", [entity_name])
+            .limit(1)
+            .maybe_single()
+            .execute()
+        )
+        entity = variants_resp.data
+
+    if not entity:
+        return {
+            "found": False,
+            "entity_name": entity_name,
+            "reason": (
+                f"No confirmed entity matching '{entity_name}' found in the "
+                "Entity Directory for this project. Either the entity does not "
+                "exist, the directory has not been built, or the name does not "
+                "match any canonical name or known variant."
+            ),
+        }
+
+    entity_id: str = entity["id"]
+    canonical: str = entity["canonical_name"]
+
+    # 3. Fetch confirmed events up to and including the given date
+    events_resp = (
+        supabase.table("entity_events")
+        .select(
+            "event_type, event_date, event_date_certain, "
+            "status_before, status_after, initiated_by, authorised_by, "
+            "source_document, sequence_number"
+        )
+        .eq("project_id", project_id)
+        .eq("entity_id", entity_id)
+        .eq("confirmation_status", "confirmed")
+        .lte("event_date", date_str)
+        .order("event_date", desc=False)
+        .order("sequence_number", desc=False)
+        .execute()
+    )
+    events = events_resp.data or []
+
+    if not events:
+        return {
+            "found": True,
+            "entity_name": canonical,
+            "entity_type": entity["entity_type"],
+            "authority_at_date": date_str,
+            "current_status": None,
+            "event_count": 0,
+            "event_chain": [],
+            "note": (
+                "No confirmed authority events found for this entity on or "
+                "before the specified date. The entity is in the directory "
+                "but has no recorded events at this point in time."
+            ),
+        }
+
+    latest = events[-1]
+    current_status = latest.get("status_after")
+
+    # Flag if any event in the chain is missing a date (uncertainty warning)
+    has_uncertain_dates = any(
+        not e.get("event_date_certain", True) for e in events
+    )
+
+    return {
+        "found": True,
+        "entity_name": canonical,
+        "entity_type": entity["entity_type"],
+        "authority_at_date": date_str,
+        "current_status": current_status,
+        "event_count": len(events),
+        "has_uncertain_dates": has_uncertain_dates,
+        "event_chain": [
+            {
+                "event_type": e.get("event_type"),
+                "event_date": e.get("event_date"),
+                "event_date_certain": e.get("event_date_certain", True),
+                "status_after": e.get("status_after"),
+                "initiated_by": e.get("initiated_by"),
+                "authorised_by": e.get("authorised_by"),
+                "source_document": e.get("source_document"),
+            }
+            for e in events
+        ],
+    }
+
+
 # =============================================================================
 # Tool Dispatcher
 # =============================================================================
@@ -592,6 +772,7 @@ _TOOL_EXECUTORS: dict[str, Callable] = {
     "get_document": _execute_get_document,
     "get_contradictions": _execute_get_contradictions,
     "get_related_documents": _execute_get_related_documents,
+    "get_entity_authority": _execute_get_entity_authority,
     "invoke_sme": _execute_invoke_sme,
 }
 
