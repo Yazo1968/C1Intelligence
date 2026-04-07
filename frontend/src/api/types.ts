@@ -197,3 +197,72 @@ export interface ResolveDiscrepancyRequest {
   resolved_canonical?: string;
   user_note?: string;
 }
+
+// =============================================================================
+// Governance — Function 2: Event Log
+// =============================================================================
+
+export interface EventLogRunResponse {
+  id: string;
+  project_id: string;
+  entity_id: string;
+  status: 'running' | 'awaiting_confirmation' | 'confirmed' | 'failed';
+  triggered_at: string;
+  completed_at: string | null;
+  chunks_scanned: number;
+  events_extracted: number;
+  error_message: string | null;
+}
+
+export interface EntityEventResponse {
+  id: string;
+  project_id: string;
+  entity_id: string;
+  run_id: string;
+  event_type: string;
+  event_date: string | null;
+  event_date_certain: boolean;
+  status_before: string | null;
+  status_after: string | null;
+  initiated_by: string | null;
+  authorised_by: string | null;
+  source_document: string | null;
+  source_excerpt: string | null;
+  confirmation_status: 'proposed' | 'confirmed' | 'disputed' | 'rejected';
+  user_note: string | null;
+  sequence_number: number;
+}
+
+export interface EventLogQuestionResponse {
+  id: string;
+  project_id: string;
+  run_id: string;
+  entity_id: string;
+  question_text: string;
+  question_type:
+    | 'date_conflict'
+    | 'missing_authorisation'
+    | 'overlapping_roles'
+    | 'termination_without_replacement'
+    | 'gap_in_timeline'
+    | 'ambiguous_event';
+  events_referenced: string[];
+  answer: string | null;
+  sequence_number: number;
+}
+
+export interface PatchEventRequest {
+  event_type?: string;
+  event_date?: string;
+  event_date_certain?: boolean;
+  status_before?: string;
+  status_after?: string;
+  initiated_by?: string;
+  authorised_by?: string;
+  confirmation_status?: 'confirmed' | 'disputed' | 'rejected';
+  user_note?: string;
+}
+
+export interface AnswerQuestionRequest {
+  answer: string;
+}
