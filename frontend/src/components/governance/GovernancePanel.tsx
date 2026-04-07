@@ -703,7 +703,9 @@ function StateCEntitySection({
                 >
                   <div>
                     <p className="text-sm font-medium text-gray-900">
-                      {entity.title ? `${entity.title} ` : ''}{entity.canonical_name}
+                      {entity.title && !entity.canonical_name.startsWith(entity.title)
+                        ? `${entity.title} `
+                        : ''}{entity.canonical_name}
                     </p>
                     {entity.short_address && (
                       <p className="text-xs text-gray-400">{entity.short_address}</p>
