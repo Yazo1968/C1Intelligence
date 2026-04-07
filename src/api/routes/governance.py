@@ -117,13 +117,12 @@ async def get_governance_status(
     supabase = get_supabase_client()
     _verify_project_access(supabase, project_id, user_id)
 
-    # Get the most recent completed run
+    # Fetch most recent run of any status
     try:
-        run_result = (
+        latest_any = (
             supabase.table("governance_run_log")
-            .select("id, triggered_at, status")
+            .select("id, status, triggered_at")
             .eq("project_id", str(project_id))
-            .eq("status", "complete")
             .order("triggered_at", desc=True)
             .limit(1)
             .execute()
@@ -136,83 +135,59 @@ async def get_governance_status(
             message=f"Failed to retrieve governance status: {exc}",
         )
 
-    if not run_result.data:
-        # Check for parties_identified run (Phase 1 complete, awaiting confirmation)
+    # Fetch most recent complete run
+    try:
+        latest_complete = (
+            supabase.table("governance_run_log")
+            .select("id, triggered_at, status")
+            .eq("project_id", str(project_id))
+            .eq("status", "complete")
+            .order("triggered_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("governance_status_complete_fetch_failed", project_id=str(project_id), error=str(exc))
+        return error_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error_code="GOVERNANCE_STATUS_FAILED",
+            message=f"Failed to retrieve governance status: {exc}",
+        )
+
+    latest = latest_any.data[0] if latest_any.data else None
+    complete = latest_complete.data[0] if latest_complete.data else None
+
+    # If a complete run exists, use it as baseline for established/stale
+    # regardless of what newer runs are doing
+    if complete:
+        last_run_at = complete["triggered_at"]
+        last_run_id = uuid.UUID(complete["id"])
+        # Check stale: documents ingested after the last complete run
         try:
-            parties_run_result = (
-                supabase.table("governance_run_log")
-                .select("id, triggered_at")
+            docs_result = (
+                supabase.table("documents")
+                .select("id")
                 .eq("project_id", str(project_id))
-                .eq("status", "parties_identified")
-                .order("triggered_at", desc=True)
+                .gt("created_at", last_run_at)
                 .limit(1)
                 .execute()
             )
+            governance_status = "stale" if docs_result.data else "established"
         except Exception:
-            parties_run_result = None
+            governance_status = "established"
 
-        if parties_run_result and parties_run_result.data:
-            # Count party identities extracted so far
-            try:
-                parties_count_result = (
-                    supabase.table("party_identities")
-                    .select("id", count="exact")
-                    .eq("project_id", str(project_id))
-                    .execute()
-                )
-                parties_count = parties_count_result.count or 0
-            except Exception:
-                parties_count = 0
+        return GovernanceStatusResponse(
+            project_id=project_id,
+            status=governance_status,
+            last_run_at=last_run_at,
+            last_run_id=last_run_id,
+            events_confirmed=0,
+            events_flagged=0,
+            events_inferred=0,
+        )
 
-            return GovernanceStatusResponse(
-                project_id=project_id,
-                status="parties_identified",
-                last_run_at=parties_run_result.data[0]["triggered_at"],
-                last_run_id=uuid.UUID(parties_run_result.data[0]["id"]),
-                events_confirmed=0,
-                events_flagged=0,
-                events_inferred=0,
-                parties_count=parties_count,
-            )
-
-        # Check for in-progress or failed run
-        try:
-            latest_run_result = (
-                supabase.table("governance_run_log")
-                .select("id, status, triggered_at")
-                .eq("project_id", str(project_id))
-                .order("triggered_at", desc=True)
-                .limit(1)
-                .execute()
-            )
-        except Exception:
-            latest_run_result = None
-
-        if latest_run_result and latest_run_result.data:
-            latest = latest_run_result.data[0]
-            if latest["status"] == "running":
-                return GovernanceStatusResponse(
-                    project_id=project_id,
-                    status="processing",
-                    last_run_at=latest["triggered_at"],
-                    last_run_id=uuid.UUID(latest["id"]),
-                    events_confirmed=0,
-                    events_flagged=0,
-                    events_inferred=0,
-                    parties_count=0,
-                )
-            if latest["status"] == "failed":
-                return GovernanceStatusResponse(
-                    project_id=project_id,
-                    status="failed",
-                    last_run_at=latest["triggered_at"],
-                    last_run_id=uuid.UUID(latest["id"]),
-                    events_confirmed=0,
-                    events_flagged=0,
-                    events_inferred=0,
-                    parties_count=0,
-                )
-
+    # No complete run — check latest run status
+    if not latest:
         return GovernanceStatusResponse(
             project_id=project_id,
             status="not_established",
@@ -224,35 +199,50 @@ async def get_governance_status(
             parties_count=0,
         )
 
-    last_run = run_result.data[0]
-    last_run_at = last_run["triggered_at"]
-    last_run_id = uuid.UUID(last_run["id"])
-
-    # authority_events counts — populated in Phase 5; stub zeros for now
-    counts = {"confirmed": 0, "flagged": 0, "inferred": 0}
-
-    # Check for documents ingested after the last run — if so, status is stale
-    try:
-        docs_result = (
-            supabase.table("documents")
-            .select("id")
-            .eq("project_id", str(project_id))
-            .gt("created_at", last_run_at)
-            .limit(1)
-            .execute()
+    if latest["status"] == "parties_identified":
+        try:
+            parties_count_result = (
+                supabase.table("party_identities")
+                .select("id", count="exact")
+                .eq("project_id", str(project_id))
+                .execute()
+            )
+            parties_count = parties_count_result.count or 0
+        except Exception:
+            parties_count = 0
+        return GovernanceStatusResponse(
+            project_id=project_id,
+            status="parties_identified",
+            last_run_at=latest["triggered_at"],
+            last_run_id=uuid.UUID(latest["id"]),
+            events_confirmed=0,
+            events_flagged=0,
+            events_inferred=0,
+            parties_count=parties_count,
         )
-        governance_status = "stale" if docs_result.data else "established"
-    except Exception:
-        governance_status = "established"
 
+    if latest["status"] == "running":
+        return GovernanceStatusResponse(
+            project_id=project_id,
+            status="processing",
+            last_run_at=latest["triggered_at"],
+            last_run_id=uuid.UUID(latest["id"]),
+            events_confirmed=0,
+            events_flagged=0,
+            events_inferred=0,
+            parties_count=0,
+        )
+
+    # failed or any other status with no complete run
     return GovernanceStatusResponse(
         project_id=project_id,
-        status=governance_status,
-        last_run_at=last_run_at,
-        last_run_id=last_run_id,
-        events_confirmed=counts["confirmed"],
-        events_flagged=counts["flagged"],
-        events_inferred=counts["inferred"],
+        status="failed",
+        last_run_at=latest["triggered_at"],
+        last_run_id=uuid.UUID(latest["id"]),
+        events_confirmed=0,
+        events_flagged=0,
+        events_inferred=0,
+        parties_count=0,
     )
 
 
@@ -643,6 +633,27 @@ async def extract_authority_events(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Reconciliation interview not complete. Complete the interview before extracting authority events.",
         )
+
+    # Guard: reject if a phase=2 run is already in progress
+    try:
+        running_result = (
+            supabase.table("governance_run_log")
+            .select("id")
+            .eq("project_id", str(project_id))
+            .eq("status", "running")
+            .eq("phase", 2)
+            .limit(1)
+            .execute()
+        )
+        if running_result.data:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Authority event extraction is already in progress for this project.",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # On check failure, proceed
 
     now = datetime.now(timezone.utc)
 
