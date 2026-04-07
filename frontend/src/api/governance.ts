@@ -10,6 +10,7 @@ import type {
   EventLogQuestionResponse,
   PatchEventRequest,
   AnswerQuestionRequest,
+  AbsorbEntityRequest,
 } from './types';
 
 const base = (projectId: string) =>
@@ -78,6 +79,18 @@ export function confirmDirectory(
   return apiClient.post<EntityDirectoryRunResponse>(
     `${base(projectId)}/directory/confirm`,
     {},
+  );
+}
+
+export function absorbEntity(
+  projectId: string,
+  targetEntityId: string,
+  sourceEntityId: string,
+): Promise<EntityResponse> {
+  const body: AbsorbEntityRequest = { source_entity_id: sourceEntityId };
+  return apiClient.post<EntityResponse>(
+    `${base(projectId)}/directory/entities/${targetEntityId}/absorb`,
+    { ...body },
   );
 }
 

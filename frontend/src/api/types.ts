@@ -266,3 +266,7 @@ export interface PatchEventRequest {
 export interface AnswerQuestionRequest {
   answer: string;
 }
+
+export interface AbsorbEntityRequest {
+  source_entity_id: string;
+}

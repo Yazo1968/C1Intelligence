@@ -6,10 +6,9 @@ import {
   triggerDirectoryRun,
   getDirectoryStatus,
   listEntities,
-  listDiscrepancies,
   patchEntity,
-  resolveDiscrepancy,
   confirmDirectory,
+  absorbEntity,
   triggerEventRun,
   getEventRunStatus,
   listEvents,
@@ -21,7 +20,6 @@ import {
 import type {
   EntityDirectoryRunResponse,
   EntityResponse,
-  EntityDiscrepancyResponse,
   EventLogRunResponse,
   EntityEventResponse,
   EventLogQuestionResponse,
@@ -56,7 +54,6 @@ function statusBadge(status: EntityDirectoryRunResponse['status']) {
 export function GovernancePanel({ projectId }: GovernancePanelProps) {
   const [run, setRun] = useState<EntityDirectoryRunResponse | null>(null);
   const [entities, setEntities] = useState<EntityResponse[]>([]);
-  const [discrepancies, setDiscrepancies] = useState<EntityDiscrepancyResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -82,14 +79,10 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
 
   const loadReviewData = useCallback(async () => {
     try {
-      const [ents, discs] = await Promise.all([
-        listEntities(projectId),
-        listDiscrepancies(projectId),
-      ]);
+      const ents = await listEntities(projectId);
       setEntities(ents);
-      setDiscrepancies(discs);
     } catch {
-      // Non-fatal — panel will show empty sections
+      // non-fatal
     }
   }, [projectId]);
 
@@ -161,18 +154,6 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
     }
   }
 
-  async function handleConfirmAll(type: 'organisation' | 'individual') {
-    const targets = entities.filter(
-      (e) => e.entity_type === type && e.confirmation_status === 'proposed',
-    );
-    await Promise.all(
-      targets.map((e) =>
-        patchEntity(projectId, e.id, { confirmation_status: 'confirmed' }),
-      ),
-    );
-    await loadReviewData();
-  }
-
   async function handlePatchEntity(
     entityId: string,
     updates: { canonical_name?: string; confirmation_status?: 'confirmed' | 'rejected'; user_note?: string },
@@ -182,22 +163,6 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
       await loadReviewData();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to update entity.');
-    }
-  }
-
-  async function handleResolveDiscrepancy(
-    discrepancyId: string,
-    resolution: 'same_entity' | 'different_entities' | 'correction',
-    resolvedCanonical?: string,
-  ) {
-    try {
-      await resolveDiscrepancy(projectId, discrepancyId, {
-        resolution,
-        resolved_canonical: resolvedCanonical,
-      });
-      setDiscrepancies((prev) => prev.filter((d) => d.id !== discrepancyId));
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to resolve discrepancy.');
     }
   }
 
@@ -212,6 +177,25 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
     } finally {
       setConfirming(false);
     }
+  }
+
+  async function handleAbsorb(targetId: string, sourceId: string) {
+    try {
+      await absorbEntity(projectId, targetId, sourceId);
+      await loadReviewData();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to merge entities.');
+    }
+  }
+
+  async function handleConfirmAll() {
+    const targets = entities.filter(
+      (e) => e.confirmation_status === 'proposed' && e.entity_type !== undefined,
+    );
+    await Promise.all(
+      targets.map((e) => patchEntity(projectId, e.id, { confirmation_status: 'confirmed' }))
+    );
+    await loadReviewData();
   }
 
   // ── Event log helpers ────────────────────────────────────────────────────
@@ -263,12 +247,10 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
 
   const orgs = entities.filter((e) => e.entity_type === 'organisation');
   const inds = entities.filter((e) => e.entity_type === 'individual');
-  const unresolvedCount = discrepancies.length;
   const confirmedCount = entities.filter(
     (e) => e.confirmation_status === 'confirmed',
   ).length;
-  const canConfirmDirectory =
-    unresolvedCount === 0 && confirmedCount > 0;
+  const canConfirmDirectory = confirmedCount > 0;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -355,11 +337,7 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
               <p className="text-sm text-gray-500">
                 Found {run.organisations_found} organisation{run.organisations_found !== 1 ? 's' : ''} and{' '}
                 {run.individuals_found} individual{run.individuals_found !== 1 ? 's' : ''}.
-                {unresolvedCount > 0 && (
-                  <span className="ml-1 text-amber-600 font-medium">
-                    {unresolvedCount} discrepanc{unresolvedCount !== 1 ? 'ies' : 'y'} require resolution before confirming.
-                  </span>
-                )}
+                Drag cards together to merge duplicates, then confirm.
               </p>
             )}
           </div>
@@ -397,48 +375,14 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
         </div>
       </div>
 
-      {/* State B-Review content */}
+      {/* State B-Review — consolidation board */}
       {isReview && (
-        <div className="space-y-4">
-
-          {/* Discrepancies section */}
-          {unresolvedCount > 0 && (
-            <div className="rounded-lg border border-amber-200 bg-white p-5 space-y-3">
-              <h3 className="text-sm font-semibold text-gray-700">
-                Resolve Discrepancies ({unresolvedCount} remaining)
-              </h3>
-              <div className="space-y-3">
-                {discrepancies.map((disc) => (
-                  <DiscrepancyCard
-                    key={disc.id}
-                    discrepancy={disc}
-                    onResolve={handleResolveDiscrepancy}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Organisations section */}
-          <EntitySection
-            title="Organisations"
-            entities={orgs}
-            expanded={orgsExpanded}
-            onToggle={() => setOrgsExpanded((v) => !v)}
-            onPatch={handlePatchEntity}
-            onConfirmAll={() => handleConfirmAll('organisation')}
-          />
-
-          {/* Individuals section */}
-          <EntitySection
-            title="Individuals"
-            entities={inds}
-            expanded={indsExpanded}
-            onToggle={() => setIndsExpanded((v) => !v)}
-            onPatch={handlePatchEntity}
-            onConfirmAll={() => handleConfirmAll('individual')}
-          />
-        </div>
+        <EntityConsolidationBoard
+          entities={entities.filter((e) => e.confirmation_status !== 'merged')}
+          onAbsorb={handleAbsorb}
+          onPatch={handlePatchEntity}
+          onConfirmAll={handleConfirmAll}
+        />
       )}
 
       {/* State C — confirmed directory with event log controls */}
@@ -487,121 +431,32 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
   );
 }
 
-// ── DiscrepancyCard ───────────────────────────────────────────────────────────
+// ── EntityConsolidationBoard ──────────────────────────────────────────────────
 
-interface DiscrepancyCardProps {
-  discrepancy: EntityDiscrepancyResponse;
-  onResolve: (
-    id: string,
-    resolution: 'same_entity' | 'different_entities' | 'correction',
-    canonical?: string,
-  ) => void;
-}
-
-function DiscrepancyCard({ discrepancy, onResolve }: DiscrepancyCardProps) {
-  const [correctionInput, setCorrectionInput] = useState('');
-  const [showCorrection, setShowCorrection] = useState(false);
-
-  return (
-    <div className="rounded-md border border-amber-100 bg-amber-50 p-4 space-y-3">
-      <div className="flex items-start gap-2">
-        <span className="text-amber-500 mt-0.5">⚠</span>
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-gray-800 capitalize">
-            {discrepancy.discrepancy_type.replace('_', ' ')}
-          </p>
-          <p className="text-sm text-gray-600">{discrepancy.description}</p>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => onResolve(discrepancy.id, 'same_entity', discrepancy.name_a)}
-        >
-          Same entity — keep "{discrepancy.name_a}"
-        </Button>
-        {discrepancy.name_b && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => onResolve(discrepancy.id, 'same_entity', discrepancy.name_b!)}
-          >
-            Same entity — keep "{discrepancy.name_b}"
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => onResolve(discrepancy.id, 'different_entities')}
-        >
-          Different entities
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => setShowCorrection((v) => !v)}
-        >
-          Enter correct name
-        </Button>
-      </div>
-      {showCorrection && (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={correctionInput}
-            onChange={(e) => setCorrectionInput(e.target.value)}
-            placeholder="Correct canonical name"
-            className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20"
-          />
-          <Button
-            size="sm"
-            disabled={!correctionInput.trim()}
-            onClick={() => onResolve(discrepancy.id, 'correction', correctionInput.trim())}
-          >
-            Save
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── EntitySection ─────────────────────────────────────────────────────────────
-
-interface EntitySectionProps {
-  title: string;
+interface EntityConsolidationBoardProps {
   entities: EntityResponse[];
-  expanded: boolean;
-  onToggle: () => void;
-  onPatch: (
-    id: string,
-    updates: { canonical_name?: string; confirmation_status?: 'confirmed' | 'rejected' },
-  ) => void;
+  onAbsorb: (targetId: string, sourceId: string) => void;
+  onPatch: (id: string, updates: { canonical_name?: string; confirmation_status?: 'confirmed' | 'rejected'; user_note?: string }) => void;
   onConfirmAll: () => void;
-  readOnly?: boolean;
 }
 
-function EntitySection({
-  title,
+function EntityConsolidationBoard({
   entities,
-  expanded,
-  onToggle,
+  onAbsorb,
   onPatch,
   onConfirmAll,
-  readOnly = false,
-}: EntitySectionProps) {
+}: EntityConsolidationBoardProps) {
+  const orgs = entities.filter((e) => e.entity_type === 'organisation');
+  const inds = entities.filter((e) => e.entity_type === 'individual');
+  const hasUnconfirmed = entities.some((e) => e.confirmation_status === 'proposed');
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-        <button
-          onClick={onToggle}
-          className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"
-        >
-          <span>{expanded ? '▾' : '▸'}</span>
-          {title} ({entities.length})
-        </button>
-        {!readOnly && entities.some((e) => e.confirmation_status === 'proposed') && (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-400">
+          Drag a card onto another to merge them as the same entity.
+        </p>
+        {hasUnconfirmed && (
           <button
             onClick={onConfirmAll}
             className="text-xs text-navy-900 hover:underline"
@@ -610,118 +465,195 @@ function EntitySection({
           </button>
         )}
       </div>
-      {expanded && (
-        <div className="divide-y divide-gray-50">
-          {entities.length === 0 ? (
-            <p className="px-5 py-4 text-sm text-gray-400">None found.</p>
-          ) : (
-            entities.map((entity) => (
-              <EntityRow
+      {orgs.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Organisations ({orgs.length})
+          </p>
+          <div className="space-y-2">
+            {orgs.map((entity) => (
+              <EntityConsolidationCard
                 key={entity.id}
                 entity={entity}
+                onAbsorb={onAbsorb}
                 onPatch={onPatch}
-                readOnly={readOnly}
               />
-            ))
-          )}
+            ))}
+          </div>
+        </div>
+      )}
+      {inds.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Individuals ({inds.length})
+          </p>
+          <div className="space-y-2">
+            {inds.map((entity) => (
+              <EntityConsolidationCard
+                key={entity.id}
+                entity={entity}
+                onAbsorb={onAbsorb}
+                onPatch={onPatch}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// ── EntityRow ─────────────────────────────────────────────────────────────────
+// ── EntityConsolidationCard ───────────────────────────────────────────────────
 
-interface EntityRowProps {
+interface EntityConsolidationCardProps {
   entity: EntityResponse;
-  onPatch: (
-    id: string,
-    updates: { canonical_name?: string; confirmation_status?: 'confirmed' | 'rejected' },
-  ) => void;
-  readOnly?: boolean;
+  onAbsorb: (targetId: string, sourceId: string) => void;
+  onPatch: (id: string, updates: { canonical_name?: string; confirmation_status?: 'confirmed' | 'rejected' }) => void;
 }
 
-function EntityRow({ entity, onPatch, readOnly = false }: EntityRowProps) {
+function EntityConsolidationCard({
+  entity,
+  onAbsorb,
+  onPatch,
+}: EntityConsolidationCardProps) {
+  const [dragOver, setDragOver] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(entity.canonical_name);
 
   const isConfirmed = entity.confirmation_status === 'confirmed';
   const isRejected = entity.confirmation_status === 'rejected';
 
-  const borderColor = isConfirmed
-    ? 'border-l-emerald-500'
-    : isRejected
-    ? 'border-l-gray-300'
-    : 'border-l-gray-200';
+  function handleDragStart(e: React.DragEvent) {
+    e.dataTransfer.setData('entityId', entity.id);
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.types.includes('entityid') ||
+      e.dataTransfer.getData('entityId') !== entity.id;
+    if (sourceId) setDragOver(true);
+    e.dataTransfer.dropEffect = 'move';
+  }
+
+  function handleDragLeave() {
+    setDragOver(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const sourceId = e.dataTransfer.getData('entityId');
+    if (sourceId && sourceId !== entity.id) {
+      onAbsorb(entity.id, sourceId);
+    }
+  }
 
   return (
     <div
-      className={`flex items-start justify-between gap-4 px-5 py-3 border-l-2 ${borderColor} ${isRejected ? 'opacity-50' : ''}`}
+      draggable
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={[
+        'rounded-lg border bg-white p-4 transition-all cursor-grab active:cursor-grabbing',
+        dragOver
+          ? 'border-navy-900 ring-2 ring-navy-900/20 bg-navy-900/5'
+          : isConfirmed
+          ? 'border-l-4 border-l-emerald-500 border-gray-200'
+          : isRejected
+          ? 'border-gray-200 opacity-40'
+          : 'border-gray-200',
+      ].join(' ')}
     >
-      <div className="space-y-0.5 min-w-0">
-        <div className="flex items-center gap-2">
-          {isConfirmed && <span className="text-emerald-500 text-xs">✓</span>}
-          <p className={`text-sm font-medium text-gray-900 ${isRejected ? 'line-through' : ''}`}>
-            {entity.title ? `${entity.title} ` : ''}{entity.canonical_name}
-          </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Canonical name */}
+          {editing ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                autoFocus
+                className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20"
+              />
+              <Button
+                size="sm"
+                disabled={!editValue.trim() || editValue === entity.canonical_name}
+                onClick={() => {
+                  onPatch(entity.id, { canonical_name: editValue.trim() });
+                  setEditing(false);
+                }}
+              >
+                Save
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => { setEditing(false); setEditValue(entity.canonical_name); }}
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              {isConfirmed && <span className="text-emerald-500 text-xs shrink-0">✓</span>}
+              <p className={`text-sm font-semibold text-gray-900 ${isRejected ? 'line-through' : ''}`}>
+                {entity.title ? `${entity.title} ` : ''}{entity.canonical_name}
+              </p>
+            </div>
+          )}
+          {/* Alias chips */}
+          {entity.name_variants.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {entity.name_variants.map((v) => (
+                <span
+                  key={v}
+                  className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                >
+                  {v}
+                </span>
+              ))}
+            </div>
+          )}
+          {dragOver && (
+            <p className="text-xs text-navy-900 font-medium">
+              Drop to merge into this entity
+            </p>
+          )}
         </div>
-        {entity.name_variants.length > 0 && (
-          <p className="text-xs text-gray-400">
-            Also found as: {entity.name_variants.join(', ')}
-          </p>
-        )}
-        {entity.short_address && (
-          <p className="text-xs text-gray-400">{entity.short_address}</p>
-        )}
-        {editing && (
-          <div className="flex gap-2 mt-2">
-            <input
-              type="text"
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-navy-900/20"
-            />
-            <Button
-              size="sm"
-              disabled={!editValue.trim() || editValue === entity.canonical_name}
-              onClick={() => {
-                onPatch(entity.id, { canonical_name: editValue.trim() });
-                setEditing(false);
-              }}
-            >
-              Save
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => { setEditing(false); setEditValue(entity.canonical_name); }}>
-              Cancel
-            </Button>
-          </div>
-        )}
-      </div>
-      {!readOnly && !editing && (
-        <div className="flex items-center gap-1 shrink-0">
-          {!isConfirmed && !isRejected && (
+
+        {/* Actions */}
+        {!editing && !isRejected && (
+          <div className="flex items-center gap-1 shrink-0">
+            {!isConfirmed && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onPatch(entity.id, { confirmation_status: 'confirmed' })}
+              >
+                ✓
+              </Button>
+            )}
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => onPatch(entity.id, { confirmation_status: 'confirmed' })}
+              onClick={() => setEditing(true)}
             >
-              Confirm
+              ✎
             </Button>
-          )}
-          <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
-            Edit
-          </Button>
-          {!isRejected && (
             <button
               onClick={() => onPatch(entity.id, { confirmation_status: 'rejected' })}
-              className="text-gray-400 hover:text-red-500 px-1"
-              title="Reject"
+              className="text-gray-400 hover:text-red-500 px-1 text-sm"
+              title="Remove"
             >
               ✕
             </button>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
