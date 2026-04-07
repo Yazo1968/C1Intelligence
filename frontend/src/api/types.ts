@@ -151,7 +151,7 @@ export interface ApiError {
 export interface EntityDirectoryRunResponse {
   id: string;
   project_id: string;
-  status: 'running' | 'awaiting_confirmation' | 'confirmed' | 'failed';
+  status: 'running' | 'extracting' | 'consolidating' | 'awaiting_confirmation' | 'confirmed' | 'failed';
   chunks_processed: number;
   total_chunks: number;
   organisations_found: number;

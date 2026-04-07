@@ -40,8 +40,10 @@ const POLL_INTERVAL_MS = 5_000;
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function statusBadge(status: EntityDirectoryRunResponse['status']) {
-  if (status === 'running')
+  if (status === 'running' || status === 'extracting')
     return <Badge color="navy">Processing</Badge>;
+  if (status === 'consolidating')
+    return <Badge color="navy">Consolidating</Badge>;
   if (status === 'awaiting_confirmation')
     return <Badge color="amber">Ready for Review</Badge>;
   if (status === 'confirmed')
@@ -267,7 +269,8 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   const noRunYet = !run || run.status === 'failed';
-  const isRunning = run?.status === 'running';
+  const isRunning = run?.status === 'extracting' || run?.status === 'running';
+  const isConsolidating = run?.status === 'consolidating';
   const isReview = run?.status === 'awaiting_confirmation';
   const isConfirmed = run?.status === 'confirmed';
 
@@ -301,29 +304,45 @@ export function GovernancePanel({ projectId }: GovernancePanelProps) {
             )}
 
             {/* State B-Running progress */}
-            {isRunning && run && (
+            {(isRunning || isConsolidating) && run && (
               <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Reading documents — {run.chunks_processed} of {run.total_chunks} chunks processed</span>
-                  <span>
-                    {run.total_chunks > 0
-                      ? Math.round((run.chunks_processed / run.total_chunks) * 100)
-                      : 0}%
-                  </span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-gray-100">
-                  <div
-                    className="h-2 rounded-full bg-navy-900 transition-all duration-500"
-                    style={{
-                      width: run.total_chunks > 0
-                        ? `${Math.round((run.chunks_processed / run.total_chunks) * 100)}%`
-                        : '0%',
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-gray-400">
-                  This may take a few minutes depending on project size.
-                </p>
+                {isRunning ? (
+                  <>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>
+                        Reading documents — {run.chunks_processed} of {run.total_chunks} chunks processed
+                        {run.organisations_found > 0 || run.individuals_found > 0 ? (
+                          <span className="ml-2 text-gray-400">
+                            · {run.organisations_found} org{run.organisations_found !== 1 ? 's' : ''},{' '}
+                            {run.individuals_found} individual{run.individuals_found !== 1 ? 's' : ''} found so far
+                          </span>
+                        ) : null}
+                      </span>
+                      <span>
+                        {run.total_chunks > 0
+                          ? Math.round((run.chunks_processed / run.total_chunks) * 100)
+                          : 0}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-gray-100">
+                      <div
+                        className="h-2 rounded-full bg-navy-900 transition-all duration-500"
+                        style={{
+                          width: run.total_chunks > 0
+                            ? `${Math.round((run.chunks_processed / run.total_chunks) * 100)}%`
+                            : '0%',
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      This may take a few minutes depending on project size.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    Consolidating results — grouping name variants and detecting discrepancies...
+                  </p>
+                )}
               </div>
             )}
 
