@@ -4,6 +4,6 @@
   "layer2a_required": false,
   "layer1_amendment_document_required": true,
   "confidence_cap_without_layer2b": "AMBER",
-  "confidence_cap_without_amendment_document": "GREY",
+  "confidence_cap_without_amendment_document": "AMBER",
   "description": "Commercial orchestrator requires Layer 2b standard form provisions before characterising payment, variation, or valuation frameworks. Amendment document required for project-specific rates and procedures."
 }

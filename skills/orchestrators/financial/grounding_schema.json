@@ -4,6 +4,6 @@
   "layer2a_required": true,
   "layer1_amendment_document_required": true,
   "confidence_cap_without_layer2b": "AMBER",
-  "confidence_cap_without_amendment_document": "GREY",
+  "confidence_cap_without_amendment_document": "AMBER",
   "description": "Financial orchestrator requires Layer 2b standard form provisions for payment and financial frameworks, and Layer 2a internal policies for DOA and approval authority. Amendment document required for project-specific financial terms."
 }
