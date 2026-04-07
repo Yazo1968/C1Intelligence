@@ -140,6 +140,10 @@ Reads confirmed `entities` and `entity_events` tables. Deterministic, zero LLM c
 Entity extraction is two-stage: Stage 1 (`extracting`) writes raw names
 to `entity_raw_extractions` after every batch; Stage 2 (`consolidating`)
 reads staging, groups variants, writes to `entities`.
+Entity consolidation (B-Review state): drag-drop board. Drag one entity
+card onto another to absorb it. Source canonical name + variants are merged
+into target name_variants. Source marked 'merged'. No discrepancy resolution
+flow — visual merge only.
 
 **Domains:**
 - Legal & Contractual SME: 7 skills (contract_assembly,

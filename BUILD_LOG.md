@@ -1741,3 +1741,38 @@ runs as a separate Stage 2 after all batches complete.
 - Frontend shows live "N orgs, N individuals found so far" during extraction
 - Page reload mid-extraction resumes polling correctly
 - HEAD: `5a8ed51`
+
+---
+
+## Session: Entity Consolidation Redesign
+**Date:** April 2026
+**Strategic Partner:** Claude (chat)
+**Execution Agent:** Claude Code
+
+### Objective
+Replace the discrepancy-resolution model for Function 1 (Entity Directory)
+review with a visual drag-drop consolidation board. Entities are merged by
+dragging one card onto another. Also fixed normalisation bug causing
+ALBA TEC / ALBATEC to appear as separate entities.
+
+### Tasks
+- `8a07f1a` — Fix: _normalise() strips spaces so compound names group correctly
+- G1 `d8e69b2` — Backend: absorb endpoint merges source entity into target
+- G2 `9ed148f` — Frontend: drag-drop EntityConsolidationBoard replaces B-Review
+
+### Bugs fixed
+1. `_normalise()` kept internal spaces — "ALBA TEC" and "ALBATEC" produced
+   different keys and were treated as separate entities. Fixed by stripping
+   all spaces from the comparison key.
+2. Discrepancy resolution wrote to DB but never acted on the data — merged
+   entities remained listed separately. Fixed by replacing the model entirely
+   with drag-drop absorb.
+
+### End state
+- absorb endpoint live: POST /directory/entities/{id}/absorb
+- B-Review state: EntityConsolidationBoard with draggable cards
+- Merging two entities: drag source card onto target → absorb API call →
+  source canonical + variants appended to target name_variants →
+  source marked 'merged' and disappears from list
+- entity_discrepancies table retained as audit trail, no longer surfaced in UI
+- HEAD: `9ed148f`
