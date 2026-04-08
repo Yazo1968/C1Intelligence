@@ -25,11 +25,44 @@ from src.api.schemas import (
     SubmitQueryRequest,
 )
 from src.agents.models import AgentError, QueryRequest
-from src.agents.orchestrator import assess_query, process_query
+from src.agents.orchestrator import assess_query, process_query, _strip_evidence_declaration
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/projects/{project_id}", tags=["queries"])
+
+
+def _clean_findings_for_client(text: str) -> str:
+    """
+    Replace internal architecture terminology with user-facing equivalents.
+    Agents are instructed using internal terms (Layer 1, Layer 2b, warehouse)
+    and absorb this language into their output. This post-processing step
+    ensures no internal terminology reaches the client.
+    """
+    replacements = [
+        # Layer references
+        ("Layer 2b", "the applicable standard form"),
+        ("Layer 2a", "internal policy documents"),
+        ("Layer 1", "project documents"),
+        ("layer 2b", "the applicable standard form"),
+        ("layer 2a", "internal policy documents"),
+        ("layer 1", "project documents"),
+        # Warehouse / ingestion references
+        ("the document warehouse", "the document set"),
+        ("the warehouse", "the document set"),
+        ("not in the warehouse", "not in the document set"),
+        ("not found in the warehouse", "not found in the document set"),
+        ("ingested into the warehouse", "uploaded to the document set"),
+        ("ingested", "uploaded"),
+        ("warehouse", "document set"),
+        # Chunk references (should have been caught earlier but defensive)
+        ("chunk_index", ""),
+        ("retrieved from warehouse", "retrieved from document set"),
+    ]
+    result = text
+    for old, new in replacements:
+        result = result.replace(old, new)
+    return result
 
 
 def _run_query_pipeline(
@@ -56,7 +89,9 @@ def _run_query_pipeline(
             "specialist_findings": [
                 {
                     "domain": f.domain,
-                    "findings": f.findings,
+                    "findings": _clean_findings_for_client(
+                        _strip_evidence_declaration(f.findings)
+                    ),
                     "confidence": f.confidence,
                     "sources_used": f.sources_used,
                     "tools_called": f.tools_called,

@@ -219,7 +219,7 @@ class BaseOrchestrator:
             try:
                 call_kwargs: dict = {
                     "model": CLAUDE_MODEL,
-                    "max_tokens": 4000,
+                    "max_tokens": 8000,
                     "system": [
                         {
                             "type": "text",
