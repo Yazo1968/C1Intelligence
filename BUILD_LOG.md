@@ -1831,3 +1831,55 @@ Query output now produces complete, grounded, professional findings with:
 - Evidence Declaration stripped before client sees findings
 
 ### HEAD: `35a4490`
+
+---
+
+## Session: Query Engine Diagnosis and Pivot Decision
+**Date:** April 2026
+**Strategic Partner:** Claude (chat)
+**Execution Agent:** Claude Code
+
+### What was attempted
+Series of fixes to the three-tier agentic query engine:
+- `1244328` — Raised max_tool_rounds 3→8; forced completion injection; fixed pre-JSON meta-commentary leak
+- `35a4490` — Stripped Evidence Declaration from client output; replaced internal terms (Layer 1/2a/2b, warehouse); raised max_tokens 4000→8000
+- `906a19b` — Raised executive summary max_tokens 200→600; consolidated terminology cleaning; applied to response_text
+- `2ef7361` — Removed internal terms from _SPECIALIST_RULES; fixed Commercial NOT ENGAGED on contract-only queries
+- `0ca6213` — Session close docs
+- `4e81ec3` — CLAUDE.md updated with pivot decision (this entry)
+
+### Output quality after fixes
+With max_tool_rounds=8 and max_tokens=8000, a single query on a one-document
+project produced correct, grounded, clause-level findings across Legal and
+Commercial domains. Evidence Declaration stripped. Internal terminology
+cleaned. No meta-commentary. Quality was acceptable on one document.
+
+### Why the engine is being retired
+- 3-5 minutes per query (three parallel orchestrators × up to 8 tool rounds each)
+- $3-5 per query (dozens of API calls, 8000 max_tokens each)
+- Not scalable: on 300+ document projects, top-k retrieval samples ~20 chunks
+  from 30,000+ available — agents never see most of the evidence
+- max_tokens=8000 across three parallel orchestrators hit Anthropic rate limits,
+  causing "Query analysis failed" on the frontend
+- Architecture was chatbot-style retrieval-augmented generation, not forensic-grade
+  document-complete processing
+
+### Strategic decisions made
+1. Three-tier agentic query engine (orchestrators + SMEs + tool loops) is RETIRED
+2. New model: Gemini 2.0 Flash, single large-context call
+   - 1M token context window — load full document set, not sampled chunks
+   - Single inference call per query — no tool rounds, no orchestrator chains
+   - Target: <30 seconds, <$0.10 per query
+3. Gemini Flash for query engine. Claude retained for Governance extraction only.
+4. Skill files retained as domain knowledge — repurposed as structured analysis
+   instructions for the single Gemini call
+
+### Files to replace in new session
+src/agents/orchestrator.py, base_orchestrator.py, base_specialist.py,
+domain_router.py, prompts.py, specialist_config.py
+
+### Files untouched
+All governance agents, tools.py, retrieval.py, audit.py, contradiction.py,
+models.py, skill_loader.py, all frontend, all DB migrations
+
+### HEAD at session close: 4e81ec3
