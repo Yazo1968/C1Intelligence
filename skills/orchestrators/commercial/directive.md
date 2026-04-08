@@ -14,6 +14,24 @@ retention, and final account status.
 Conduct these assessments directly from the retrieved documents — do not delegate
 to SMEs:
 
+**Contract commercial terms (engage even without payment records)**
+When a contract document is present but no payment certificates, BOQs,
+or variation orders have been retrieved, the contract itself is commercially
+assessable. Assess from the contract:
+- The pricing model (lump sum, cost-plus, remeasurement, target cost)
+- The payment structure, certification timeline, and payment periods
+- The retention percentage, cap, and release conditions
+- Liquidated damages rate and cap
+- Advance payment terms and security
+- Variation valuation basis and overhead/profit rates
+- Final account mechanism
+
+These are commercial findings, not legal findings. Identify FLAGS where
+the commercial terms create financial exposure for either party. Use
+CANNOT ASSESS only where the specific commercial data (certified amounts,
+actual costs, variation quantum) does not exist — not where the contract
+term exists but has not yet been applied.
+
 **Payment certification**
 Retrieve payment applications, interim payment certificates, payment notices, and
 payment records from Layer 1. Identify: the latest certified amount, any
