@@ -112,48 +112,59 @@ state. `list_migrations` for applied migrations.
 
 ## Architecture
 
-**Three-tier agents:**
-- Tier 0: Main orchestrator (router)
-- Tier 1: Legal, Commercial, Financial orchestrators (BaseOrchestrator,
-  directive files in `skills/orchestrators/`)
-- Tier 2: Schedule & Programme, Technical, Compliance, Financial &
-  Accounting SMEs (BaseSpecialist, skill files in `skills/smes/`)
+**Query Engine — UNDER REDESIGN (new session)**
+The three-tier agentic query engine (Tier 0 router, Tier 1 orchestrators,
+Tier 2 SMEs, agentic tool loops) is retired. It produced correct output
+but was too slow (3-5 min), too expensive ($3-5/query), and not scalable
+to large document sets.
 
-**Skill authoring:** All skill files authored using `skills/c1-skill-authoring/`.
-Read this skill before building or rebuilding any file under `skills/`.
+Replacement architecture: single large-context call using Gemini.
+- Model: Gemini 2.0 Flash (fast, cheap, 1M token context window)
+- Approach: load full document content into context, single inference call,
+  structured JSON output
+- No retrieval sampling, no tool rounds, no orchestrator chains
+- Target: <30 seconds per query, <$0.10 per query
+- Gemini client already exists in src/clients.py for embeddings — reuse it
 
-**Skill files:** 3 orchestrator directives + 1 synthesis directive
-+ 26 SME skill files = 30 files total.
+Files to replace in new session:
+  src/agents/orchestrator.py — main query pipeline
+  src/agents/base_orchestrator.py — agentic loop base class
+  src/agents/base_specialist.py — SME base class
+  src/agents/domain_router.py — Claude-based domain router
+  src/agents/prompts.py — agent system prompts
+  src/agents/specialist_config.py — agent config
 
-**Aggregation Integrity Layer (v2.0 — deterministic):**
-Routing coverage check (chunk-domain keyword alignment — deterministic, no LLM). SME invocation trace (tools_called records invoke_sme:{domain} — deterministic). Raw SME output preservation (captured in agentic loop before synthesis). Evidence Auditor (run_evidence_audit() — zero API calls, reads only pre-recorded deterministic data). Consolidated Evidence Map in every response (built from sources_used, tools_called, raw_sme_outputs, and evidence_record — not from agent self-reporting).
-Design principle: every integrity check reads deterministic system state. No integrity layer asks an agent to audit itself.
+Files to RETAIN (untouched by query engine redesign):
+  src/agents/governance/ — all governance extraction (stays on Claude)
+  src/agents/tools.py — tool definitions (may be simplified)
+  src/agents/retrieval.py — chunk retrieval (repurposed for doc loading)
+  src/agents/audit.py — audit log writing
+  src/agents/contradiction.py — contradiction detection
+  src/agents/models.py — data models (QueryRequest, QueryResponse, etc.)
+  src/agents/skill_loader.py — skill file loader
 
-**Agent tuning (locked):**
-Tier 1 orchestrators: max_tool_rounds=8, max_tokens=8000.
-Tier 2 SMEs: max_tool_rounds=3–5 (per specialist_config.py).
-Evidence Declaration block stripped from client-facing findings.
-Internal terms (Layer 1/2a/2b, warehouse) replaced before API response.
+Skill files (skills/orchestrators/, skills/smes/) — retained as domain
+knowledge reference but repurposed as structured analysis instructions
+for the single Gemini call, not as agentic directives.
 
-**Governance Feature:**
-Redesign complete. Design document: docs/C1_GOVERNANCE_REDESIGN.md v2.1.
-Function 1 — Entity Directory: batch chunk processing, name extraction,
-discrepancy detection, user confirmation flow.
-Function 2 — Event Log: per-entity fulltext search, event extraction,
-consolidation, question generation, user confirmation.
-`get_entity_authority(entity_name, date)` tool available to all agents.
-Reads confirmed `entities` and `entity_events` tables. Deterministic, zero LLM calls.
-Entity extraction is two-stage: Stage 1 (`extracting`) writes raw names
-to `entity_raw_extractions` after every batch; Stage 2 (`consolidating`)
-reads staging, groups variants, writes to `entities`.
-Entity consolidation (B-Review state): drag-drop board. Drag one entity
-card onto another to absorb it. Source canonical name + variants are merged
-into target name_variants. Source marked 'merged'. No discrepancy resolution
-flow — visual merge only.
-Manual alias editing: AliasEditor on each entity card in both B-Review
-and State C. User can add any alias (e.g. nominated party reference numbers,
-short names) and remove existing variants. PATCH /directory/entities/{id}
-accepts name_variants as a full replacement array.
+**Governance Feature — COMPLETE, STAYS ON CLAUDE**
+Entity extraction and event extraction use Claude (claude-sonnet-4-6).
+Do not change governance agents to Gemini.
+
+**Database — 23 migrations applied (001–023)**
+All tables intact. Query engine redesign requires no schema changes.
+Next migration if needed: 024.
+
+**Gemini SDK in use:**
+  from google import genai
+  client = genai.Client(api_key=GEMINI_API_KEY)
+  Embeddings: gemini-embedding-001 at 3072 dims (locked — do not change)
+  Query inference: gemini-2.0-flash-001 (new)
+
+**Current platform HEAD: 906a19b** (last stable before query engine work)
+Note: commits after 906a19b (35a4490, 2ef7361, 0ca6213, 906a19b) contain
+partial fixes to the old engine — they are on main but the engine itself
+is being replaced. New session should read these files but not extend them.
 
 **Domains:**
 - Legal & Contractual SME: 7 skills (contract_assembly,
