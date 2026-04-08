@@ -129,6 +129,12 @@ Read this skill before building or rebuilding any file under `skills/`.
 Routing coverage check (chunk-domain keyword alignment — deterministic, no LLM). SME invocation trace (tools_called records invoke_sme:{domain} — deterministic). Raw SME output preservation (captured in agentic loop before synthesis). Evidence Auditor (run_evidence_audit() — zero API calls, reads only pre-recorded deterministic data). Consolidated Evidence Map in every response (built from sources_used, tools_called, raw_sme_outputs, and evidence_record — not from agent self-reporting).
 Design principle: every integrity check reads deterministic system state. No integrity layer asks an agent to audit itself.
 
+**Agent tuning (locked):**
+Tier 1 orchestrators: max_tool_rounds=8, max_tokens=8000.
+Tier 2 SMEs: max_tool_rounds=3–5 (per specialist_config.py).
+Evidence Declaration block stripped from client-facing findings.
+Internal terms (Layer 1/2a/2b, warehouse) replaced before API response.
+
 **Governance Feature:**
 Redesign complete. Design document: docs/C1_GOVERNANCE_REDESIGN.md v2.1.
 Function 1 — Entity Directory: batch chunk processing, name extraction,

@@ -1800,3 +1800,34 @@ ALBA TEC / ALBATEC to appear as separate entities.
 - H2 `a9cbf2c` — AliasEditor on entity cards: add/remove aliases manually in both B-Review and State C
 
 ### Head: `a9cbf2c`
+
+---
+
+## Session: Query Engine Fixes
+**Date:** April 2026
+**Strategic Partner:** Claude (chat)
+**Execution Agent:** Claude Code
+
+### Root cause identified
+Orchestrators hitting max_tool_rounds=3 before completing analysis.
+At round 3, tools removed and Claude output mid-thought meta-commentary
+as final findings. Pre-JSON text was being used as findings_text, surfacing
+chain-of-thought to users.
+
+### Fixes
+- `1244328` — Raise max_tool_rounds 3→8 for Tier 1 orchestrators;
+  inject forced-completion message on final round;
+  _parse_findings reads JSON block first, pre-JSON text only as fallback
+- `35a4490` — Strip Evidence Declaration block from specialist_findings
+  before API serialisation; post-process internal terms (Layer 1/2a/2b,
+  warehouse, ingested) to user-facing equivalents; raise max_tokens 4000→8000
+
+### Result
+Query output now produces complete, grounded, professional findings with:
+- Full clause-level citations to specific documents and references
+- FLAGS with evidential basis
+- CANNOT ASSESS used correctly where documents absent
+- No meta-commentary or internal architecture terminology in client output
+- Evidence Declaration stripped before client sees findings
+
+### HEAD: `35a4490`
