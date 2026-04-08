@@ -840,7 +840,7 @@ def _generate_executive_summary(
         anthropic_client = get_anthropic_client()
         response = anthropic_client.messages.create(
             model=CLAUDE_MODEL,
-            max_tokens=200,
+            max_tokens=600,
             system="You are a senior construction contract analyst. Write a 3-sentence executive summary for a director-level reader. Be direct. State what was assessed, the confidence level, and the single most important finding.",
             messages=[
                 {
@@ -952,6 +952,29 @@ def _strip_evidence_declaration(findings_text: str) -> str:
     return cleaned.strip()
 
 
+def _clean_output_terminology(text: str) -> str:
+    """Replace internal architecture terms in any client-facing output."""
+    replacements = [
+        ("the document warehouse", "the document set"),
+        ("the warehouse", "the document set"),
+        ("not in the warehouse", "not in the document set"),
+        ("not found in the warehouse", "not found in the document set"),
+        ("ingested into the warehouse", "uploaded to the document set"),
+        ("ingested", "uploaded"),
+        ("warehouse", "document set"),
+        ("Layer 2b", "the applicable standard form"),
+        ("Layer 2a", "internal policy documents"),
+        ("Layer 1", "project documents"),
+        ("layer 2b", "the applicable standard form"),
+        ("layer 2a", "internal policy documents"),
+        ("layer 1", "project documents"),
+    ]
+    result = text
+    for old, new in replacements:
+        result = result.replace(old, new)
+    return result
+
+
 def build_response_text(
     findings: list[SpecialistFindings],
     contradictions: list[ContradictionFlag],
@@ -975,7 +998,7 @@ def build_response_text(
 
     # --- Executive Summary ---
     executive_summary = _generate_executive_summary(findings, confidence)
-    sections.append(executive_summary)
+    sections.append(_clean_output_terminology(executive_summary))
     sections.append("")
     sections.append(f"**Overall Confidence:** {confidence.value}")
     sections.append(f"**Documents assessed:** {document_count}")
@@ -1011,7 +1034,9 @@ def build_response_text(
             badge = finding.confidence
             sections.append(f"### {display_name} — {badge}")
             sections.append("")
-            sections.append(_strip_evidence_declaration(finding.findings))
+            sections.append(_clean_output_terminology(
+                _strip_evidence_declaration(finding.findings)
+            ))
             sections.append("")
             evidence_summary = _build_evidence_summary(finding)
             if evidence_summary:
