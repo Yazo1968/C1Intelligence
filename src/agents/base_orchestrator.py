@@ -200,6 +200,22 @@ class BaseOrchestrator:
         tool_round: int = 0
 
         while tool_round <= self._config.max_tool_rounds:
+            # On the final round, inject a completion instruction so Claude
+            # produces findings from evidence already gathered rather than
+            # continuing to narrate pending tool calls.
+            if tool_round == self._config.max_tool_rounds:
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "You have completed your evidence gathering. "
+                        "Produce your complete professional findings now based on the "
+                        "evidence you have already retrieved. "
+                        "Do not reference tools you have not yet called. "
+                        "Do not narrate what you intended to do. "
+                        "Output your findings and the required JSON block."
+                    ),
+                })
+
             try:
                 call_kwargs: dict = {
                     "model": CLAUDE_MODEL,
@@ -382,7 +398,7 @@ class BaseOrchestrator:
             )
 
         if json_block:
-            findings_text = text_before_json or json_block.get("findings", text)
+            findings_text = json_block.get("findings", "") or text_before_json
             confidence = json_block.get("confidence", "AMBER")
             if confidence not in ("GREEN", "AMBER", "RED", "GREY"):
                 confidence = "AMBER"
